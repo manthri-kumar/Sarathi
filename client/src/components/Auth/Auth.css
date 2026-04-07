@@ -1,0 +1,280 @@
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* MAIN */
+.main-container {
+  display: flex;
+  height: 100vh;
+}
+
+/* LEFT PANEL */
+.left-panel {
+  flex: 1;
+  background: radial-gradient(circle at left, #0f2b0f, #020402);
+  color: white;
+  padding: 60px 80px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP LEFT */
+.left-top {
+  position: absolute;
+  top: 40px;
+  left: 80px;
+}
+
+.left-top h1 {
+  font-size: 25px;
+  color: #b6ff00;
+}
+
+/* CENTER CONTENT */
+.left-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* HEADING */
+.left-content h2 {
+  font-size: 48px;
+  margin-bottom: 40px;
+  line-height: 1.2;
+}
+
+/* DESCRIPTION */
+.desc {
+  color: #aaa;
+  max-width: 700px;
+  line-height: 1.8;
+  font-size: 15px;
+
+}
+
+/* BUTTON */
+.explore-btn {
+  width: 240px;
+  margin-top: 30px;
+  padding: 14px;
+  background: linear-gradient(90deg, #b6ff00, #7fff00);
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+    margin-bottom: 40px;
+
+}
+
+.explore-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(182,255,0,0.4);
+}
+
+/* RIGHT PANEL */
+.right-panel {
+  flex: 1;
+  background: #020402;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* CARD */
+.auth-card {
+  width: 360px;
+  padding: 35px;
+  background: #0b0f0b;
+  border-radius: 20px;
+  box-shadow: 0 0 40px rgba(170,255,0,0.15);
+  text-align: center;
+  color: white;
+  transition: all 0.4s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 
+    0 0 80px rgba(170,255,0,0.25),
+    0 0 120px rgba(0,255,0,0.1);
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* 🔥 TOGGLE (SMOOTH) */
+/* TOGGLE CONTAINER */
+.toggle {
+  display: flex;
+  background: #0f0f0f;
+  border-radius: 40px;
+  padding: 4px;
+  margin: 20px 0;
+  width: 100%;
+}
+
+/* BUTTON BASE */
+.toggle button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: #aaa;
+  font-weight: 500;
+
+  transition: all 0.4s ease;
+}
+
+/* ACTIVE SIDE (GREEN HALF) */
+.toggle button.active {
+  background: linear-gradient(90deg, #b6ff00, #7fff00);
+  color: black;
+}
+
+/* HOVER */
+.toggle button:hover {
+  color: rgb(255, 255, 255);
+}
+
+/* INPUTS */
+.auth-card input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 10px;
+  border: 1px solid #222;
+  background: #050805;
+  color: white;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+/* INPUT FOCUS */
+.auth-card input:focus {
+  border: 3px solid #b6ff00;
+  box-shadow: 0 0 10px rgba(183, 255, 1, 0.3);
+}
+
+/* BUTTON */
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(90deg, #b6ff00, #7fff00);
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* BUTTON HOVER */
+.auth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(182,255,0,0.4);
+}
+
+/* BUTTON CLICK */
+.auth-btn:active {
+  transform: scale(0.97);
+}
+
+/* DIVIDER */
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #333;
+  margin: 0 10px;
+}
+
+/* SOCIAL */
+.social-icons {
+  display: flex;
+  justify-content: center;
+}
+
+.icon {
+  width: 45px;
+  height: 45px;
+  background: #111;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.icon:hover {
+  transform: scale(1.1);
+  background: #222;
+}
+
+/* SWITCH */
+.switch-text {
+  margin-top: 15px;
+}
+
+.switch-text span {
+  color: #b6ff00;
+  cursor: pointer;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    display: none;
+  }
+}
+
+.google-icon-btn {
+  width: 50px;
+  height: 50px;
+
+  background: #000000;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 10px auto;
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+}
+
+.google-icon-btn img {
+  width: 40px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.google-icon-btn:hover {
+  transform: scale(1.1);
+  background: #000000;
+  box-shadow: 0 0 12px rgba(53, 53, 53, 0.25);
+}
