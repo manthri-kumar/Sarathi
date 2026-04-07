@@ -54,9 +54,11 @@ function AuthPage() {
 
   // GOOGLE CLICK
   const handleGoogleClick = () => {
+    const CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // 🔐 SAFE PLACEHOLDER
+
     window.location.href =
       "https://accounts.google.com/o/oauth2/v2/auth?" +
-      "client_id=1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com" +
+      `client_id=${CLIENT_ID}` +
       "&redirect_uri=http://localhost:3000" +
       "&response_type=token" +
       "&scope=email profile";
