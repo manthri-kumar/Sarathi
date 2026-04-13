@@ -1,0 +1,120 @@
+.sidebar {
+  width: 250px;
+  height: 100vh;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  background: radial-gradient(circle at 20% 0%, rgba(0, 255, 149, 0.13), transparent 40%), #020402;
+
+  padding: 24px 16px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+/* LOGO */
+.logo-section {
+  margin-bottom: 30px;
+}
+
+.logo-section h2 {
+  font-size: 20px;
+  color: white;
+  margin: 0;
+}
+
+.logo-section p {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* MENU */
+.menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.6);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.menu li svg {
+  min-width: 18px;
+}
+
+/* HOVER */
+.menu li:hover {
+  background: rgba(255,255,255,0.05);
+  color: white;
+}
+
+/* ACTIVE */
+.menu li.active {
+  background: linear-gradient(135deg, #00ff88, #00ff5e);
+  color: black;
+  font-weight: 500;
+  box-shadow: 0 6px 18px rgba(0,255,120,0.25);
+}
+
+/* INDICATOR FIX */
+.menu li.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  background: #00ff88;
+  border-radius: 2px;
+}
+
+/* BOTTOM */
+.bottom-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 16px;
+}
+
+/* LOGOUT */
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+}
+
+.logout:hover {
+  color: #4ade80;
+}
+
+/* SETTINGS */
+.settings-icon {
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+}
+
+.settings-icon:hover {
+  color: #4ade80;
+}

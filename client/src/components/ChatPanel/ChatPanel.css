@@ -1,0 +1,159 @@
+.chat-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 550px;
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #0b1220;
+  color: white;
+
+  border-left: 1px solid #1f2937;
+  box-shadow: -5px 0 20px rgba(0,0,0,0.6);
+
+  z-index: 1000;
+}
+
+/* HEADER */
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 16px;
+  font-weight: 600;
+  background: linear-gradient(to right, #111827, #1f2937);
+
+  border-bottom: 1px solid #1f2937;
+}
+
+/* BODY */
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+
+  display: flex;
+  flex-direction: column;
+  scroll-behavior: smooth;
+}
+
+/* MESSAGE ROW */
+.chat-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.chat-row.user {
+  justify-content: flex-end;
+}
+
+.chat-row.bot {
+  justify-content: flex-start;
+}
+
+/* AVATAR */
+.avatar {
+  margin-right: 6px;
+}
+
+/* MESSAGE */
+.chat-bubble {
+  max-width: 85%;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* USER */
+.chat-row.user .chat-bubble {
+  background: #22c55e;
+  color: black;
+  border-bottom-right-radius: 2px;
+}
+
+/* BOT */
+.chat-row.bot .chat-bubble {
+  background: #1f2937;
+  border-bottom-left-radius: 2px;
+}
+
+/* QUICK ACTIONS */
+.quick-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+}
+
+.quick-actions button {
+  flex: 1;
+  padding: 6px;
+  border-radius: 8px;
+  border: none;
+  background: #1f2937;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* INPUT */
+.chat-input-container {
+  margin-top: auto;
+  display: flex;
+  padding: 10px;
+  background: #111827;
+  border-top: 1px solid #1f2937;
+}
+
+.chat-input-container input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background: #1f2937;
+  color: white;
+}
+
+.chat-input-container button {
+  margin-left: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #22c55e;
+  cursor: pointer;
+}
+.chat-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-card {
+  background: #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.chat-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.chat-card div {
+  padding: 8px;
+}
+
+.chat-card button {
+  background: #22c55e;
+  border: none;
+  padding: 5px 8px;
+  margin-top: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+}

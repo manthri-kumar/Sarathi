@@ -1,0 +1,81 @@
+/* Container */
+.navbar-container {
+  margin-bottom: 20px;
+}
+
+/* Top bar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Search */
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  background: #111827;
+  padding: 10px 15px;
+  border-radius: 14px;
+  width: 80%;
+}
+
+.search-wrapper input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: white;
+  margin-left: 10px;
+  width: 100%;
+}
+
+.search-icon {
+  color: #9ca3af;
+}
+
+/* Right side */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Bell */
+.bell {
+  position: relative;
+  cursor: pointer;
+}
+
+.bell .dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: red;
+  border-radius: 50%;
+}
+
+/* Profile */
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.profile-section img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+/* Greeting */
+.greeting h2 {
+  margin: 15px 0 5px;
+}
+
+.greeting p {
+  color: #9ca3af;
+  font-size: 14px;
+}

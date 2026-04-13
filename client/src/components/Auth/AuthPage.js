@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Auth.css";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
 
 function AuthPage() {
@@ -12,13 +13,7 @@ function AuthPage() {
     password: "",
   });
 
-  // AUTO LOGIN
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      window.location.href = "/dashboard";
-    }
-  }, []);
+  const navigate = useNavigate();
 
   // GOOGLE REDIRECT HANDLER
   useEffect(() => {
@@ -46,11 +41,11 @@ function AuthPage() {
             localStorage.setItem("token", res.data.token);
             localStorage.setItem("user", JSON.stringify(res.data.user));
 
-            window.location.href = "/dashboard";
+            navigate("/dashboard"); // ✅ FIXED
           });
       }
     }
-  }, []);
+  }, [navigate]);
 
   // GOOGLE CLICK
   const handleGoogleClick = () => {
@@ -64,18 +59,22 @@ function AuthPage() {
       "&scope=email profile";
   };
 
+  // LOGIN / SIGNUP
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       if (!isLogin) {
+        // SIGNUP
         const res = await axios.post(
           "http://localhost:5000/api/auth/signup",
           form
         );
+
         alert(res.data.message);
         setIsLogin(true);
       } else {
+        // LOGIN
         const res = await axios.post(
           "http://localhost:5000/api/auth/login",
           {
@@ -87,7 +86,7 @@ function AuthPage() {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
 
-        window.location.href = "/dashboard";
+        navigate("/dashboard"); // ✅ FIXED
       }
 
       setForm({ username: "", email: "", password: "" });
@@ -102,15 +101,15 @@ function AuthPage() {
       {/* LEFT PANEL */}
       <div className="left-panel">
         <div className="left-top">
-          <h1>Sarathi.com</h1>
+          <h1>Sarathi</h1>
         </div>
 
         <div className="left-content">
           <h2>Plan Smarter. Travel Better.</h2>
           <p className="desc">
-            Intelligent travel designed around you.
+           Sarathi is an AI-powered travel companion that personalizes your journey based on your mood, preferences, and real-time conditions. Discover hidden gems, get smart recommendations, and experience travel that adapts to you.
           </p>
-          <button className="explore-btn">Start Exploring →</button>
+          <button className="explore-btns">Start Exploring →</button>
         </div>
       </div>
 
@@ -149,7 +148,7 @@ function AuthPage() {
             onSubmit={handleSubmit}
           >
 
-            {/* fake inputs to block autofill */}
+            {/* hidden fields to prevent autofill */}
             <input type="text" name="fakeuser" style={{ display: "none" }} />
             <input type="password" name="fakepass" style={{ display: "none" }} />
 
@@ -157,8 +156,6 @@ function AuthPage() {
             {!isLogin && (
               <input
                 type="text"
-                name="field1"
-                autoComplete="new-password"
                 placeholder="Username"
                 value={form.username}
                 onChange={(e) =>
@@ -170,8 +167,6 @@ function AuthPage() {
             {/* EMAIL */}
             <input
               type="email"
-              name="field2"
-              autoComplete="new-password"
               placeholder="Email"
               value={form.email}
               onChange={(e) =>
@@ -182,8 +177,6 @@ function AuthPage() {
             {/* PASSWORD */}
             <input
               type="password"
-              name="field3"
-              autoComplete="new-password"
               placeholder="Password"
               value={form.password}
               onChange={(e) =>

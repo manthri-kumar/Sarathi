@@ -1,0 +1,35 @@
+.itinerary-container {
+  padding: 20px;
+  color: white;
+}
+
+.day-card {
+  background: #1f2937;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 10px;
+}
+
+.plan-item {
+  display: flex;
+  justify-content: space-between;
+  background: #111827;
+  padding: 8px;
+  margin-top: 5px;
+  border-radius: 6px;
+}
+
+.add-plan {
+  margin-top: 10px;
+  background: #22c55e;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.add-day {
+  background: #3b82f6;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+}

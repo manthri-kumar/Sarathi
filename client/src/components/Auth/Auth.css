@@ -12,7 +12,7 @@ body {
 /* LEFT PANEL */
 .left-panel {
   flex: 1;
-  background: radial-gradient(circle at left, #0f2b0f, #020402);
+  background: radial-gradient(circle at left, #1a4a1a, #020402);
   color: white;
   padding: 60px 80px;
   position: relative;
@@ -56,24 +56,62 @@ body {
 
 }
 
-/* BUTTON */
-.explore-btn {
+/* ===== EXPLORE BUTTON (LEFT SIDE) ===== */
+.explore-btns {
   width: 240px;
   margin-top: 30px;
   padding: 14px;
-  background: linear-gradient(90deg, #b6ff00, #7fff00);
-  border: none;
+
+background: linear-gradient(90deg, #b6ff00, #84ff00);
+  color: black;  border: none;
   border-radius: 12px;
+
   font-weight: bold;
+  color: black; /* 🔥 better contrast */
+
   cursor: pointer;
   transition: all 0.3s ease;
-    margin-bottom: 40px;
-
+  margin-bottom: 40px;
 }
 
-.explore-btn:hover {
+.explore-btns:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 25px rgba(182,255,0,0.4);
+  box-shadow: 0 10px 30px rgba(182,255,0,0.5);
+}
+
+/* ===== AUTH BUTTON ===== */
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+
+  background: linear-gradient(90deg, #b6ff00, #84ff00);
+  color: black;
+
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(182,255,0,0.5);
+}
+.toggle button.active {
+  background: linear-gradient(90deg, #b6ff00, #84ff00);
+  color: black;
+}
+/* ===== TOGGLE ACTIVE BUTTON ===== */
+.toggle button.active {
+  background: linear-gradient(90deg, #b6ff00, #84ff00); /* 🔥 GREEN */
+  color: black;
+}
+
+/* ===== LOGIN LINK ===== */
+.switch-text span {
+  color: #b6ff00; /* already correct but reinforced */
 }
 
 /* RIGHT PANEL */

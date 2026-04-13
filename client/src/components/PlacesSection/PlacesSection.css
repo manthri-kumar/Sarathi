@@ -1,0 +1,130 @@
+.places-section {
+  margin-top: 30px;
+}
+
+.places-section h2 {
+  color: white;
+  margin-bottom: 20px;
+}
+
+/* GRID */
+.places-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* CARD */
+.place-card {
+  display: flex;
+  background: #111827;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: 0.3s;
+  border: 1px solid #1f2937;
+
+  /* 🔥 FIX HEIGHT ISSUE */
+  height: 120px;
+}
+
+.place-card:hover {
+  transform: translateY(-5px);
+  border-color: #22c55e;
+}
+
+/* IMAGE */
+.place-img {
+  width: 120px;
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.place-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* DETAILS */
+.place-details {
+  padding: 12px 15px;
+  color: white;
+  flex: 1;
+
+  /* 🔥 ALIGN CONTENT */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.place-details h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.place-details p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* RATING */
+.rating {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.rating span {
+  color: #9ca3af;
+}
+
+/* BUTTON */
+.nav-btn {
+  margin-top: 6px;
+  padding: 6px 12px;
+  background: #22c55e;
+  border: none;
+  border-radius: 8px;
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+  width: fit-content;
+}
+
+.nav-btn:hover {
+  background: #16a34a;
+}
+
+/* 🔥 VIEW MORE BUTTON */
+.view-more {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.view-more button {
+  padding: 10px 20px;
+  background: #22c55e;
+  border: none;
+  border-radius: 10px;
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.view-more button:hover {
+  background: #16a34a;
+}
+.stars {
+  color: gold;
+  font-size: 14px;
+}
+
+.distance {
+  font-size: 12px;
+  color: #9ca3af;
+}

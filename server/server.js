@@ -1,5 +1,5 @@
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -14,8 +14,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/places", require("./routes/placesRoutes"));
+
+// 🔥 ADD THIS LINE (MISSING)
+app.use("/api/chat", require("./routes/chat"));
 
 app.get("/", (req, res) => {
   res.send("Sarathi API Running 🚀");

@@ -1,0 +1,119 @@
+/* HERO */
+.hero {
+  width: 100%;
+  height: 260px;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 20px;
+}
+
+/* ===== SLIDER FIX ===== */
+.slider-wrapper {
+  display: flex;
+  height: 100%;
+
+  /* 🔥 KEY FIX */
+  width: 100%;
+  transition: transform 0.6s ease-in-out;
+}
+
+/* Each slide */
+.slide {
+  min-width: 100%;   /* 🔥 VERY IMPORTANT */
+  height: 100%;
+
+  background-size: cover;
+  background-position: center;
+}
+/* ===== OVERLAY ===== */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.2)
+  );
+
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hero h2 {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.hero h1 {
+  font-size: 28px;
+  margin: 5px 0;
+}
+
+.hero p {
+  color: #cbd5f5;
+  margin-bottom: 15px;
+}
+
+/* Button */
+.explore-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  width: fit-content;
+  transition: 0.3s;
+}
+
+.explore-btn:hover {
+  transform: scale(1.05);
+}
+
+/* ===== ARROWS ===== */
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: white;
+  font-size: 20px;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.arrow.left {
+  left: 15px;
+}
+
+.arrow.right {
+  right: 15px;
+}
+
+/* ===== DOTS ===== */
+.dots {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dot.active {
+  background: white;
+}
