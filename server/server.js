@@ -14,14 +14,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+/* ROUTES */
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/places", require("./routes/placesRoutes"));
-
-const itineraryRoutes = require("./routes/itineraryRoutes");
-app.use("/api/itinerary", itineraryRoutes);
-
-// 🔥 ADD THIS LINE (MISSING)
+app.use("/api/itinerary", require("./routes/itineraryRoutes"));
 app.use("/api/chat", require("./routes/chat"));
+
+app.use("/api/trips", require("./routes/tripRoutes"));
+
+/* 🔥 NEW SAVED ROUTE */
+app.use("/api/saved", require("./routes/savedRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Sarathi API Running 🚀");

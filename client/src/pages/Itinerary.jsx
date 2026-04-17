@@ -11,72 +11,85 @@ const Itinerary = () => {
   const [finalPlan, setFinalPlan] = useState([]);
   const [showFinal, setShowFinal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [savedTrips, setSavedTrips] = useState([]);
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mobileTab, setMobileTab] = useState("suggested");
 
   const touchStartX = useRef(0);
   const navigate = useNavigate();
 
-  /* 🔥 LOAD DATA (NO REFRESH ISSUE) */
+  /* LOAD FINAL PLAN */
   useEffect(() => {
-    const trips = JSON.parse(localStorage.getItem("myTrips")) || [];
-    setSavedTrips(trips);
+    const savedFinal =
+      JSON.parse(localStorage.getItem("finalPlan")) || [];
 
-    const savedFinal = JSON.parse(localStorage.getItem("finalPlan"));
-    if (savedFinal) {
+    if (savedFinal.length > 0) {
       setFinalPlan(savedFinal);
       setShowFinal(true);
     }
   }, []);
 
+  /* MOBILE SWIPE */
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = (e) => {
-    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    const diff =
+      e.changedTouches[0].clientX - touchStartX.current;
+
     if (diff > 80) setSidebarOpen(true);
     if (diff < -80) setSidebarOpen(false);
   };
 
-  /* 🔍 FETCH */
+  /* SEARCH CITY */
   const handleSearch = async () => {
-    if (!city) return;
+    if (!city.trim()) return;
 
     setLoading(true);
+
     try {
       const res = await fetch(
         `http://localhost:5000/api/places/search?city=${city}`
       );
+
       const data = await res.json();
       setPlaces(data);
-    } catch {
+    } catch (error) {
       alert("Error fetching places");
     }
+
     setLoading(false);
   };
 
+  /* ADD PLACE */
   const addToPlan = (place) => {
     setPlan([
       ...plan,
-      { ...place, date: "", time: "", budget: "", note: "" }
+      {
+        ...place,
+        date: "",
+        time: "",
+        budget: "",
+        note: ""
+      }
     ]);
   };
 
+  /* UPDATE FIELD */
   const updateField = (index, field, value) => {
     const updated = [...plan];
     updated[index][field] = value;
     setPlan(updated);
   };
 
+  /* REMOVE PLACE */
   const removePlace = (index) => {
     setPlan(plan.filter((_, i) => i !== index));
   };
 
-  /* ✅ FINALIZE + SAVE */
+  /* FINALIZE */
   const finalizeTrip = () => {
+    if (plan.length === 0) return;
+
     const sorted = [...plan].sort((a, b) => {
       const d1 = new Date(`${a.date} ${a.time}`);
       const d2 = new Date(`${b.date} ${b.time}`);
@@ -86,24 +99,51 @@ const Itinerary = () => {
     setFinalPlan(sorted);
     setShowFinal(true);
 
-    localStorage.setItem("finalPlan", JSON.stringify(sorted));
+    localStorage.setItem(
+      "finalPlan",
+      JSON.stringify(sorted)
+    );
   };
 
-  /* 💾 SAVE TRIP */
-  const handleSaveTrip = (item) => {
-    const exists = savedTrips.some(
-      (t) => t.name === item.name && t.date === item.date
+  /* CONFIRM TRIP → SAVE TO DATABASE */
+  const handleConfirmTrip = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      for (const trip of finalPlan) {
+        await fetch("http://localhost:5000/api/trips", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(trip)
+        });
+      }
+
+      localStorage.removeItem("finalPlan");
+
+      navigate("/my-trips");
+
+    } catch (error) {
+      console.log(error);
+      alert("Failed to confirm trip");
+    }
+  };
+
+  /* SAVE TO SAVED PAGE */
+  const handleSaveTrip = () => {
+    const oldSaved =
+      JSON.parse(localStorage.getItem("savedTrips")) || [];
+
+    const updated = [...oldSaved, ...finalPlan];
+
+    localStorage.setItem(
+      "savedTrips",
+      JSON.stringify(updated)
     );
 
-    if (exists) return;
-
-    const updated = [...savedTrips, item];
-    setSavedTrips(updated);
-
-    localStorage.setItem("myTrips", JSON.stringify(updated));
-
-    // smooth navigation
-    setTimeout(() => navigate("/my-trips"), 500);
+    alert("Trip saved successfully!");
   };
 
   return (
@@ -115,11 +155,18 @@ const Itinerary = () => {
       <Sidebar isOpen={sidebarOpen} />
 
       {sidebarOpen && (
-        <div className="overlay" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       <div className="main-content">
-        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Navbar
+          toggleSidebar={() =>
+            setSidebarOpen(!sidebarOpen)
+          }
+        />
 
         <div className="planner-wrapper">
           <h1>Plan Your Trip</h1>
@@ -130,8 +177,11 @@ const Itinerary = () => {
               type="text"
               placeholder="Search city..."
               value={city}
-              onChange={(e) => setCity(e.target.value)}
+              onChange={(e) =>
+                setCity(e.target.value)
+              }
             />
+
             <button onClick={handleSearch}>
               {loading ? "Loading..." : "Search"}
             </button>
@@ -140,12 +190,15 @@ const Itinerary = () => {
           {!showFinal ? (
             <div className="planner-grid">
 
-              {/* SUGGESTED */}
+              {/* LEFT */}
               <div className="suggested">
                 <h2>Suggested Places</h2>
 
                 {places.map((p, i) => (
-                  <div key={i} className="place-card">
+                  <div
+                    key={i}
+                    className="place-card"
+                  >
                     <img src={p.image} alt="" />
 
                     <div className="place-info">
@@ -156,7 +209,9 @@ const Itinerary = () => {
 
                       <button
                         className="add-btn"
-                        onClick={() => addToPlan(p)}
+                        onClick={() =>
+                          addToPlan(p)
+                        }
                       >
                         + Add
                       </button>
@@ -165,24 +220,43 @@ const Itinerary = () => {
                 ))}
               </div>
 
-              {/* PLAN */}
+              {/* RIGHT */}
               <div className="planner">
                 <h2>Your Plan</h2>
 
                 {plan.map((item, index) => (
-                  <div key={index} className="plan-card">
-
+                  <div
+                    key={index}
+                    className="plan-card"
+                  >
                     <div className="plan-top">
                       <h3>{item.name}</h3>
-                      <button onClick={() => removePlace(index)}>✖</button>
+
+                      <button
+                        className="remove-btn"
+                        onClick={() =>
+                          removePlace(index)
+                        }
+                      >
+                        ✖
+                      </button>
                     </div>
 
                     <div className="plan-inputs">
                       <input
                         type="date"
+                        min={
+                          new Date()
+                            .toISOString()
+                            .split("T")[0]
+                        }
                         value={item.date}
                         onChange={(e) =>
-                          updateField(index, "date", e.target.value)
+                          updateField(
+                            index,
+                            "date",
+                            e.target.value
+                          )
                         }
                       />
 
@@ -190,7 +264,11 @@ const Itinerary = () => {
                         type="time"
                         value={item.time}
                         onChange={(e) =>
-                          updateField(index, "time", e.target.value)
+                          updateField(
+                            index,
+                            "time",
+                            e.target.value
+                          )
                         }
                       />
 
@@ -199,7 +277,11 @@ const Itinerary = () => {
                         placeholder="Budget"
                         value={item.budget}
                         onChange={(e) =>
-                          updateField(index, "budget", e.target.value)
+                          updateField(
+                            index,
+                            "budget",
+                            e.target.value
+                          )
                         }
                       />
                     </div>
@@ -208,14 +290,21 @@ const Itinerary = () => {
                       placeholder="Notes..."
                       value={item.note}
                       onChange={(e) =>
-                        updateField(index, "note", e.target.value)
+                        updateField(
+                          index,
+                          "note",
+                          e.target.value
+                        )
                       }
                     />
                   </div>
                 ))}
 
                 {plan.length > 0 && (
-                  <button className="final-btn" onClick={finalizeTrip}>
+                  <button
+                    className="final-btn"
+                    onClick={finalizeTrip}
+                  >
                     Finalize Trip
                   </button>
                 )}
@@ -226,33 +315,54 @@ const Itinerary = () => {
 
               <h2>Your Final Itinerary</h2>
 
-              {finalPlan.map((item, i) => {
-                const isSaved = savedTrips.some(
-                  (t) => t.name === item.name && t.date === item.date
-                );
-
-                return (
-                  <div key={i} className="final-card">
-
-                    <div className="final-time">
-                      {item.date} | {item.time}
-                    </div>
-
-                    <h3>{item.name}</h3>
-                    <p>💰 ₹{item.budget || "N/A"}</p>
-
-                    <button
-                      className={`save-btn ${isSaved ? "saved" : ""}`}
-                      onClick={() => handleSaveTrip(item)}
-                    >
-                      {isSaved ? "Saved ✓" : "Save Trip"}
-                    </button>
-
+              {finalPlan.map((item, i) => (
+                <div
+                  key={i}
+                  className="final-card"
+                >
+                  <div className="final-time">
+                    {item.date} | {item.time}
                   </div>
-                );
-              })}
 
-              <button onClick={() => setShowFinal(false)}>⬅ Back</button>
+                  <h3>{item.name}</h3>
+
+                  {item.budget && (
+                    <p>💰 ₹{item.budget}</p>
+                  )}
+
+                  {item.note && (
+                    <p>📝 {item.note}</p>
+                  )}
+                </div>
+              ))}
+
+              {/* ACTIONS */}
+              <div className="final-actions">
+
+                <button
+                  className="back-btn"
+                  onClick={() =>
+                    setShowFinal(false)
+                  }
+                >
+                  ⬅ Back
+                </button>
+
+                <button
+                  className="confirm-btn"
+                  onClick={handleConfirmTrip}
+                >
+                  ✅ Confirm Trip
+                </button>
+
+                <button
+                  className="save-btn"
+                  onClick={handleSaveTrip}
+                >
+                  💾 Save
+                </button>
+
+              </div>
             </div>
           )}
         </div>

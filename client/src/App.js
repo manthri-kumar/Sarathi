@@ -4,6 +4,8 @@ import Dashboard from "./pages/Dashboard";
 import Itinerary from "./pages/Itinerary";
 import Explore from "./pages/Explore";
 import MyTrips from "./pages/MyTrips";
+import Saved from "./pages/Saved";
+import Profile from "./pages/Profile";
 
 /* 🔐 Protected Route */
 const ProtectedRoute = ({ children }) => {
@@ -63,6 +65,22 @@ function App() {
         />
 
         <Route path="/my-trips" element={<MyTrips />} />
+        <Route
+  path="/saved"
+  element={
+    <ProtectedRoute>
+      <Saved />
+    </ProtectedRoute>
+  }
+/>
+<Route
+ path="/profile"
+ element={
+   <ProtectedRoute>
+     <Profile />
+   </ProtectedRoute>
+}
+/>
 
       </Routes>
     </BrowserRouter>

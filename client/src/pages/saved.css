@@ -1,0 +1,132 @@
+/* saved.css */
+
+.saved-wrapper {
+  padding: 28px;
+  min-height: 100vh;
+}
+
+.saved-header {
+  margin-bottom: 28px;
+}
+
+.saved-header h1 {
+  color: white;
+  font-size: 38px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.saved-header p {
+  color: #9ca3af;
+  font-size: 17px;
+}
+
+/* EMPTY */
+.empty-state {
+  background: #0b1220;
+  padding: 40px;
+  border-radius: 18px;
+  text-align: center;
+}
+
+.empty-state h2 {
+  color: white;
+  font-size: 30px;
+}
+
+.empty-state p {
+  color: #9ca3af;
+  margin-top: 10px;
+}
+
+/* GRID */
+.saved-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* CARD */
+.saved-card {
+  background: linear-gradient(145deg,#081220,#0c1628);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: 0.3s ease;
+}
+
+.saved-card:hover {
+  transform: translateY(-6px);
+}
+
+.saved-card img {
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+}
+
+.saved-content {
+  padding: 18px;
+}
+
+.saved-content h3 {
+  color: white;
+  font-size: 28px;
+  margin: 8px 0;
+}
+
+.saved-content p {
+  color: #d1d5db;
+  margin: 8px 0;
+}
+
+/* ACTIONS */
+.saved-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.saved-actions a,
+.saved-actions button {
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-btn {
+  background: #22c55e;
+  color: black;
+}
+
+.delete-btn {
+  background: #ef4444;
+  color: white;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .saved-wrapper {
+    padding: 18px;
+  }
+
+  .saved-header h1 {
+    font-size: 30px;
+  }
+
+  .saved-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-actions {
+    flex-direction: column;
+  }
+
+  .saved-actions a,
+  .saved-actions button {
+    width: 100%;
+    text-align: center;
+  }
+}

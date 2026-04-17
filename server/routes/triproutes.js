@@ -1,55 +1,78 @@
-// routes/tripRoutes.js
 const express = require("express");
 const router = express.Router();
 const Trip = require("../models/Trip");
-const auth = require("../middleware/authMiddleware");
+const protect = require("../middleware/authMiddleware");
 
-/* 🔥 CREATE TRIP */
-router.post("/", auth, async (req, res) => {
+/* CREATE TRIP */
+router.post("/", protect, async (req, res) => {
   try {
-    const trip = new Trip({
-      ...req.body,
-      userId: req.user
+    const trip = await Trip.create({
+      userId: req.user.id,
+      name: req.body.name,
+      image: req.body.image,
+      date: req.body.date,
+      time: req.body.time,
+      budget: req.body.budget,
+      note: req.body.note
     });
 
-    await trip.save();
-    res.json(trip);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
+    res.status(201).json(trip);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Trip save failed"
+    });
   }
 });
 
-/* 🔥 GET USER TRIPS */
-router.get("/", auth, async (req, res) => {
+/* GET USER TRIPS */
+router.get("/", protect, async (req, res) => {
   try {
-    const trips = await Trip.find({ userId: req.user }).sort({ date: 1 });
+    const trips = await Trip.find({
+      userId: req.user.id
+    }).sort({ createdAt: -1 });
+
     res.json(trips);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
+  } catch (error) {
+    res.status(500).json({
+      message: "Fetch failed"
+    });
   }
 });
 
-/* ✏️ UPDATE TRIP */
-router.put("/:id", auth, async (req, res) => {
+/* DELETE */
+router.delete("/:id", protect, async (req, res) => {
   try {
-    const updated = await Trip.findByIdAndUpdate(
-      req.params.id,
+    await Trip.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id
+    });
+
+    res.json({ message: "Deleted" });
+  } catch (error) {
+    res.status(500).json({
+      message: "Delete failed"
+    });
+  }
+});
+
+/* UPDATE */
+router.put("/:id", protect, async (req, res) => {
+  try {
+    const trip = await Trip.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        userId: req.user.id
+      },
       req.body,
       { new: true }
     );
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
-});
 
-/* 🗑 DELETE */
-router.delete("/:id", auth, async (req, res) => {
-  try {
-    await Trip.findByIdAndDelete(req.params.id);
-    res.json({ msg: "Deleted" });
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
+    res.json(trip);
+  } catch (error) {
+    res.status(500).json({
+      message: "Update failed"
+    });
   }
 });
 

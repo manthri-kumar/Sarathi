@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
 import "../pages/mytrips.css";
@@ -7,118 +8,241 @@ const MyTrips = () => {
   const [trips, setTrips] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  /* 📅 LOAD + SORT */
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("myTrips")) || [];
+  const token = localStorage.getItem("token");
 
-    const sorted = data.sort((a, b) => {
-      const d1 = new Date(`${a.date} ${a.time}`);
-      const d2 = new Date(`${b.date} ${b.time}`);
-      return d1 - d2;
-    });
+  /* LOAD TRIPS */
+  const fetchTrips = async () => {
+    try {
+      setLoading(true);
 
-    setTrips(sorted);
-  }, []);
+      const res = await axios.get(
+        "http://localhost:5000/api/trips",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-  /* 🗑 DELETE */
-  const handleDelete = (index) => {
-    const updated = trips.filter((_, i) => i !== index);
-    setTrips(updated);
-    localStorage.setItem("myTrips", JSON.stringify(updated));
+      setTrips(res.data || []);
+    } catch (error) {
+      console.log(error);
+      setTrips([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  /* 🟢 STATUS */
+  useEffect(() => {
+    if (token) fetchTrips();
+    else setLoading(false);
+  }, [token]);
+
+  /* DELETE */
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(
+        `http://localhost:5000/api/trips/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      fetchTrips();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  /* 🔥 FIXED SAVE TO SAVED PAGE (USERWISE) */
+  const handleSavePage = (trip) => {
+    const user =
+      JSON.parse(localStorage.getItem("user")) || {};
+
+    const userId =
+      user._id || user.id || user.email || "guest";
+
+    const key = `savedTrips_${userId}`;
+
+    const oldSaved =
+      JSON.parse(localStorage.getItem(key)) || [];
+
+    const exists = oldSaved.some(
+      (item) =>
+        item.name === trip.name &&
+        item.date === trip.date &&
+        item.time === trip.time
+    );
+
+    if (exists) {
+      alert("Already saved");
+      return;
+    }
+
+    const updated = [...oldSaved, trip];
+
+    localStorage.setItem(
+      key,
+      JSON.stringify(updated)
+    );
+
+    alert("Trip saved successfully!");
+  };
+
+  /* EDIT SAVE */
+  const saveEdit = async () => {
+    try {
+      await axios.put(
+        `http://localhost:5000/api/trips/${editingTrip._id}`,
+        {
+          date: editingTrip.date,
+          time: editingTrip.time,
+          budget: editingTrip.budget,
+          note: editingTrip.note
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setEditingTrip(null);
+      fetchTrips();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  /* STATUS */
   const getStatus = (trip) => {
     if (!trip.date) return "Upcoming";
-    const tripDate = new Date(`${trip.date} ${trip.time || "00:00"}`);
-    return tripDate > new Date() ? "Upcoming" : "Completed";
+
+    const tripDate = new Date(
+      `${trip.date} ${trip.time || "00:00"}`
+    );
+
+    return tripDate > new Date()
+      ? "Upcoming"
+      : "Completed";
   };
 
   return (
     <div className="dashboard">
-
       <Sidebar isOpen={sidebarOpen} />
-
-      {sidebarOpen && (
-        <div className="overlay" onClick={() => setSidebarOpen(false)} />
-      )}
 
       <div className="main-content">
 
-        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Navbar
+          toggleSidebar={() =>
+            setSidebarOpen(!sidebarOpen)
+          }
+        />
 
         <div className="mytrips-wrapper">
 
-          {/* HEADER */}
           <div className="mytrips-header">
-            <h1>My Trips ✈️</h1>
-            <p>Manage and revisit your saved journeys</p>
+            <h1>My Trips </h1>
+            <p>
+              Manage and revisit your saved journeys
+            </p>
           </div>
 
-          {/* EMPTY */}
-          {trips.length === 0 ? (
+          {loading ? (
+            <div className="empty-state">
+              <h2>Loading...</h2>
+            </div>
+          ) : trips.length === 0 ? (
             <div className="empty-state">
               <h2>No Trips Yet</h2>
-              <p>Start planning and save trips</p>
             </div>
           ) : (
             <div className="trips-grid">
 
-              {trips.map((trip, i) => (
-                <div key={i} className="trip-card">
-
-                  {/* IMAGE */}
+              {trips.map((trip) => (
+                <div
+                  key={trip._id}
+                  className="trip-card"
+                >
                   <img
-                    src={trip.image || "https://source.unsplash.com/400x300/?travel"}
+                    src={
+                      trip.image ||
+                      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800"
+                    }
                     alt=""
                   />
 
                   <div className="trip-content">
 
-                    {/* STATUS */}
-                    <span className={`status ${getStatus(trip).toLowerCase()}`}>
+                    <span
+                      className={`status ${getStatus(
+                        trip
+                      ).toLowerCase()}`}
+                    >
                       {getStatus(trip)}
                     </span>
 
                     <h3>{trip.name}</h3>
 
-                    {/* DATE */}
-                    {(trip.date || trip.time) && (
+                    <p>
+                      📅 {trip.date || "N/A"}{" "}
+                      {trip.time &&
+                        `| ⏰ ${trip.time}`}
+                    </p>
+
+                    {trip.budget && (
                       <p>
-                        📅 {trip.date} {trip.time && `| ⏰ ${trip.time}`}
+                        💰 ₹{trip.budget}
                       </p>
                     )}
 
-                    {/* BUDGET */}
-                    {trip.budget && (
-                      <p>💰 ₹{trip.budget}</p>
+                    {trip.note && (
+                      <p>
+                        📝 {trip.note}
+                      </p>
                     )}
 
-                    {/* NOTE */}
-                    {trip.note && trip.note.trim() !== "" && (
-                      <p>📝 {trip.note}</p>
-                    )}
-
-                    {/* ACTIONS */}
                     <div className="trip-actions">
 
                       <button
                         className="edit-btn"
-                        onClick={() => setEditingTrip({ ...trip, index: i })}
+                        onClick={() =>
+                          setEditingTrip(trip)
+                        }
                       >
                         Edit
                       </button>
 
                       <button
                         className="delete-btn"
-                        onClick={() => handleDelete(i)}
+                        onClick={() =>
+                          handleDelete(
+                            trip._id
+                          )
+                        }
                       >
                         Delete
                       </button>
 
+                      <button
+                        className="save-btn"
+                        onClick={() =>
+                          handleSavePage(
+                            trip
+                          )
+                        }
+                      >
+                        Save
+                      </button>
+
                       <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.name)}`}
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          trip.name
+                        )}`}
                         target="_blank"
                         rel="noreferrer"
                         className="nav-btn"
@@ -127,7 +251,6 @@ const MyTrips = () => {
                       </a>
 
                     </div>
-
                   </div>
                 </div>
               ))}
@@ -135,76 +258,94 @@ const MyTrips = () => {
             </div>
           )}
 
-          {/* ✏️ EDIT MODAL */}
+          {/* EDIT MODAL */}
           {editingTrip && (
             <div className="modal">
-
               <div className="modal-box">
 
                 <h2>Edit Trip</h2>
 
                 <input
                   type="date"
-                  value={editingTrip.date || ""}
+                  value={
+                    editingTrip.date || ""
+                  }
                   onChange={(e) =>
-                    setEditingTrip({ ...editingTrip, date: e.target.value })
+                    setEditingTrip({
+                      ...editingTrip,
+                      date:
+                        e.target.value
+                    })
                   }
                 />
 
                 <input
                   type="time"
-                  value={editingTrip.time || ""}
+                  value={
+                    editingTrip.time || ""
+                  }
                   onChange={(e) =>
-                    setEditingTrip({ ...editingTrip, time: e.target.value })
+                    setEditingTrip({
+                      ...editingTrip,
+                      time:
+                        e.target.value
+                    })
                   }
                 />
 
                 <input
                   type="number"
                   placeholder="Budget"
-                  value={editingTrip.budget || ""}
+                  value={
+                    editingTrip.budget ||
+                    ""
+                  }
                   onChange={(e) =>
-                    setEditingTrip({ ...editingTrip, budget: e.target.value })
+                    setEditingTrip({
+                      ...editingTrip,
+                      budget:
+                        e.target.value
+                    })
                   }
                 />
 
                 <textarea
                   placeholder="Notes"
-                  value={editingTrip.note || ""}
+                  value={
+                    editingTrip.note || ""
+                  }
                   onChange={(e) =>
-                    setEditingTrip({ ...editingTrip, note: e.target.value })
+                    setEditingTrip({
+                      ...editingTrip,
+                      note:
+                        e.target.value
+                    })
                   }
                 />
 
                 <div className="modal-actions">
 
                   <button
-                    onClick={() => {
-                      const updated = [...trips];
-                      updated[editingTrip.index] = editingTrip;
-
-                      setTrips(updated);
-                      localStorage.setItem("myTrips", JSON.stringify(updated));
-
-                      setEditingTrip(null);
-                    }}
+                    onClick={saveEdit}
                   >
                     Save
                   </button>
 
-                  <button onClick={() => setEditingTrip(null)}>
+                  <button
+                    onClick={() =>
+                      setEditingTrip(null)
+                    }
+                  >
                     Cancel
                   </button>
 
                 </div>
 
               </div>
-
             </div>
           )}
 
         </div>
-
       </div>
     </div>
   );
