@@ -1,58 +1,262 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./Itinerary.css";
+import Navbar from "../components/Navbar/Navbar";
+import Sidebar from "../components/Sidebar/Sidebar";
+import { useNavigate } from "react-router-dom";
 
 const Itinerary = () => {
-  const [days, setDays] = useState([
-    { day: 1, plans: [] }
-  ]);
+  const [city, setCity] = useState("");
+  const [places, setPlaces] = useState([]);
+  const [plan, setPlan] = useState([]);
+  const [finalPlan, setFinalPlan] = useState([]);
+  const [showFinal, setShowFinal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [savedTrips, setSavedTrips] = useState([]);
 
-  const addDay = () => {
-    setDays([...days, { day: days.length + 1, plans: [] }]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState("suggested");
+
+  const touchStartX = useRef(0);
+  const navigate = useNavigate();
+
+  /* 🔥 LOAD DATA (NO REFRESH ISSUE) */
+  useEffect(() => {
+    const trips = JSON.parse(localStorage.getItem("myTrips")) || [];
+    setSavedTrips(trips);
+
+    const savedFinal = JSON.parse(localStorage.getItem("finalPlan"));
+    if (savedFinal) {
+      setFinalPlan(savedFinal);
+      setShowFinal(true);
+    }
+  }, []);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
   };
 
-  const addPlan = (index) => {
-    const text = prompt("Enter plan:");
-    if (!text) return;
-
-    const updated = [...days];
-    updated[index].plans.push(text);
-    setDays(updated);
+  const handleTouchEnd = (e) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (diff > 80) setSidebarOpen(true);
+    if (diff < -80) setSidebarOpen(false);
   };
 
-  const deletePlan = (dayIndex, planIndex) => {
-    const updated = [...days];
-    updated[dayIndex].plans.splice(planIndex, 1);
-    setDays(updated);
+  /* 🔍 FETCH */
+  const handleSearch = async () => {
+    if (!city) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/places/search?city=${city}`
+      );
+      const data = await res.json();
+      setPlaces(data);
+    } catch {
+      alert("Error fetching places");
+    }
+    setLoading(false);
+  };
+
+  const addToPlan = (place) => {
+    setPlan([
+      ...plan,
+      { ...place, date: "", time: "", budget: "", note: "" }
+    ]);
+  };
+
+  const updateField = (index, field, value) => {
+    const updated = [...plan];
+    updated[index][field] = value;
+    setPlan(updated);
+  };
+
+  const removePlace = (index) => {
+    setPlan(plan.filter((_, i) => i !== index));
+  };
+
+  /* ✅ FINALIZE + SAVE */
+  const finalizeTrip = () => {
+    const sorted = [...plan].sort((a, b) => {
+      const d1 = new Date(`${a.date} ${a.time}`);
+      const d2 = new Date(`${b.date} ${b.time}`);
+      return d1 - d2;
+    });
+
+    setFinalPlan(sorted);
+    setShowFinal(true);
+
+    localStorage.setItem("finalPlan", JSON.stringify(sorted));
+  };
+
+  /* 💾 SAVE TRIP */
+  const handleSaveTrip = (item) => {
+    const exists = savedTrips.some(
+      (t) => t.name === item.name && t.date === item.date
+    );
+
+    if (exists) return;
+
+    const updated = [...savedTrips, item];
+    setSavedTrips(updated);
+
+    localStorage.setItem("myTrips", JSON.stringify(updated));
+
+    // smooth navigation
+    setTimeout(() => navigate("/my-trips"), 500);
   };
 
   return (
-    <div className="itinerary-container">
+    <div
+      className="dashboard"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <Sidebar isOpen={sidebarOpen} />
 
-      <h2>🧭 Trip Itinerary</h2>
+      {sidebarOpen && (
+        <div className="overlay" onClick={() => setSidebarOpen(false)} />
+      )}
 
-      {days.map((day, index) => (
-        <div key={index} className="day-card">
+      <div className="main-content">
+        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-          <h3>Day {day.day}</h3>
+        <div className="planner-wrapper">
+          <h1>Plan Your Trip</h1>
 
-          {day.plans.map((plan, i) => (
-            <div key={i} className="plan-item">
-              <span>{plan}</span>
-              <button onClick={() => deletePlan(index, i)}>❌</button>
+          {/* SEARCH */}
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Search city..."
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+            <button onClick={handleSearch}>
+              {loading ? "Loading..." : "Search"}
+            </button>
+          </div>
+
+          {!showFinal ? (
+            <div className="planner-grid">
+
+              {/* SUGGESTED */}
+              <div className="suggested">
+                <h2>Suggested Places</h2>
+
+                {places.map((p, i) => (
+                  <div key={i} className="place-card">
+                    <img src={p.image} alt="" />
+
+                    <div className="place-info">
+                      <div>
+                        <h3>{p.name}</h3>
+                        <p>{p.address}</p>
+                      </div>
+
+                      <button
+                        className="add-btn"
+                        onClick={() => addToPlan(p)}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* PLAN */}
+              <div className="planner">
+                <h2>Your Plan</h2>
+
+                {plan.map((item, index) => (
+                  <div key={index} className="plan-card">
+
+                    <div className="plan-top">
+                      <h3>{item.name}</h3>
+                      <button onClick={() => removePlace(index)}>✖</button>
+                    </div>
+
+                    <div className="plan-inputs">
+                      <input
+                        type="date"
+                        value={item.date}
+                        onChange={(e) =>
+                          updateField(index, "date", e.target.value)
+                        }
+                      />
+
+                      <input
+                        type="time"
+                        value={item.time}
+                        onChange={(e) =>
+                          updateField(index, "time", e.target.value)
+                        }
+                      />
+
+                      <input
+                        type="number"
+                        placeholder="Budget"
+                        value={item.budget}
+                        onChange={(e) =>
+                          updateField(index, "budget", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <textarea
+                      placeholder="Notes..."
+                      value={item.note}
+                      onChange={(e) =>
+                        updateField(index, "note", e.target.value)
+                      }
+                    />
+                  </div>
+                ))}
+
+                {plan.length > 0 && (
+                  <button className="final-btn" onClick={finalizeTrip}>
+                    Finalize Trip
+                  </button>
+                )}
+              </div>
             </div>
-          ))}
+          ) : (
+            <div className="final-view">
 
-          <button className="add-plan" onClick={() => addPlan(index)}>
-            + Add Plan
-          </button>
+              <h2>Your Final Itinerary</h2>
 
+              {finalPlan.map((item, i) => {
+                const isSaved = savedTrips.some(
+                  (t) => t.name === item.name && t.date === item.date
+                );
+
+                return (
+                  <div key={i} className="final-card">
+
+                    <div className="final-time">
+                      {item.date} | {item.time}
+                    </div>
+
+                    <h3>{item.name}</h3>
+                    <p>💰 ₹{item.budget || "N/A"}</p>
+
+                    <button
+                      className={`save-btn ${isSaved ? "saved" : ""}`}
+                      onClick={() => handleSaveTrip(item)}
+                    >
+                      {isSaved ? "Saved ✓" : "Save Trip"}
+                    </button>
+
+                  </div>
+                );
+              })}
+
+              <button onClick={() => setShowFinal(false)}>⬅ Back</button>
+            </div>
+          )}
         </div>
-      ))}
-
-      <button className="add-day" onClick={addDay}>
-        + Add Day
-      </button>
-
+      </div>
     </div>
   );
 };

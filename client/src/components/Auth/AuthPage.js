@@ -49,7 +49,7 @@ function AuthPage() {
 
   // GOOGLE CLICK
   const handleGoogleClick = () => {
-    const CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // 🔐 SAFE PLACEHOLDER
+    const CLIENT_ID = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com"; // 🔐 SAFE PLACEHOLDER
 
     window.location.href =
       "https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -141,54 +141,56 @@ function AuthPage() {
           </div>
 
           {/* FORM */}
-          <form
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            onSubmit={handleSubmit}
-          >
+     <form onSubmit={handleSubmit} autoComplete="off">
 
-            {/* hidden fields to prevent autofill */}
-            <input type="text" name="fakeuser" style={{ display: "none" }} />
-            <input type="password" name="fakepass" style={{ display: "none" }} />
+  {/* USERNAME */}
+  {!isLogin && (
+    <input
+      type="text"
+      name="random_username_123"
+      placeholder="Username"
+      value={form.username}
+      autoComplete="off"
+      readOnly
+      onFocus={(e) => e.target.removeAttribute("readOnly")}
+      onChange={(e) =>
+        setForm({ ...form, username: e.target.value })
+      }
+    />
+  )}
 
-            {/* USERNAME */}
-            {!isLogin && (
-              <input
-                type="text"
-                placeholder="Username"
-                value={form.username}
-                onChange={(e) =>
-                  setForm({ ...form, username: e.target.value })
-                }
-              />
-            )}
+  {/* EMAIL */}
+  <input
+    type="email"
+    name="random_email_456"
+    placeholder="Email"
+    value={form.email}
+    autoComplete="off"
+    readOnly
+    onFocus={(e) => e.target.removeAttribute("readOnly")}
+    onChange={(e) =>
+      setForm({ ...form, email: e.target.value })
+    }
+  />
 
-            {/* EMAIL */}
-            <input
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={(e) =>
-                setForm({ ...form, email: e.target.value })
-              }
-            />
+  {/* PASSWORD */}
+  <input
+    type="password"
+    name="random_password_789"
+    placeholder="Password"
+    value={form.password}
+    autoComplete="new-password"
+    readOnly
+    onFocus={(e) => e.target.removeAttribute("readOnly")}
+    onChange={(e) =>
+      setForm({ ...form, password: e.target.value })
+    }
+  />
 
-            {/* PASSWORD */}
-            <input
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) =>
-                setForm({ ...form, password: e.target.value })
-              }
-            />
-
-            <button className="auth-btn">
-              {isLogin ? "Login" : "Sign Up"}
-            </button>
-
-          </form>
+  <button className="auth-btn">
+    {isLogin ? "Login" : "Sign Up"}
+  </button>
+</form>
 
           {/* DIVIDER */}
           <div className="divider">

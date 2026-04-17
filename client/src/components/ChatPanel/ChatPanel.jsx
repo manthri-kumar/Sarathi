@@ -3,42 +3,26 @@ import "./ChatPanel.css";
 
 const ChatPanel = ({ closeChat }) => {
   const [messages, setMessages] = useState([
-    {
-      text: "Hi 👋 I'm Sarathi AI, your smart travel assistant.",
-      sender: "bot"
-    }
+    { text: "Hi 👋 I'm Sarathi AI. Ask me anything!", sender: "bot" }
   ]);
 
   const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // 📍 ENABLE LOCATION
-  const enableLocation = () => {
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-
-      localStorage.setItem("lat", lat);
-      localStorage.setItem("lng", lng);
-
-      alert("Location enabled ✅");
-
-      sendMessage("best places near me");
-    });
-  };
+  }, [messages, typing]);
 
   const sendMessage = async (text) => {
     const msg = text || input;
     if (!msg.trim()) return;
 
-    setMessages(prev => [...prev, { text: msg, sender: "user" }]);
+    setMessages((prev) => [...prev, { text: msg, sender: "user" }]);
     setInput("");
 
-    setMessages(prev => [...prev, { text: "•••", sender: "bot" }]);
+    setTyping(true);
 
     const lat = localStorage.getItem("lat");
     const lng = localStorage.getItem("lng");
@@ -52,102 +36,138 @@ const ChatPanel = ({ closeChat }) => {
 
       const data = await res.json();
 
-      setMessages(prev => {
-        const updated = [...prev];
-        updated.pop();
+      setTyping(false);
 
-        if (data.type === "places") {
-          return [...updated, { type: "places", data: data.data, sender: "bot" }];
-        }
-
-        if (data.type === "location") {
-          return [...updated, { type: "location", text: data.reply, sender: "bot" }];
-        }
-
-        if (data.type === "itinerary") {
-          localStorage.setItem("itinerary", JSON.stringify(data.data));
-
-          return [
-            ...updated,
-            {
-              type: "itinerary",
-              text: "Your trip plan is ready 🧭",
-              sender: "bot"
-            }
-          ];
-        }
-
-        return [...updated, { text: data.reply, sender: "bot" }];
-      });
+      setMessages((prev) => [...prev, { ...data, sender: "bot" }]);
 
     } catch {
-      setMessages(prev => {
-        const updated = [...prev];
-        updated.pop();
-        return [...updated, { text: "Server error ❌", sender: "bot" }];
-      });
+      setTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        { text: "Server error ❌", sender: "bot" }
+      ]);
     }
   };
 
   return (
     <div className="chat-panel">
 
+      {/* HEADER */}
       <div className="chat-header">
         <h3>🤖 Sarathi AI</h3>
         <button onClick={closeChat}>✖</button>
       </div>
 
+      {/* BODY */}
       <div className="chat-body">
+
         {messages.map((msg, i) => (
-          <div key={i} className={`chat-row ${msg.sender}`}>
+          <div key={i} className={`chat-row ${msg.sender} fade-in`}>
 
-            {msg.sender === "bot" && <div className="avatar">🤖</div>}
-
-            {msg.type === "location" ? (
+            {/* TEXT */}
+            {!msg.type && (
               <div className="chat-bubble">
-                <p>{msg.text}</p>
-                <button onClick={enableLocation}>Enable Location 📍</button>
+                {msg.reply || msg.text}
               </div>
+            )}
 
-            ) : msg.type === "places" ? (
-              <div className="chat-cards">
-                {msg.data.slice(0, 3).map((place, idx) => (
+            {/* PLACES */}
+            {msg.type === "places" && (
+              <div className="chat-cards fade-in">
+                {msg.data.map((p, idx) => (
                   <div key={idx} className="chat-card">
-                    <img src={place.image} alt={place.name} />
-                    <h4>{place.name}</h4>
-                    <button onClick={() =>
-                      window.open(`https://www.google.com/maps?q=${place.lat},${place.lng}`)
-                    }>
-                      Navigate
-                    </button>
+
+                    <img
+                      src={p.image}
+                      alt=""
+                      onError={(e) =>
+                        (e.target.src =
+                          "https://source.unsplash.com/400x200/travel")
+                      }
+                    />
+
+                    <div className="card-content">
+                      <h4>{p.name}</h4>
+                      <p>⭐ {p.rating}</p>
+
+                      <button onClick={() =>
+                        window.open(`https://www.google.com/maps?q=${p.lat},${p.lng}`)
+                      }>
+                        Navigate
+                      </button>
+                    </div>
+
                   </div>
                 ))}
               </div>
+            )}
 
-            ) : msg.type === "itinerary" ? (
-              <div className="chat-bubble">
-                <p>{msg.text}</p>
-                <button onClick={() => window.location.href = "/itinerary"}>
-                  View Itinerary 🧭
-                </button>
+            {/* ITINERARY */}
+            {msg.type === "itinerary" && (
+              <div className="itinerary-box fade-in">
+
+                <div className="budget">
+                  💰 ₹{msg.budget?.total}
+                </div>
+
+                {msg.data.map((day, idx) => (
+                  <div key={idx} className="day-card">
+
+                    <h3>Day {day.day}</h3>
+
+                    {day.schedule.map((item, i) => (
+                      <div key={i} className="mini-card">
+
+                        <img src={item.place.image} />
+
+                        <div>
+                          <p className="time">{item.time}</p>
+                          <p className="name">{item.place.name}</p>
+                          <small>{item.travelTime}</small>
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
-
-            ) : (
-              <div className="chat-bubble">{msg.text}</div>
             )}
 
           </div>
         ))}
+
+        {/* TYPING ANIMATION */}
+        {typing && (
+          <div className="chat-row bot">
+            <div className="typing">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        )}
+
         <div ref={chatEndRef} />
       </div>
 
-      <div className="chat-input-container">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Sarathi AI..."
-        />
-        <button onClick={() => sendMessage()}>➤</button>
+      {/* FOOTER */}
+      <div className="chat-footer">
+
+        <div className="quick-actions">
+          <button onClick={() => sendMessage("Plan 2 day trip")}>Trip</button>
+          <button onClick={() => sendMessage("places within 5km")}>Nearby</button>
+          <button onClick={() => sendMessage("food near me")}>Food</button>
+        </div>
+
+        <div className="chat-input">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask Sarathi..."
+          />
+          <button onClick={() => sendMessage()}>➤</button>
+        </div>
+
       </div>
 
     </div>

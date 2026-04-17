@@ -17,6 +17,9 @@ app.use(express.json());
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/places", require("./routes/placesRoutes"));
 
+const itineraryRoutes = require("./routes/itineraryRoutes");
+app.use("/api/itinerary", itineraryRoutes);
+
 // 🔥 ADD THIS LINE (MISSING)
 app.use("/api/chat", require("./routes/chat"));
 

@@ -1,130 +1,137 @@
+/* ===== SECTION ===== */
 .places-section {
   margin-top: 30px;
+  max-width: 100000px;   /* 🔥 CENTERED COMPACT WIDTH */
 }
 
 .places-section h2 {
-  color: white;
   margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: 600;
 }
 
-/* GRID */
+/* ===== GRID ===== */
 .places-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-/* CARD */
+/* ===== CARD ===== */
 .place-card {
   display: flex;
-  background: #111827;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: 0.3s;
-  border: 1px solid #1f2937;
+  align-items: center;
 
-  /* 🔥 FIX HEIGHT ISSUE */
-  height: 120px;
+  background: #0b1220;
+  border-radius: 14px;
+  overflow: hidden;
+
+  border: 1px solid rgba(255,255,255,0.06);
+
+  height: 110px;  /* 🔥 COMPACT HEIGHT */
+  transition: 0.25s ease;
+  cursor: pointer;
 }
 
 .place-card:hover {
-  transform: translateY(-5px);
   border-color: #22c55e;
+  transform: translateY(-3px);
 }
 
-/* IMAGE */
+/* ===== IMAGE ===== */
 .place-img {
-  width: 120px;
+  width: 110px;
   height: 100%;
   flex-shrink: 0;
-  overflow: hidden;
 }
 
 .place-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
-/* DETAILS */
+/* ===== DETAILS ===== */
 .place-details {
-  padding: 12px 15px;
-  color: white;
-  flex: 1;
-
-  /* 🔥 ALIGN CONTENT */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  padding: 0rem 0rem;
+  margin-bottom: 2rem;
 }
 
 .place-details h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .place-details p {
-  margin: 4px 0;
-  font-size: 13px;
-  color: #9ca3af;
-}
-
-/* RATING */
-.rating {
-  font-size: 14px;
   margin-top: 4px;
-}
-
-.rating span {
-  color: #9ca3af;
-}
-
-/* BUTTON */
-.nav-btn {
-  margin-top: 6px;
-  padding: 6px 12px;
-  background: #22c55e;
-  border: none;
-  border-radius: 8px;
-  color: black;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-  width: fit-content;
-}
-
-.nav-btn:hover {
-  background: #16a34a;
-}
-
-/* 🔥 VIEW MORE BUTTON */
-.view-more {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.view-more button {
-  padding: 10px 20px;
-  background: #22c55e;
-  border: none;
-  border-radius: 10px;
-  color: black;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.view-more button:hover {
-  background: #16a34a;
-}
-.stars {
-  color: gold;
-  font-size: 14px;
-}
-
-.distance {
   font-size: 12px;
   color: #9ca3af;
+}
+
+/* ===================================================== */
+/* ================= FORCE MOBILE DESIGN ================= */
+/* ===================================================== */
+
+@media (max-width: 768px) {
+
+  /* GRID */
+  .places-section .places-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  /* CARD */
+  .places-section .place-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+
+    height: auto !important;
+    padding: 12px !important;
+
+    border-radius: 18px !important;
+
+    background: rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(12px);
+
+    border: 1px solid rgba(255,255,255,0.08) !important;
+
+    transition: all 0.3s ease;
+  }
+
+  /* IMAGE */
+  .places-section .place-img {
+    width: 100% !important;
+    height: 110px !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .places-section .place-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 14px;
+  }
+
+  /* TEXT */
+  .places-section .place-details {
+    text-align: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .places-section .place-details h3 {
+    font-size: 14px !important;
+    font-weight: 600;
+    margin: 6px 0 2px;
+  }
+
+  .places-section .place-details p {
+    font-size: 11px !important;
+    color: #9ca3af;
+  }
 }

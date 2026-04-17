@@ -2,8 +2,7 @@ import React from "react";
 import "./Navbar.css";
 import { Search, Bell, ChevronDown } from "lucide-react";
 
-const Navbar = ({ showGreeting = true }) => {   // ✅ ADD THIS
-
+const Navbar = ({ toggleSidebar }) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const username = user?.username || user?.name || "User";
@@ -14,42 +13,48 @@ const Navbar = ({ showGreeting = true }) => {   // ✅ ADD THIS
   return (
     <div className="navbar-container">
 
-      {/* TOP BAR */}
-      <div className="navbar">
+      {/* DESKTOP NAVBAR */}
+      <div className="navbar desktop-nav">
 
-        {/* SEARCH */}
         <div className="search-wrapper">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search destinations, trips, or inspiration..."
-          />
+          <Search size={18} />
+          <input placeholder="Search destinations..." />
         </div>
 
-        {/* RIGHT SIDE */}
         <div className="nav-right">
-
           <div className="bell">
             <Bell size={18} />
             <span className="dot"></span>
           </div>
 
           <div className="profile-section">
-            <img src={profilePic} alt="profile" />
+            <img src={profilePic} alt="" />
             <span>{username}</span>
             <ChevronDown size={16} />
           </div>
-
         </div>
+
       </div>
 
-      {/* 🔥 CONDITIONAL GREETING */}
-      {showGreeting && (
-        <div className="greeting">
-          <h2>Hello {username}</h2>
-          <p>What’s in your mind today</p>
+      {/* MOBILE NAVBAR */}
+      <div className="navbar mobile-nav">
+
+        <button className="menu-btn" onClick={toggleSidebar}>☰</button>
+
+        <div className="nav-title">Sarathi</div>
+
+        <div className="nav-right">
+          <Bell size={18} />
+          <img src={profilePic} className="nav-avatar" alt="" />
         </div>
-      )}
+
+      </div>
+
+      {/* MOBILE SEARCH */}
+      <div className="mobile-search">
+        <Search size={18} />
+        <input placeholder="Search..." />
+      </div>
 
     </div>
   );

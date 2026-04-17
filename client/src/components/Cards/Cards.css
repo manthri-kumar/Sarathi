@@ -126,4 +126,10 @@
   100% {
     left: 125%;
   }
+}/* ===== MOBILE CARDS ===== */
+@media (max-width: 768px) {
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }

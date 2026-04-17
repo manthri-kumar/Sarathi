@@ -1,35 +1,272 @@
-.itinerary-container {
-  padding: 20px;
-  color: white;
+/* ===== WRAPPER ===== */
+.planner-wrapper {
+  max-width: 1200px;
 }
 
-.day-card {
-  background: #1f2937;
-  padding: 15px;
+/* ===== TITLE ===== */
+.planner-wrapper h1 {
+  font-size: 28px;
   margin-bottom: 15px;
+}
+
+/* ===== SEARCH BAR ===== */
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255,255,255,0.05);
+  color: white;
+  outline: none;
+}
+
+.search-bar button {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #22c55e;
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== GRID ===== */
+.planner-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+}
+
+/* ===== SECTIONS ===== */
+.suggested,
+.planner {
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ===== TITLES ===== */
+.suggested h2,
+.planner h2 {
+  margin-bottom: 15px;
+}
+
+/* ===== PLACES ===== */
+.places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.place-card {
+  display: flex;
+  gap: 12px;
+  background: #0b1220;
+  border-radius: 12px;
+  padding: 10px;
+  transition: 0.3s;
+}
+
+.place-card:hover {
+  transform: translateY(-3px);
+}
+
+.place-card img {
+  width: 90px;
+  height: 80px;
+  object-fit: cover;
   border-radius: 10px;
 }
 
-.plan-item {
+.place-info {
+  flex: 1;
   display: flex;
   justify-content: space-between;
-  background: #111827;
-  padding: 8px;
-  margin-top: 5px;
-  border-radius: 6px;
 }
 
-.add-plan {
-  margin-top: 10px;
+.place-text h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.place-text .address {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ===== BUTTON ===== */
+.add-btn {
   background: #22c55e;
   border: none;
+  border-radius: 8px;
   padding: 6px 10px;
-  border-radius: 6px;
+  color: black;
+  cursor: pointer;
 }
 
-.add-day {
-  background: #3b82f6;
+/* ===== PLAN ===== */
+.plan-card {
+  background: #0b1220;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.plan-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.remove-btn {
+  background: none;
   border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
+  color: red;
+  cursor: pointer;
+}
+
+/* ===== INPUTS ===== */
+.plan-inputs {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.plan-inputs input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.05);
+  color: white;
+}
+
+/* ===== TEXTAREA ===== */
+.plan-card textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.05);
+  color: white;
+}
+
+/* ===== FINAL BUTTON ===== */
+.final-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #22c55e;
+  color: black;
+  font-weight: 600;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+/* ===== FINAL VIEW ===== */
+.final-view {
+  background: rgba(255,255,255,0.03);
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.final-card {
+  background: #0b1220;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.final-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ===== SAVE BUTTON ===== */
+.save-btn {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2c2c2c;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.save-btn.saved {
+  background: #00c853;
+}
+
+/* ===== BACK BUTTON ===== */
+.back-btn {
+  margin-top: 10px;
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: none;
+  background: #22c55e;
+  color: black;
+  cursor: pointer;
+}
+
+/* ===================================================== */
+/* 🔥 PERFECT WHITE ICON FIX (FINAL CLEAN VERSION) */
+/* ===================================================== */
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+  cursor: pointer;
+}
+
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+  background-color: #000000;
+  color: white;
+}
+
+input[type="date"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-inner-spin-button {
+  filter: invert(1);
+}
+
+/* ===================================================== */
+/* ================= MOBILE ============================= */
+/* ===================================================== */
+
+@media (max-width: 768px) {
+
+  .planner-grid {
+    display: block;
+  }
+
+  .plan-inputs {
+    flex-direction: column;
+  }
+
+  .place-card img {
+    width: 80px;
+    height: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .planner-wrapper h1 {
+    font-size: 22px;
+  }
+
+  .final-card {
+    font-size: 13px;
+  }
 }

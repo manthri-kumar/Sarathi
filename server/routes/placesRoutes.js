@@ -107,5 +107,54 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch data" });
   }
 });
+/* 🔥 SEARCH BY CITY NAME */
+router.get("/search", async (req, res) => {
+  const { city } = req.query;
+
+  if (!city) {
+    return res.status(400).json({ error: "City required" });
+  }
+
+  try {
+    const response = await axios.get(
+      "https://maps.googleapis.com/maps/api/place/textsearch/json",
+      {
+        params: {
+          query: `tourist attractions in ${city}`,
+          key: process.env.GOOGLE_API_KEY,
+        },
+      }
+    );
+
+    const places = response.data.results.map((p) => {
+      let image;
+
+      if (p.photos?.length > 0) {
+        const ref = p.photos[0].photo_reference;
+        image = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${process.env.GOOGLE_API_KEY}`;
+      }
+
+      if (!image) {
+        image =
+          "https://images.unsplash.com/photo-1501785888041-af3ef285b470";
+      }
+
+      return {
+        name: p.name,
+        address: p.formatted_address,
+        rating: p.rating,
+        lat: p.geometry.location.lat,
+        lng: p.geometry.location.lng,
+        image,
+      };
+    });
+
+    res.json(places);
+
+  } catch (err) {
+    console.error("❌ SEARCH ERROR:", err.message);
+    res.status(500).json({ error: "Failed to search places" });
+  }
+});
 
 module.exports = router;

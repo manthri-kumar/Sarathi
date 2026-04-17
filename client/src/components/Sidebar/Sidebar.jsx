@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen }) => {   // ✅ ADD THIS
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,25 +24,22 @@ const Sidebar = () => {
 
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Home size={18} /> },
-    { name: "Trips", path: "/trips", icon: <Briefcase size={18} /> },
     { name: "Explore", path: "/explore", icon: <Compass size={18} /> },
     { name: "Itinerary", path: "/itinerary", icon: <Calendar size={18} /> },
-    { name: "Bookings", path: "/bookings", icon: <Briefcase size={18} /> },
+    { name: "My Trips", path: "/my-trips", icon: <Briefcase size={18} /> },
     { name: "Saved", path: "/saved", icon: <Bookmark size={18} /> },
     { name: "Profile", path: "/profile", icon: <User size={18} /> },
   ];
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? "open" : ""}`}>  {/* ✅ IMPORTANT */}
       {/* TOP */}
       <div>
-        {/* LOGO */}
         <div className="logo-section">
           <h2>Sarathi</h2>
           <p>Your Journey, Our Guidance</p>
         </div>
 
-        {/* MENU */}
         <ul className="menu">
           {menuItems.map((item) => (
             <li

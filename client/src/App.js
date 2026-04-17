@@ -3,6 +3,7 @@ import AuthPage from "./components/Auth/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import Itinerary from "./pages/Itinerary";
 import Explore from "./pages/Explore";
+import MyTrips from "./pages/MyTrips";
 
 /* 🔐 Protected Route */
 const ProtectedRoute = ({ children }) => {
@@ -60,6 +61,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/my-trips" element={<MyTrips />} />
 
       </Routes>
     </BrowserRouter>

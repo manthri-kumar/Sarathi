@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
@@ -20,7 +20,24 @@ const Explore = () => {
 
   const [locationName, setLocationName] = useState("");
 
-  /* 🔥 SMART LOCATION EXTRACTOR */
+  /* ✅ SIDEBAR STATE (🔥 FIX) */
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  /* 👉 Swipe support */
+  const touchStartX = useRef(0);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+
+    if (diff > 80) setSidebarOpen(true);
+    if (diff < -80) setSidebarOpen(false);
+  };
+
+  /* 🔥 LOCATION EXTRACTOR */
   const getLocationName = (components) => {
     const priority = [
       "locality",
@@ -49,7 +66,6 @@ const Explore = () => {
       const lng = pos.coords.longitude;
 
       try {
-        /* 🔥 PARALLEL API CALLS */
         const [placesRes, geoRes] = await Promise.all([
           fetch(`http://localhost:5000/api/places?lat=${lat}&lng=${lng}`),
           fetch(
@@ -60,16 +76,12 @@ const Explore = () => {
         const data = await placesRes.json();
         const geoData = await geoRes.json();
 
-        /* ✅ SET DATA */
         setPlaces(data.places || []);
         setRestaurants(data.restaurants || []);
         setHotels(data.hotels || []);
 
-        /* 🔥 GET LOCATION NAME */
         const components = geoData.results[0]?.address_components || [];
-        const finalLocation = getLocationName(components);
-
-        setLocationName(finalLocation);
+        setLocationName(getLocationName(components));
 
         setLocationLoaded(true);
         localStorage.setItem("locationSelected", "true");
@@ -82,7 +94,6 @@ const Explore = () => {
     });
   };
 
-  /* 🔥 AUTO LOAD */
   useEffect(() => {
     if (locationLoaded) {
       fetchData();
@@ -90,15 +101,30 @@ const Explore = () => {
   }, []);
 
   return (
-    <div className="dashboard">
+    <div
+      className="dashboard"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
 
-      <Sidebar />
+      {/* ✅ SIDEBAR */}
+      <Sidebar isOpen={sidebarOpen} />
 
+      {/* ✅ OVERLAY */}
+      {sidebarOpen && (
+        <div
+          className="overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* MAIN */}
       <div className="main-content">
 
-        <Navbar showGreeting={false} />
+        {/* ✅ PASS TOGGLE */}
+        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} showGreeting={false} />
 
-        {/* ❌ BEFORE CLICK */}
+        {/* BEFORE LOAD */}
         {!locationLoaded && (
           <div style={{ padding: "20px" }}>
             <h2>Enable Location to Explore</h2>
@@ -110,23 +136,19 @@ const Explore = () => {
           </div>
         )}
 
-        {/* 🔄 LOADING */}
-        {loading && (
-          <h3 style={{ padding: "20px" }}>Loading...</h3>
-        )}
+        {/* LOADING */}
+        {loading && <h3 style={{ padding: "20px" }}>Loading...</h3>}
 
-        {/* ✅ AFTER LOAD */}
+        {/* AFTER LOAD */}
         {locationLoaded && !loading && (
           <>
-            {/* 📍 LOCATION HEADER */}
             <div className="location-header">
               <h2>📍 {locationName}</h2>
               <p>Showing results near you</p>
             </div>
 
-            {/* 🔥 TABS */}
+            {/* TABS */}
             <div className="tabs">
-
               <button
                 className={activeTab === "places" ? "active" : ""}
                 onClick={() => setActiveTab("places")}
@@ -147,10 +169,8 @@ const Explore = () => {
               >
                 Hotels
               </button>
-
             </div>
 
-            {/* 🔥 CONTENT */}
             {activeTab === "places" && (
               <PlacesSection places={places} title="Most Popular Places" />
             )}
@@ -162,7 +182,6 @@ const Explore = () => {
             {activeTab === "hotels" && (
               <PlacesSection places={hotels} title="Best Hotels" />
             )}
-
           </>
         )}
 
