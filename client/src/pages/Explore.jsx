@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef,useCallback} from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
@@ -60,7 +60,7 @@ const Explore = () => {
   };
 
   /* 🔥 FETCH DATA */
-  const fetchData = () => {
+  const fetchData = useCallback(() => {
     if (!navigator.geolocation) return;
 
     setLoading(true);
@@ -96,14 +96,13 @@ const Explore = () => {
 
       setLoading(false);
     });
-  };
+  }, []);
 
- // eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(() => {
   if (locationLoaded) {
     fetchData();
   }
-}, []);
+}, [locationLoaded, fetchData]);
 
   return (
     <div

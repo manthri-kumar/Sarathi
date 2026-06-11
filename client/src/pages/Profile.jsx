@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
@@ -20,48 +20,44 @@ const Profile = () => {
   const token = localStorage.getItem("token");
 
   /* LOAD PROFILE DATA */
- // eslint-disable-next-line react-hooks/exhaustive-deps
+const loadProfile = useCallback(async () => {
+  try {
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+
+    const localUser =
+      JSON.parse(localStorage.getItem("user")) || {};
+
+    setUser(localUser);
+
+    setForm({
+      username: localUser.username || "",
+      email: localUser.email || ""
+    });
+
+    const tripRes = await axios.get(
+      "http://localhost:5000/api/trips",
+      { headers }
+    );
+
+    setTripCount(tripRes.data.length);
+
+    const savedRes = await axios.get(
+      "http://localhost:5000/api/saved",
+      { headers }
+    );
+
+    setSavedCount(savedRes.data.length);
+
+  } catch (err) {
+    console.log(err);
+  }
+}, [token]);
+
 useEffect(() => {
   loadProfile();
-}, []);
-
-  const loadProfile = async () => {
-    try {
-      const headers = {
-        Authorization: `Bearer ${token}`
-      };
-
-      /* USER */
-      const localUser =
-        JSON.parse(localStorage.getItem("user")) || {};
-
-      setUser(localUser);
-
-      setForm({
-        username: localUser.username || "",
-        email: localUser.email || ""
-      });
-
-      /* TRIPS */
-      const tripRes = await axios.get(
-        "http://localhost:5000/api/trips",
-        { headers }
-      );
-
-      setTripCount(tripRes.data.length);
-
-      /* SAVED */
-      const savedRes = await axios.get(
-        "http://localhost:5000/api/saved",
-        { headers }
-      );
-
-      setSavedCount(savedRes.data.length);
-
-    } catch (err) {
-      console.log(err);
-    }
-  };
+}, [loadProfile]);
 
   /* SAVE PROFILE */
   const saveProfile = () => {

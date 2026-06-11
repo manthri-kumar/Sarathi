@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
@@ -13,33 +13,36 @@ const MyTrips = () => {
   const token = localStorage.getItem("token");
 
   /* LOAD TRIPS */
-  const fetchTrips = async () => {
-    try {
-      setLoading(true);
+  const fetchTrips = useCallback(async () => {
+  try {
+    setLoading(true);
 
-      const res = await axios.get(
-        "http://localhost:5000/api/trips",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+    const res = await axios.get(
+      "http://localhost:5000/api/trips",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      }
+    );
 
-      setTrips(res.data || []);
-    } catch (error) {
-      console.log(error);
-      setTrips([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
- // eslint-disable-next-line react-hooks/exhaustive-deps
-useEffect(() => {
-  if (token) fetchTrips();
-  else setLoading(false);
+    setTrips(res.data || []);
+  } catch (error) {
+    console.log(error);
+    setTrips([]);
+  } finally {
+    setLoading(false);
+  }
 }, [token]);
+
+
+useEffect(() => {
+  if (token) {
+    fetchTrips();
+  } else {
+    setLoading(false);
+  }
+}, [token, fetchTrips]);
 
   /* DELETE */
   const handleDelete = async (id) => {
