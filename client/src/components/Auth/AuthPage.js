@@ -5,8 +5,7 @@ import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
 
 // ✅ Use your STABLE production URL, not a preview URL
-const REDIRECT_URI = "https://sarathi.vercel.app"; // ← your real domain
-
+const REDIRECT_URI = "https://sarathi-manthri-kumars-projects.vercel.app";
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false); // ← prevents flicker
