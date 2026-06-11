@@ -30,8 +30,8 @@ function AuthPage() {
         })
           .then((res) => res.json())
           .then(async (data) => {
-            const res = await axios.post(
-              "http://localhost:5000/api/auth/google",
+            await axios.post(
+  "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
               {
                 email: data.email,
                 name: data.name,
@@ -54,7 +54,7 @@ function AuthPage() {
     window.location.href =
       "https://accounts.google.com/o/oauth2/v2/auth?" +
       `client_id=${CLIENT_ID}` +
-      "&redirect_uri=http://localhost:3000" +
+      "&redirect_uri=https://your-vercel-app.vercel.app" +
       "&response_type=token" +
       "&scope=email profile";
   };
@@ -66,17 +66,17 @@ function AuthPage() {
     try {
       if (!isLogin) {
         // SIGNUP
-        const res = await axios.post(
-          "http://localhost:5000/api/auth/signup",
-          form
-        );
+        await axios.post(
+  "https://sarathi-backend-7u0y.onrender.com/api/auth/signup",
+  form
+);
 
         alert(res.data.message);
         setIsLogin(true);
       } else {
         // LOGIN
-        const res = await axios.post(
-          "http://localhost:5000/api/auth/login",
+        await axios.post(
+  "https://sarathi-backend-7u0y.onrender.com/api/auth/login",
           {
             email: form.email,
             password: form.password,
