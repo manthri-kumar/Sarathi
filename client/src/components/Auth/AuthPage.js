@@ -30,19 +30,19 @@ function AuthPage() {
         })
           .then((res) => res.json())
           .then(async (data) => {
-            await axios.post(
-  "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
-              {
-                email: data.email,
-                name: data.name,
-              }
-            );
+  const res = await axios.post(
+    "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
+    {
+      email: data.email,
+      name: data.name,
+    }
+  );
 
-            localStorage.setItem("token", res.data.token);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
+  localStorage.setItem("token", res.data.token);
+  localStorage.setItem("user", JSON.stringify(res.data.user));
 
-            navigate("/dashboard"); // ✅ FIXED
-          });
+  navigate("/dashboard");
+});
       }
     }
   }, [navigate]);
@@ -54,7 +54,7 @@ function AuthPage() {
     window.location.href =
       "https://accounts.google.com/o/oauth2/v2/auth?" +
       `client_id=${CLIENT_ID}` +
-      "&redirect_uri=https://your-vercel-app.vercel.app" +
+      "&redirect_uri=https://sarathi-6w2qneb0z-manthri-kumars-projects.vercel.app" +
       "&response_type=token" +
       "&scope=email profile";
   };
@@ -66,25 +66,25 @@ function AuthPage() {
     try {
       if (!isLogin) {
         // SIGNUP
-        await axios.post(
+        const res = await axios.post(
   "https://sarathi-backend-7u0y.onrender.com/api/auth/signup",
   form
 );
 
-        alert(res.data.message);
+alert(res.data.message);
         setIsLogin(true);
       } else {
         // LOGIN
-        await axios.post(
+        const res = await axios.post(
   "https://sarathi-backend-7u0y.onrender.com/api/auth/login",
-          {
-            email: form.email,
-            password: form.password,
-          }
-        );
+  {
+    email: form.email,
+    password: form.password,
+  }
+);
 
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+localStorage.setItem("token", res.data.token);
+localStorage.setItem("user", JSON.stringify(res.data.user));
 
         navigate("/dashboard"); // ✅ FIXED
       }
