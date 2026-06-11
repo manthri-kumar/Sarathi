@@ -16,72 +16,118 @@ function AuthPage() {
   const navigate = useNavigate();
 
   // GOOGLE REDIRECT HANDLER
- useEffect(() => {
-  const hash = window.location.hash;
+// GOOGLE REDIRECT HANDLER
+useEffect(() => {
+  const handleGoogleLogin = async () => {
+    try {
+      const hash = window.location.hash;
 
-  if (hash) {
-    const token = hash.split("access_token=")[1]?.split("&")[0];
+      if (!hash.includes("access_token")) return;
 
-    if (token) {
-      fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => res.json())
-        .then(async (data) => {
-          console.log("Google User:", data);
+      const accessToken = hash
+        .split("access_token=")[1]
+        ?.split("&")[0];
 
-          const res = await axios.post(
-            "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
-            {
-              email: data.email,
-              name: data.name,
-            }
-          );
+      if (!accessToken) return;
 
-          console.log("Backend Response:", res.data);
+      console.log("Google Access Token:", accessToken);
 
-          localStorage.setItem(
-            "token",
-            res.data.token
-          );
+      // Get Google User Info
+      const googleRes = await fetch(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
-          localStorage.setItem(
-            "user",
-            JSON.stringify(res.data.user)
-          );
+      const googleUser = await googleRes.json();
 
-          console.log(
-            "Stored Token:",
-            localStorage.getItem("token")
-          );
+      console.log("Google User:", googleUser);
 
-          console.log(
-            "Stored User:",
-            localStorage.getItem("user")
-          );
+      // Send to backend
+      const backendRes = await axios.post(
+        "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
+        {
+          email: googleUser.email,
+          name: googleUser.name,
+          picture: googleUser.picture,
+        }
+      );
 
-          navigate("/dashboard");
-        })
-        .catch((err) => {
-          console.error("Google Login Error:", err);
-        });
+      console.log(
+        "Backend Response:",
+        backendRes.data
+      );
+
+      if (!backendRes.data.token) {
+        throw new Error(
+          "Token not received from backend"
+        );
+      }
+
+      localStorage.setItem(
+        "token",
+        backendRes.data.token
+      );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(
+          backendRes.data.user
+        )
+      );
+
+      // Clear URL hash
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+
+      console.log("Login Success");
+
+      // Redirect
+      window.location.href = "/dashboard";
+
+    } catch (err) {
+      console.error(
+        "Google Login Error:",
+        err
+      );
+
+      alert(
+        err.response?.data?.message ||
+        err.message ||
+        "Google Login Failed"
+      );
     }
-  }
-}, [navigate]);
+  };
+
+  handleGoogleLogin();
+}, []);
 
   // GOOGLE CLICK
   const handleGoogleClick = () => {
-    const CLIENT_ID = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com"; // 🔐 SAFE PLACEHOLDER
+  const CLIENT_ID =
+    "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
 
-    window.location.href =
-      "https://accounts.google.com/o/oauth2/v2/auth?" +
-      `client_id=${CLIENT_ID}` +
-      "&redirect_uri=https://sarathi-6w2qneb0z-manthri-kumars-projects.vercel.app" +
-      "&response_type=token" +
-      "&scope=email profile";
-  };
+  const REDIRECT_URI =
+    "https://sarathi-6w2qneb0z-manthri-kumars-projects.vercel.app";
+
+  const scope = encodeURIComponent(
+    "openid email profile"
+  );
+
+  window.location.href =
+    `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${CLIENT_ID}` +
+    `&redirect_uri=${REDIRECT_URI}` +
+    `&response_type=token` +
+    `&scope=${scope}` +
+    `&prompt=select_account`;
+};
 
   // LOGIN / SIGNUP
   const handleSubmit = async (e) => {

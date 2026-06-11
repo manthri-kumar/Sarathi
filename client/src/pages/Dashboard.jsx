@@ -20,6 +20,18 @@ const Dashboard = () => {
 
   const { t } = useTranslation();
 
+  useEffect(() => {
+  console.log(
+    "Dashboard Token:",
+    localStorage.getItem("token")
+  );
+
+  console.log(
+    "Dashboard User:",
+    localStorage.getItem("user")
+  );
+}, []);
+
   /* ================= USER ================= */
   useEffect(() => {
     const user = JSON.parse(
