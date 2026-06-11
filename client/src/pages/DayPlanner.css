@@ -1,0 +1,295 @@
+/* ================= MAIN LAYOUT ================= */
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+
+  background: #020617;
+}
+
+.day-page {
+  padding: 30px;
+  color: white;
+}
+
+/* ================= HEADER ================= */
+
+.day-header {
+  margin-bottom: 25px;
+}
+
+.day-header h1 {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.day-header p {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+/* ================= FORM ================= */
+
+.day-form-card {
+  background: #08111f;
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 25px;
+}
+
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.day-grid label {
+  display: block;
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.day-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #0b1220;
+  color: white;
+  outline: none;
+}
+
+.day-input:focus {
+  border-color: #22c55e;
+}
+
+/* ================= BUTTON ================= */
+
+.generate-btn {
+  width: 100%;
+  height: 54px;
+  margin-top: 24px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+
+  background: linear-gradient(
+    135deg,
+    #22c55e,
+    #4ade80
+  );
+
+  color: black;
+  transition: 0.3s;
+}
+
+.generate-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ================= SUMMARY ================= */
+
+.stats-card {
+  background: #08111f;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 25px;
+}
+
+.stats-card h2 {
+  margin-bottom: 20px;
+  font-size: 28px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.stats-row:last-child {
+  border-bottom: none;
+}
+
+/* ================= ITINERARY ================= */
+
+.schedule-card {
+  background: #08111f;
+  border-radius: 24px;
+  padding: 28px;
+}
+
+.schedule-card h2 {
+  margin-bottom: 25px;
+  font-size: 28px;
+}
+
+/* ================= GRID ================= */
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+
+/* ================= PLACE CARD ================= */
+
+.schedule-place {
+  background: linear-gradient(
+    135deg,
+    #041126,
+    #071c3d
+  );
+
+  border: 1px solid rgba(255,255,255,0.05);
+
+  border-radius: 22px;
+
+  overflow: hidden;
+
+  transition: .3s ease;
+
+  cursor: pointer;
+}
+
+.schedule-place:hover {
+  transform: translateY(-6px);
+
+  border-color:
+    rgba(34,197,94,.35);
+
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.35);
+}
+
+.schedule-place img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+}
+
+/* ================= CONTENT ================= */
+
+.schedule-content {
+  padding: 18px;
+}
+
+.schedule-content h3 {
+  margin: 10px 0;
+  font-size: 22px;
+  color: white;
+}
+
+.schedule-content p {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* ================= BADGES ================= */
+
+.time-badge {
+  display: inline-block;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Morning */
+
+.morning {
+  background: rgba(250,204,21,0.15);
+  color: #facc15;
+}
+
+/* Afternoon */
+
+.afternoon {
+  background: rgba(249,115,22,0.15);
+  color: #f97316;
+}
+
+/* Evening */
+
+.evening {
+  background: rgba(168,85,247,0.15);
+  color: #a855f7;
+}
+
+/* Night */
+
+.night {
+  background: rgba(59,130,246,0.15);
+  color: #3b82f6;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 1024px) {
+
+  .schedule-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .day-page {
+    padding: 20px;
+  }
+
+  .day-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .day-header h1 {
+    font-size: 30px;
+  }
+
+  .stats-card h2,
+  .schedule-card h2 {
+    font-size: 22px;
+  }
+
+}
+.navigate-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+
+  background: linear-gradient(
+    135deg,
+    #042f11,
+    #54f63b
+  );
+
+  color: white;
+
+  transition: 0.3s;
+}
+
+.navigate-btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}

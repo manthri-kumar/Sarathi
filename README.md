@@ -1,0 +1,266 @@
+# 🚀 Sarathi – Context-Aware Travel Guide
+
+## 🌍 Overview
+
+**Sarathi** is a context-aware travel guide designed to transform how users plan and experience trips. It goes beyond traditional travel planners by adapting to user preferences, real-time conditions, and contextual factors to deliver personalized travel recommendations.
+
+Sarathi acts as a **smart travel assistant** — helping users discover places, plan itineraries, and make better travel decisions dynamically.
+
+---
+
+## ✨ Key Features
+
+### 🧠 Smart Decision Engine
+
+* Generates personalized travel plans
+* Considers:
+
+  * User preferences
+  * Budget constraints
+  * Time availability
+
+---
+
+### 🎭 Mood-Based Recommendations
+
+* Suggests activities based on user mood:
+
+  * Relaxed 😌
+  * Adventurous 😎
+  * Tired 😴
+* Adjusts plans dynamically
+
+---
+
+### 🌦️ Real-Time Adaptation
+
+* Updates recommendations based on:
+
+  * Weather conditions
+  * Time of day
+  * Travel context
+
+---
+
+### 📍 Smart Place Discovery
+
+* Recommends:
+
+  * Tourist attractions
+  * Hidden gems 🌍
+  * Local experiences
+* Based on real-world data such as ratings and reviews
+
+---
+
+### 🍽️ Food & Hotel Suggestions
+
+* Suggests best:
+
+  * Restaurants
+  * Hotels
+* Filters using:
+
+  * Ratings ⭐
+  * Budget 💰
+  * Location 📍
+
+---
+
+### 🔄 Dynamic Itinerary Planning
+
+* Automatically updates travel plans
+* Example:
+
+  > “I feel tired” → suggests lighter activities or rest options
+
+---
+
+### 🔐 Secure Authentication
+
+* User login/signup system
+* JWT-based authentication
+* Google OAuth integration
+
+---
+
+### 🛒 Travel Cart *(Future Scope)*
+
+* Save selected:
+
+  * Places
+  * Hotels
+  * Activities
+* Plan trips efficiently
+
+---
+
+## 🏗️ Tech Stack
+
+### 💻 Frontend
+
+* HTML
+* CSS
+* JavaScript
+* React.js
+
+---
+
+### ⚙️ Backend
+
+* Node.js
+* Express.js
+
+---
+
+### 🗄️ Database
+
+* MongoDB
+
+---
+
+### 🔐 Authentication
+
+* JWT (JSON Web Tokens)
+* Google OAuth
+
+---
+
+### 🌐 APIs *(Planned / Optional)*
+
+* Google Places API
+* Weather API
+
+---
+
+## 📂 Project Structure
+
+```text
+Sarathi/
+│
+├── client/              # Frontend (React)
+├── server/              # Backend (Node.js + Express)
+├── models/              # Database schemas
+├── routes/              # API routes
+├── controllers/         # Business logic
+├── .env                 # Environment variables
+├── README.md
+└── package.json
+```
+
+---
+
+## ⚙️ Installation & Setup
+
+### 1️⃣ Clone Repository
+
+```bash
+git clone <your-repo-url>
+cd Sarathi
+```
+
+---
+
+### 2️⃣ Install Dependencies
+
+#### Frontend
+
+```bash
+cd client
+npm install
+```
+
+#### Backend
+
+```bash
+cd server
+npm install
+```
+
+---
+
+### 3️⃣ Setup Environment Variables
+
+Create a `.env` file in the `server/` directory:
+
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+GOOGLE_CLIENT_ID=your_google_client_id
+```
+
+---
+
+### 4️⃣ Run Application
+
+#### Start Backend
+
+```bash
+npm run dev
+```
+
+#### Start Frontend
+
+```bash
+npm start
+```
+
+---
+
+## 📸 Screenshots *(To be added)*
+
+* Dashboard UI
+* Travel Recommendations
+* Login / Signup Page
+* Cart & Profile Page
+
+---
+
+## 🚀 Unique Value
+
+✔ Context-aware recommendations
+✔ Dynamic itinerary updates
+✔ Personalized travel experience
+✔ Combines planning, discovery, and decision-making in one platform
+
+> Sarathi bridges the gap between static travel planners and intelligent travel assistance systems.
+
+---
+
+## 🔮 Future Enhancements
+
+* 🤖 Advanced recommendation system
+* 💳 Payment & booking integration
+* 📊 Travel insights dashboard
+* 🗺️ Route optimization
+* 🌐 Multi-language support
+
+---
+
+## 👨‍💻 Author
+
+**Kumar Manthri**
+
+* Aspiring Full Stack Developer
+* Passionate about building real-world, scalable applications
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License.
+
+---
+
+## ⭐ Support
+
+If you found this project useful:
+
+* ⭐ Star the repository
+* 🍴 Fork it
+* 🤝 Contribute
+
+---
+
+> **Sarathi – Your smart guide for better travel experiences.**

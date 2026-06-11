@@ -1,0 +1,260 @@
+/* ================= MAIN LAYOUT ================= */
+
+.main-content {
+  margin-left: 220px;
+  min-height: 100vh;
+  background: #020617;
+}
+
+.trip-page {
+  padding: 30px;
+  color: white;
+}
+
+/* ================= HEADER ================= */
+
+.trip-header {
+  margin-bottom: 25px;
+}
+
+.trip-header h1 {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.trip-header p {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+/* ================= FORM ================= */
+
+.trip-form-card {
+  background: #08111f;
+  border-radius: 24px;
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  padding: 24px;
+  margin-bottom: 25px;
+}
+
+.trip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.trip-grid label {
+  display: block;
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.trip-input {
+  width: 100%;
+  height: 54px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #0b1220;
+  color: white;
+  outline: none;
+  transition: .3s;
+}
+
+.trip-input:focus {
+  border-color: #22c55e;
+}
+
+.generate-btn {
+  width: 100%;
+  margin-top: 24px;
+  height: 56px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+
+  background: linear-gradient(
+    135deg,
+    #22c55e,
+    #4ade80
+  );
+
+  color: black;
+  transition: .3s;
+}
+
+.generate-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ================= BUDGET ================= */
+
+.budget-card {
+  background: #08111f;
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 25px;
+}
+
+.budget-card h2 {
+  margin-bottom: 24px;
+  font-size: 32px;
+}
+
+.budget-row,
+.budget-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.budget-row {
+  color: #e2e8f0;
+}
+
+.budget-total {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 18px;
+  font-weight: 700;
+}
+
+.green {
+  color: #ffffff;
+}
+
+/* ================= ITINERARY SECTION ================= */
+
+
+/* ================= GRID ================= */
+
+.pla-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+/* ================= PLACE CARD ================= */
+
+.pla-card {
+  background: linear-gradient(
+    135deg,
+    #071224,
+    #0b1c38
+  );
+
+  border-radius: 20px;
+  overflow: hidden;
+
+  border: 1px solid rgba(255,255,255,.06);
+
+  transition: .3s ease;
+
+  width: 100%;
+  height: 100%;
+}
+
+.pla-card:hover {
+  transform: translateY(-6px);
+
+  border-color:
+    rgba(34,197,94,.35);
+}
+
+.pla-card img {
+  width: 100%;
+  height: 220px;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+.pla-content {
+  padding: 18px;
+}
+
+.pla-content h4 {
+  font-size: 20px;
+  line-height: 1.4;
+
+  margin-top: 10px;
+  margin-bottom: 8px;
+
+  color: white;
+}
+
+.pla-content p {
+  color: #94a3b8;
+}
+
+/* ================= TIME BADGE ================= */
+
+.time-badge {
+  display: inline-block;
+
+  background: rgba(34,197,94,.15);
+
+  color: #22c55e;
+
+  padding: 7px 14px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  margin-bottom: 12px;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 1200px) {
+
+  .pla-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .trip-page {
+    padding: 20px;
+  }
+
+  .trip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pla-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-header h1 {
+    font-size: 30px;
+  }
+
+  .budget-card h2,
+  .places-card h2 {
+    font-size: 26px;
+  }
+
+  .day-itinerary h3 {
+    font-size: 24px;
+  }
+
+  .place-card img {
+    height: 220px;
+  }
+
+}
