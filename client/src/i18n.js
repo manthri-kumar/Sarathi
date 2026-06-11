@@ -60,7 +60,6 @@ i18n
 
     welcome: "Welcome to Sarathi",
     currentLocation: "Current Location",
-    loading: "Loading...",
 
     enableLocation: "Enable Location to Explore",
 showingResults: "Showing results near you",
@@ -146,8 +145,6 @@ topRestaurants:
 bestHotels:
   "ఉత్తమ హోటళ్ళు",
 
-loading:
-  "లోడ్ అవుతోంది..."
   }
 },
 
@@ -223,8 +220,6 @@ topRestaurants:
 bestHotels:
   "सर्वश्रेष्ठ होटल",
 
-loading:
-  "लोड हो रहा है..."
   }
 }
 
