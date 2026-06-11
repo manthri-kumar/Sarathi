@@ -20,7 +20,7 @@ app.use("/api/places", require("./routes/placesRoutes"));
 app.use("/api/itinerary", require("./routes/itineraryRoutes"));
 app.use("/api/chat", require("./routes/chat"));
 
-app.use("/api/trips", require("./routes/tripRoutes"));
+app.use("/api/trips", require("./routes/triproutes"));
 
 /* 🔥 NEW SAVED ROUTE */
 app.use("/api/saved", require("./routes/savedRoutes"));
