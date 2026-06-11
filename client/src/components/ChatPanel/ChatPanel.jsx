@@ -37,17 +37,35 @@ const ChatPanel = ({ closeChat }) => {
     setInput("");
     setTyping(true);
 
+    console.log("Sending:", {
+  message: msg,
+  lat: localStorage.getItem("lat"),
+  lng: localStorage.getItem("lng"),
+  city: localStorage.getItem("city"),
+});
+
     try {
-      const res = await fetch("http://localhost:5000/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: msg,
-          lat: localStorage.getItem("lat"),
-          lng: localStorage.getItem("lng"),
-          city: localStorage.getItem("city")
-        })
-      });
+   const res = await fetch(
+  "https://sarathi-backend-7u0y.onrender.com/api/chat",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message: msg,
+      lat: localStorage.getItem("lat"),
+      lng: localStorage.getItem("lng"),
+      city: localStorage.getItem("city"),
+    }),
+  }
+);
+
+console.log("Status:", res.status);
+
+const data = await res.json();
+
+console.log("Response:", data);
 
       const data = await res.json();
       setTyping(false);
@@ -57,15 +75,20 @@ const ChatPanel = ({ closeChat }) => {
         { ...data, sender: "bot", text: data.reply || "" }
       ]);
 
-    } catch {
-      setTyping(false);
-      setMessages(prev => [
-        ...prev,
-        { text: "Server error ❌", sender: "bot" }
-      ]);
-    }
-  };
+    } catch (err) {
+  console.error("Chat Error:", err);
 
+  setTyping(false);
+
+  setMessages(prev => [
+    ...prev,
+    {
+      text: `Server error: ${err.message}`,
+      sender: "bot"
+    }
+  ]);
+}
+  };
   return (
     <div className="chat-panel">
 
