@@ -93,19 +93,23 @@ function AuthPage() {
 
   // ── GOOGLE CLICK ─────────────────────────────────────────────────────────
   const handleGoogleClick = () => {
-    const CLIENT_ID =
-      "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
+  const CLIENT_ID = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
 
-    const scope = encodeURIComponent("openid email profile");
+  // ✅ Dynamically use whatever URL the app is currently running on
+  const REDIRECT_URI = window.location.origin;
 
-    window.location.href =
-      `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${CLIENT_ID}` +
-      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-      `&response_type=token` +
-      `&scope=${scope}` +
-      `&prompt=select_account`;
-  };
+  console.log("Redirect URI being sent:", REDIRECT_URI); // ← check this in console
+
+  const scope = encodeURIComponent("openid email profile");
+
+  window.location.href =
+    `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${CLIENT_ID}` +
+    `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+    `&response_type=token` +
+    `&scope=${scope}` +
+    `&prompt=select_account`;
+};
 
   // ── FORM SUBMIT ──────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
