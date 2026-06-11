@@ -37,15 +37,8 @@ const ChatPanel = ({ closeChat }) => {
     setInput("");
     setTyping(true);
 
-    console.log("Sending:", {
-  message: msg,
-  lat: localStorage.getItem("lat"),
-  lng: localStorage.getItem("lng"),
-  city: localStorage.getItem("city"),
-});
-
     try {
-   const res = await fetch(
+     const res = await fetch(
   "https://sarathi-backend-7u0y.onrender.com/api/chat",
   {
     method: "POST",
@@ -60,12 +53,6 @@ const ChatPanel = ({ closeChat }) => {
     }),
   }
 );
-
-console.log("Status:", res.status);
-
-const data = await res.json();
-
-console.log("Response:", data);
 
       const data = await res.json();
       setTyping(false);
