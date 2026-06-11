@@ -20,9 +20,10 @@ const Profile = () => {
   const token = localStorage.getItem("token");
 
   /* LOAD PROFILE DATA */
-  useEffect(() => {
-    loadProfile();
-  }, []);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+useEffect(() => {
+  loadProfile();
+}, []);
 
   const loadProfile = async () => {
     try {

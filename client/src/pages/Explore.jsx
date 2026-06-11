@@ -98,11 +98,12 @@ const Explore = () => {
     });
   };
 
-  useEffect(() => {
-    if (locationLoaded) {
-      fetchData();
-    }
-  }, []);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+useEffect(() => {
+  if (locationLoaded) {
+    fetchData();
+  }
+}, []);
 
   return (
     <div

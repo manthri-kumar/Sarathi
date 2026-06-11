@@ -35,10 +35,11 @@ const MyTrips = () => {
     }
   };
 
-  useEffect(() => {
-    if (token) fetchTrips();
-    else setLoading(false);
-  }, [token]);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+useEffect(() => {
+  if (token) fetchTrips();
+  else setLoading(false);
+}, [token]);
 
   /* DELETE */
   const handleDelete = async (id) => {
