@@ -16,43 +16,60 @@ function AuthPage() {
   const navigate = useNavigate();
 
   // GOOGLE REDIRECT HANDLER
-  useEffect(() => {
-    const hash = window.location.hash;
+ useEffect(() => {
+  const hash = window.location.hash;
 
-    if (hash) {
-      const token = hash.split("access_token=")[1]?.split("&")[0];
+  if (hash) {
+    const token = hash.split("access_token=")[1]?.split("&")[0];
 
-      if (token) {
-        fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+    if (token) {
+      fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then(async (data) => {
+          console.log("Google User:", data);
+
+          const res = await axios.post(
+            "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
+            {
+              email: data.email,
+              name: data.name,
+            }
+          );
+
+          console.log("Backend Response:", res.data);
+
+          localStorage.setItem(
+            "token",
+            res.data.token
+          );
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(res.data.user)
+          );
+
+          console.log(
+            "Stored Token:",
+            localStorage.getItem("token")
+          );
+
+          console.log(
+            "Stored User:",
+            localStorage.getItem("user")
+          );
+
+          navigate("/dashboard");
         })
-          .then((res) => res.json())
-          .then(async (data) => {
-  console.log("Google User:", data);
-
-  const res = await axios.post(
-    "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
-    {
-      email: data.email,
-      name: data.name,
+        .catch((err) => {
+          console.error("Google Login Error:", err);
+        });
     }
-  );
-
-  console.log("Google Backend Response:", res.data);
-
-  localStorage.setItem("token", res.data.token);
-  localStorage.setItem("user", JSON.stringify(res.data.user));
-
-  console.log("Saved Token:", localStorage.getItem("token"));
-
-  navigate("/dashboard");
-
-});
-      }
-    }
-  }, [navigate]);
+  }
+}, [navigate]);
 
   // GOOGLE CLICK
   const handleGoogleClick = () => {
