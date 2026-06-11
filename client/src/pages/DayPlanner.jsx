@@ -30,21 +30,19 @@ export default function DayPlanner() {
             position.coords.longitude;
 
           const res = await fetch(
-            "http://localhost:5000/api/day-planner/generate",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-              body: JSON.stringify({
-                lat,
-                lng,
-                interest
-              })
-            }
-          );
-
+  "https://sarathi-backend-7u0y.onrender.com/api/day-planner/generate",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      lat,
+      lng,
+      interest
+    })
+  }
+);
           const data =
             await res.json();
 

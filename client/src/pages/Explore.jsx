@@ -71,7 +71,8 @@ const Explore = () => {
 
       try {
         const [placesRes, geoRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/places?lat=${lat}&lng=${lng}`),
+          fetch(
+  `https://sarathi-backend-7u0y.onrender.com/api/places?lat=${lat}&lng=${lng}`),
           fetch(
             `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
           )

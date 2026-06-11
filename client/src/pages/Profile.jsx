@@ -36,17 +36,17 @@ const loadProfile = useCallback(async () => {
       email: localUser.email || ""
     });
 
-    const tripRes = await axios.get(
-      "http://localhost:5000/api/trips",
-      { headers }
-    );
+   const tripRes = await axios.get(
+  "https://sarathi-backend-7u0y.onrender.com/api/trips",
+  { headers }
+);
 
     setTripCount(tripRes.data.length);
 
     const savedRes = await axios.get(
-      "http://localhost:5000/api/saved",
-      { headers }
-    );
+  "https://sarathi-backend-7u0y.onrender.com/api/saved",
+  { headers }
+);
 
     setSavedCount(savedRes.data.length);
 

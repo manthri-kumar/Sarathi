@@ -48,8 +48,8 @@ const Itinerary = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/places/search?city=${city}`
-      );
+  `https://sarathi-backend-7u0y.onrender.com/api/places/search?city=${city}`
+);
 
       const data = await res.json();
       setPlaces(data);
@@ -111,7 +111,7 @@ const Itinerary = () => {
       const token = localStorage.getItem("token");
 
       for (const trip of finalPlan) {
-        await fetch("http://localhost:5000/api/trips", {
+        await fetch("https://sarathi-backend-7u0y.onrender.com/api/trips", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

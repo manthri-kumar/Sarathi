@@ -18,7 +18,7 @@ const MyTrips = () => {
     setLoading(true);
 
     const res = await axios.get(
-      "http://localhost:5000/api/trips",
+  "https://sarathi-backend-7u0y.onrender.com/api/trips",
       {
         headers: {
           Authorization: `Bearer ${token}`
@@ -48,7 +48,7 @@ useEffect(() => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(
-        `http://localhost:5000/api/trips/${id}`,
+  `https://sarathi-backend-7u0y.onrender.com/api/trips/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -101,7 +101,7 @@ useEffect(() => {
   const saveEdit = async () => {
     try {
       await axios.put(
-        `http://localhost:5000/api/trips/${editingTrip._id}`,
+  `https://sarathi-backend-7u0y.onrender.com/api/trips/${editingTrip._id}`,
         {
           date: editingTrip.date,
           time: editingTrip.time,
