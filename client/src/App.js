@@ -17,10 +17,17 @@ const ProtectedRoute = ({ children }) => {
   return token ? children : <Navigate to="/" />;
 };
 
-/* 🔁 Public Route */
+/* 🔁 Public Route — allow through if hash has OAuth token (mid-callback) */
 const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("token");
-  return token ? <Navigate to="/dashboard" /> : children;
+  const isOAuthCallback = window.location.hash.includes("access_token");
+
+  // Don't redirect if we're mid-OAuth — AuthPage will handle it
+  if (token && !isOAuthCallback) {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return children;
 };
 
 function App() {
