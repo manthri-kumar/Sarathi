@@ -30,6 +30,8 @@ function AuthPage() {
         })
           .then((res) => res.json())
           .then(async (data) => {
+  console.log("Google User:", data);
+
   const res = await axios.post(
     "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
     {
@@ -38,10 +40,15 @@ function AuthPage() {
     }
   );
 
+  console.log("Google Backend Response:", res.data);
+
   localStorage.setItem("token", res.data.token);
   localStorage.setItem("user", JSON.stringify(res.data.user));
 
+  console.log("Saved Token:", localStorage.getItem("token"));
+
   navigate("/dashboard");
+
 });
       }
     }
@@ -75,16 +82,16 @@ alert(res.data.message);
         setIsLogin(true);
       } else {
         // LOGIN
-        await axios.post(
+        const res = await axios.post(
   "https://sarathi-backend-7u0y.onrender.com/api/auth/login",
-          {
-            email: form.email,
-            password: form.password,
-          }
-        );
+  {
+    email: form.email,
+    password: form.password,
+  }
+);
 
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+localStorage.setItem("token", res.data.token);
+localStorage.setItem("user", JSON.stringify(res.data.user));
 
         navigate("/dashboard"); // ✅ FIXED
       }
