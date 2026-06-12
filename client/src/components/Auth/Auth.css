@@ -317,56 +317,61 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
   box-shadow: 0 0 12px rgba(53, 53, 53, 0.25);
 }
 
-.google-loading {
-  width: 100vw;
-  height: 100vh;
+/* ─── Google Auth Full-Screen Loader ─────────────────────────────── */
 
+.google-auth-loader {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loader-card {
   display: flex;
   flex-direction: column;
-
-  justify-content: center;
   align-items: center;
-
-  background: #050b07;
-
-  color: white;
+  gap: 16px;
 }
 
-.google-loading h1 {
-  font-size: 3rem;
-  color: #9dff00;
-  margin-top: 20px;
-}
-
-.google-loading h3 {
-  margin-top: 10px;
-  font-weight: 500;
-}
-
-.google-loading p {
-  margin-top: 10px;
-  opacity: 0.8;
-}
-
-.loader {
-  width: 70px;
-  height: 70px;
-
-  border: 5px solid rgba(255,255,255,0.2);
-
-  border-top: 5px solid #9dff00;
-
+.spinner-ring {
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ffffff;
   border-radius: 50%;
-
-  animation: spin 1s linear infinite;
+  animation: spin 0.85s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
+  to { transform: rotate(360deg); }
+}
 
-  to {
-    transform: rotate(360deg);
-  }
+.loader-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.loader-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+}
+
+/* ─── Google Auth Error Banner ────────────────────────────────────── */
+
+.auth-error-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  margin-bottom: 12px;
+  text-align: center;
 }
