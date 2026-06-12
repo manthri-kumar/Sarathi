@@ -149,6 +149,35 @@
     transition: left 0.3s ease;
   }
 
+  .logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  /* Pushes it to the bottom of the mobile sidebar container */
+  margin-top: auto; 
+  /* Safe spacing from the very bottom of the screen */
+  margin-bottom: 2.5rem; 
+  /* Match the horizontal padding of 'Profile' */
+  padding-left: 1.5rem; 
+
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  cursor: pointer;
+  
+  /* Tap target safety for mobile fingers */
+  padding-top: 10px;
+  padding-bottom: 10px;
+  
+  /* Smooth transition for active/tap states */
+  transition: opacity 0.2s ease;
+}
+
+/* On mobile, an active/tap state works better than a hover state */
+.logout:active {
+  color: rgba(255, 255, 255, 1);
+  opacity: 0.8;
+}
   .sidebar.open {
     left: 0;
   }
