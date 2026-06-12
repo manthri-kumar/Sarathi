@@ -5,7 +5,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
-const templeRoutes = require("./routes/templeRoutes"); 
+
+const templeRoutes = require("./routes/templeRoutes");
 
 
 dotenv.config();
@@ -24,10 +25,7 @@ app.use("/api/chat", require("./routes/chat"));
 
 app.use("/api/trips", require("./routes/triproutes"));
 
-app.use(
-  "/api/temples",
-  require("./routes/templeRoutes")
-);
+app.use("/api/temples", templeRoutes);
 
 /* 🔥 NEW SAVED ROUTE */
 app.use("/api/saved", require("./routes/savedRoutes"));

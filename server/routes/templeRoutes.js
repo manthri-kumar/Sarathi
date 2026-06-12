@@ -9,36 +9,52 @@ router.get("/nearby", async (req, res) => {
 
     if (!lat || !lng) {
       return res.status(400).json({
-        message: "lat and lng required",
+        message: "Latitude and Longitude required"
       });
     }
 
-    const query = `
-[out:json];
-node
-["amenity"="place_of_worship"]
-["religion"="hindu"]
-(around:10000,${lat},${lng});
-out body;
-`;
+    const url =
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
+      `?location=${lat},${lng}` +
+      `&radius=10000` +
+      `&keyword=temple` +
+      `&key=${process.env.GOOGLE_PLACES_KEY}`;
 
-    const response = await axios({
-      method: "post",
-      url: "https://overpass-api.de/api/interpreter",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      data: `data=${encodeURIComponent(query)}`,
-    });
+    const response = await axios.get(url);
 
-    res.json(response.data.elements);
+    // Debug Google response
+    console.log("Google Status:", response.data.status);
+
+    if (response.data.status !== "OK") {
+      return res.status(400).json({
+        message: "Google Places Error",
+        status: response.data.status,
+        details: response.data.error_message || null
+      });
+    }
+
+    const temples = response.data.results.map((place) => ({
+      id: place.place_id,
+      name: place.name,
+      address: place.vicinity,
+      rating: place.rating || 0,
+      totalRatings: place.user_ratings_total || 0,
+      lat: place.geometry.location.lat,
+      lng: place.geometry.location.lng,
+      photo: place.photos?.[0]
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${process.env.GOOGLE_PLACES_KEY}`
+        : null
+    }));
+
+    res.json(temples);
 
   } catch (err) {
+    console.log("TEMPLE ERROR:");
     console.log(err.response?.data || err.message);
 
     res.status(500).json({
       message: "Failed to fetch temples",
-      error: err.message,
+      error: err.message
     });
   }
 });
