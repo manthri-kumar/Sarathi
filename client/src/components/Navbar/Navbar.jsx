@@ -20,30 +20,32 @@ const Navbar = ({ toggleSidebar }) => {
   const [search, setSearch] =
     useState("");
 
-  const user = JSON.parse(
-    localStorage.getItem("user")
-  );
+ const user = JSON.parse(
+  localStorage.getItem("user")
+);
 
-  const username =
-    user?.username ||
-    user?.name ||
-    "User";
+const username =
+  user?.username ||
+  user?.name ||
+  "User";
 
-  <div
+const profilePic =
+  user?.picture ||
+  user?.profilePic ||
+  user?.avatar ||
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+<div
   className="profile-section"
   onClick={() => navigate("/profile")}
 >
-
   <img
     src={profilePic}
     alt="profile"
     className="profile-pic"
   />
 
-  <span>
-    {username}
-  </span>
-
+  <span>{username}</span>
 </div>
 
   const appItems = [
