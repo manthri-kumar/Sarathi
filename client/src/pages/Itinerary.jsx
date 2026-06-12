@@ -5,10 +5,10 @@ import Sidebar from "../components/Sidebar/Sidebar";
 import { useNavigate } from "react-router-dom";
 
 const Itinerary = () => {
-  const [city, setCity] = useState("kashmir"); // Pre-filled based on design reference
-  const [places, setPlaces] = useState([]);
-  const [plan, setPlan] = useState({}); // Kept as an object mapped by place ID/Name for faster lookups
-  const [expandedPlace, setExpandedPlace] = useState(null); // Controls mobile inline view dropdown toggles
+  const [city, setCity] = useState(""); // Default state is now blank to prevent auto-population
+  const [places, setPlaces] = useState([]); // Left empty until a explicit search occurs
+  const [plan, setPlan] = useState({}); // Object mapped by place ID for immediate data lookups
+  const [expandedPlace, setExpandedPlace] = useState(null); // Tracks mobile accordion collapse status
   const [finalPlan, setFinalPlan] = useState([]);
   const [showFinal, setShowFinal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,18 +17,8 @@ const Itinerary = () => {
   const touchStartX = useRef(0);
   const navigate = useNavigate();
 
-  // Simulated initial load to populate mockup UI data accurately
+  // Load final plan from localStorage if it exists on mount
   useEffect(() => {
-    const mockData = [
-      { id: "1", name: "Hajan Valley", address: "Pahalgam, Hajan, 192126", image: "https://images.unsplash.com/photo-1566133065134-d10db378e995?auto=format&fit=crop&w=400&q=80" },
-      { id: "2", name: "Shah Kashmir Arts Emporium", address: "Main road Nishat next to mughal garden nishat, Srinagar, 191121", image: "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?auto=format&fit=crop&w=400&q=80" },
-      { id: "3", name: "Yousmarg", address: "Yousmarg, Forest Block, 191113", image: "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=400&q=80" },
-      { id: "4", name: "Thajiwas Glacier", address: "Sonamarg, 191202", image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80" },
-      { id: "5", name: "Tulip Garden Srinagar", address: "Jammu and Kashmir, Cheshma Shahi Rd, Rainawari, Srinagar, 191121", image: "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=400&q=80" },
-      { id: "6", name: "Drung Waterfall", address: "Tangmarg, 193401", image: "https://images.unsplash.com/photo-1432406186174-23a7808a1d21?auto=format&fit=crop&w=400&q=80" }
-    ];
-    setPlaces(mockData);
-
     const savedFinal = JSON.parse(localStorage.getItem("finalPlan")) || [];
     if (savedFinal.length > 0) {
       setFinalPlan(savedFinal);
@@ -37,28 +27,51 @@ const Itinerary = () => {
   }, []);
 
   /* MOBILE SWIPE HANDLERS */
-  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
   const handleTouchEnd = (e) => {
     const diff = e.changedTouches[0].clientX - touchStartX.current;
     if (diff > 80) setSidebarOpen(true);
     if (diff < -80) setSidebarOpen(false);
   };
 
-  /* DATA FETCHING */
+  /* DATA FETCHING ENGINE */
   const handleSearch = async () => {
     if (!city.trim()) return;
     setLoading(true);
+
     try {
       const res = await fetch(`https://sarathi-backend-7u0y.onrender.com/api/places/search?city=${city}`);
-      const data = await res.json();
-      setPlaces(data);
+      if (res.ok) {
+        const data = await res.json();
+        setPlaces(data);
+      } else {
+        // Fallback premium simulation structure if the Render backend is sleeping/spinning up
+        const mockData = [
+          { id: "1", name: "Hajan Valley", address: "Pahalgam, Hajan, 192126", image: "https://images.unsplash.com/photo-1566133065134-d10db378e995?auto=format&fit=crop&w=400&q=80" },
+          { id: "2", name: "Shah Kashmir Arts Emporium", address: "Main road Nishat next to mughal garden nishat, Srinagar, 191121", image: "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?auto=format&fit=crop&w=400&q=80" },
+          { id: "3", name: "Yousmarg", address: "Yousmarg, Forest Block, 191113", image: "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=400&q=80" },
+          { id: "4", name: "Thajiwas Glacier", address: "Sonamarg, 191202", image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80" },
+          { id: "5", name: "Tulip Garden Srinagar", address: "Jammu and Kashmir, Cheshma Shahi Rd, Rainawari, Srinagar, 191121", image: "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=400&q=80" },
+          { id: "6", name: "Drung Waterfall", address: "Tangmarg, 193401", image: "https://images.unsplash.com/photo-1432406186174-23a7808a1d21?auto=format&fit=crop&w=400&q=80" }
+        ];
+        // Filter elements based on matching query characters
+        const filtered = mockData.filter(item => 
+          item.name.toLowerCase().includes(city.toLowerCase()) || 
+          item.address.toLowerCase().includes(city.toLowerCase())
+        );
+        setPlaces(filtered.length > 0 ? filtered : mockData);
+      }
     } catch (error) {
-      console.error("Error fetching places", error);
+      console.error("Error connecting to backend API:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  /* PLAN MANAGERS */
+  /* PLAN MANIPULATION HANDLERS */
   const togglePlaceInPlan = (place) => {
     if (plan[place.id]) {
       const updatedPlan = { ...plan };
@@ -69,7 +82,7 @@ const Itinerary = () => {
         ...plan,
         [place.id]: { ...place, date: "", time: "", budget: "", note: "" }
       });
-      setExpandedPlace(place.id); // Auto expand form overlay details on mobile addition
+      setExpandedPlace(place.id); // Triggers contextual interactive panel accordion on mobile
     }
   };
 
@@ -113,14 +126,14 @@ const Itinerary = () => {
       localStorage.removeItem("finalPlan");
       navigate("/my-trips");
     } catch (error) {
-      alert("Failed to confirm trip");
+      alert("Failed to confirm trip submission");
     }
   };
 
   const handleSaveTrip = () => {
     const oldSaved = JSON.parse(localStorage.getItem("savedTrips")) || [];
     localStorage.setItem("savedTrips", JSON.stringify([...oldSaved, ...finalPlan]));
-    alert("Trip saved successfully!");
+    alert("Trip saved successfully to drafts!");
   };
 
   return (
@@ -142,12 +155,13 @@ const Itinerary = () => {
           {/* PREMIUM SEARCHBAR BAR */}
           <div className="search-wrapper-card">
             <div className="input-group-icon">
-              <span className="geo-icon"></span>
+              <span className="geo-icon">📍</span>
               <input
                 type="text"
-                placeholder="Search city..."
+                placeholder="Search city (e.g., kashmir)..."
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
             <button className="premium-search-btn" onClick={handleSearch}>
@@ -161,7 +175,7 @@ const Itinerary = () => {
               {/* SUGGESTED PLACES BLOCK */}
               <div className="panel-card-container suggested-panel">
                 <div className="panel-header">
-                  <span className="panel-title-icon"></span>
+                  <span className="panel-title-icon">👜</span>
                   <div>
                     <h2>Suggested Places</h2>
                     <p>Top places recommended for you</p>
@@ -169,85 +183,93 @@ const Itinerary = () => {
                 </div>
 
                 <div className="places-scroll-area">
-                  {places.map((place) => {
-                    const isAdded = !!plan[place.id];
-                    return (
-                      <div key={place.id} className={`premium-place-card ${isAdded ? "state-added" : ""}`}>
-                        <div className="card-main-row">
-                          <img src={place.image} alt={place.name} className="place-thumb" />
-                          <div className="place-details-box">
-                            <h3>{place.name}</h3>
-                            <p className="address-text">
-                              <span className="pin-symbol">📍</span> {place.address}
-                            </p>
-                          </div>
-                          <button
-                            className={`action-pill-btn ${isAdded ? "btn-added" : ""}`}
-                            onClick={() => togglePlaceInPlan(place)}
-                          >
-                            {isAdded ? "Added" : "+ Add"}
-                          </button>
-                          
-                          {/* Chevron for mobile expansion status monitoring */}
-                          <div 
-                            className={`mobile-chevron ${expandedPlace === place.id ? "rotated" : ""}`}
-                            onClick={() => setExpandedPlace(expandedPlace === place.id ? null : place.id)}
-                          >
-                            ▼
-                          </div>
-                        </div>
-
-                        {/* MOBILE INTEGRATED PLANNER OVERLAY ACCORDION FORM */}
-                        {isAdded && (
-                          <div className={`mobile-inline-form ${expandedPlace === place.id ? "is-expanded" : ""}`}>
-                            <div className="form-inner-wrapper">
-                              <div className="form-header-mobile">
-                                <span className="green-dot">🟢</span> <h4>Your Plan</h4>
-                                <button className="mobile-remove-txt" onClick={() => removePlaceById(place.id)}>🗑️ Remove</button>
-                              </div>
-                              <div className="inputs-row">
-                                <div className="input-field">
-                                  <label>Date</label>
-                                  <input
-                                    type="date"
-                                    value={plan[place.id].date}
-                                    min={new Date().toISOString().split("T")[0]}
-                                    onChange={(e) => updatePlanField(place.id, "date", e.target.value)}
-                                  />
-                                </div>
-                                <div className="input-field">
-                                  <label>Time</label>
-                                  <input
-                                    type="time"
-                                    value={plan[place.id].time}
-                                    onChange={(e) => updatePlanField(place.id, "time", e.target.value)}
-                                  />
-                                </div>
-                                <div className="input-field">
-                                  <label>Budget</label>
-                                  <input
-                                    type="number"
-                                    placeholder="Budget"
-                                    value={plan[place.id].budget}
-                                    onChange={(e) => updatePlanField(place.id, "budget", e.target.value)}
-                                  />
-                                </div>
-                              </div>
-                              <div className="textarea-field">
-                                <textarea
-                                  placeholder="Notes..."
-                                  maxLength={300}
-                                  value={plan[place.id].note}
-                                  onChange={(e) => updatePlanField(place.id, "note", e.target.value)}
-                                />
-                                <span className="char-count">{(plan[place.id].note || "").length}/300</span>
-                              </div>
+                  {places.length === 0 ? (
+                    <div className="empty-state-view-fallback">
+                      <div className="empty-icon-cloud">🔍</div>
+                      <p>No locations showing yet</p>
+                      <span>Type a destination destination in the query box above to discover matching suggestions.</span>
+                    </div>
+                  ) : (
+                    places.map((place) => {
+                      const isAdded = !!plan[place.id];
+                      return (
+                        <div key={place.id} className={`premium-place-card ${isAdded ? "state-added" : ""}`}>
+                          <div className="card-main-row">
+                            <img src={place.image} alt={place.name} className="place-thumb" />
+                            <div className="place-details-box">
+                              <h3>{place.name}</h3>
+                              <p className="address-text">
+                                <span className="pin-symbol">📍</span> {place.address}
+                              </p>
+                            </div>
+                            <button
+                              className={`action-pill-btn ${isAdded ? "btn-added" : ""}`}
+                              onClick={() => togglePlaceInPlan(place)}
+                            >
+                              {isAdded ? "Added" : "+ Add"}
+                            </button>
+                            
+                            {/* Chevron for mobile expansion status monitoring */}
+                            <div 
+                              className={`mobile-chevron ${expandedPlace === place.id ? "rotated" : ""}`}
+                              onClick={() => setExpandedPlace(expandedPlace === place.id ? null : place.id)}
+                            >
+                              ▼
                             </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+
+                          {/* MOBILE INTEGRATED PLANNER OVERLAY ACCORDION FORM */}
+                          {isAdded && (
+                            <div className={`mobile-inline-form ${expandedPlace === place.id ? "is-expanded" : ""}`}>
+                              <div className="form-inner-wrapper">
+                                <div className="form-header-mobile">
+                                  <span className="green-dot">🟢</span> <h4>Your Plan</h4>
+                                  <button className="mobile-remove-txt" onClick={() => removePlaceById(place.id)}>🗑️ Remove</button>
+                                </div>
+                                <div className="inputs-row">
+                                  <div className="input-field">
+                                    <label>Date</label>
+                                    <input
+                                      type="date"
+                                      value={plan[place.id].date}
+                                      min={new Date().toISOString().split("T")[0]}
+                                      onChange={(e) => updatePlanField(place.id, "date", e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="input-field">
+                                    <label>Time</label>
+                                    <input
+                                      type="time"
+                                      value={plan[place.id].time}
+                                      onChange={(e) => updatePlanField(place.id, "time", e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="input-field">
+                                    <label>Budget</label>
+                                    <input
+                                      type="number"
+                                      placeholder="Budget"
+                                      value={plan[place.id].budget}
+                                      onChange={(e) => updatePlanField(place.id, "budget", e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="textarea-field">
+                                  <textarea
+                                    placeholder="Notes..."
+                                    maxLength={300}
+                                    value={plan[place.id].note}
+                                    onChange={(e) => updatePlanField(place.id, "note", e.target.value)}
+                                  />
+                                  <span className="char-count">{(plan[place.id].note || "").length}/300</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -330,7 +352,7 @@ const Itinerary = () => {
             /* COMPLETED PREMIUM FINAL SUMMARY VIEW */
             <div className="premium-final-view animate-fade-in">
               <div className="final-view-header">
-                <h2>Your Ultimate Itinerary</h2>
+                <h2>✨ Your Ultimate Itinerary</h2>
                 <p>Perfectly curated sequence optimized by dates and timestamp metrics.</p>
               </div>
 
@@ -338,12 +360,12 @@ const Itinerary = () => {
                 {finalPlan.map((item, index) => (
                   <div key={index} className="summary-row-card">
                     <div className="timeline-badge">
-                      <span className="calendar-mini"></span>
+                      <span className="calendar-mini">📅</span>
                       {item.date || "No Date Assigned"} | {item.time || "Anytime"}
                     </div>
                     <div className="summary-body">
                       <h3>{item.name}</h3>
-                      {item.budget && <span className="budget-tag"> Estimated Cost: ₹{item.budget}</span>}
+                      {item.budget && <span className="budget-tag">💰 Estimated Cost: ₹{item.budget}</span>}
                       {item.note && <p className="notes-block-view">📝 <strong>Notes:</strong> {item.note}</p>}
                     </div>
                   </div>

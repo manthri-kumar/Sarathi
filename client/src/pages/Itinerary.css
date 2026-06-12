@@ -634,3 +634,34 @@ input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.5);
 }
+
+.empty-state-view-fallback {
+  text-align: center;
+  padding: 60px 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.01);
+  margin: 10px 0;
+}
+
+.empty-icon-cloud {
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.empty-state-view-fallback p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.empty-state-view-fallback span {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: block;
+  max-width: 280px;
+  margin: 0 auto;
+}
