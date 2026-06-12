@@ -13,6 +13,13 @@ router.get("/nearby", async (req, res) => {
       });
     }
 
+    // Ensure the key exists before making the call
+    if (!process.env.GOOGLE_PLACES_KEY) {
+      return res.status(500).json({
+        message: "Internal Server Error: Google Places API key is missing in environment variables."
+      });
+    }
+
     const url =
       `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
       `?location=${lat},${lng}` +
@@ -49,9 +56,21 @@ router.get("/nearby", async (req, res) => {
     res.json(temples);
 
   } catch (err) {
-    console.log("TEMPLE ERROR:");
-    console.log(err.response?.data || err.message);
-
+    console.error("TEMPLE ERROR DETAILS:");
+    
+    // Check if the error came back from the Google API directly
+    if (err.response) {
+      console.error("Data:", err.response.data);
+      console.error("Status:", err.response.status);
+      
+      return res.status(err.response.status).json({
+        message: "Failed to fetch temples from Google API",
+        error: err.response.data || err.message
+      });
+    } 
+    
+    // Fallback for general server/network errors
+    console.error(err.message);
     res.status(500).json({
       message: "Failed to fetch temples",
       error: err.message
