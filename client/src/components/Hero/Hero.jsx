@@ -21,18 +21,9 @@ const Hero = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const nextSlide = () => {
-    setIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevSlide = () => {
-    setIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
-
   return (
-    <div className="hero">
+    <section className="hero">
 
-      {/* Background Slider */}
       <div
         className="slider-wrapper"
         style={{
@@ -50,10 +41,6 @@ const Hero = () => {
         ))}
       </div>
 
-      {/* Dark Overlay */}
-      <div className="hero-dark-overlay"></div>
-
-      {/* Content */}
       <div className="hero-overlay">
 
         <span className="hero-badge">
@@ -61,44 +48,23 @@ const Hero = () => {
         </span>
 
         <h1>
-          {t("discover")}
+          Discover the
+          <span> Unexplored</span>
         </h1>
 
         <p>
-          {t("recommendations")}
+          AI-powered recommendations,
+          curated just for you.
+          Discover, plan and make memories.
         </p>
 
-        <div className="hero-buttons">
-
-          <button className="explore-btn">
-            {t("explorePlaces")} →
-          </button>
-
-          
-
-        </div>
+        <button className="explore-btn">
+          Explore Places →
+        </button>
 
       </div>
 
-      {/* Left Arrow */}
-      <button
-        className="arrow left"
-        onClick={prevSlide}
-      >
-        ❮
-      </button>
-
-      {/* Right Arrow */}
-      <button
-        className="arrow right"
-        onClick={nextSlide}
-      >
-        ❯
-      </button>
-
-      {/* Dots */}
       <div className="dots">
-
         {images.map((_, i) => (
           <span
             key={i}
@@ -107,15 +73,12 @@ const Hero = () => {
                 ? "dot active"
                 : "dot"
             }
-            onClick={() =>
-              setIndex(i)
-            }
+            onClick={() => setIndex(i)}
           />
         ))}
-
       </div>
 
-    </div>
+    </section>
   );
 };
 
