@@ -6,7 +6,7 @@ import googleLogo from "../../assets/google.png";
 
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
-
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -22,7 +22,11 @@ useEffect(() => {
     try {
       const hash = window.location.hash;
 
-      if (!hash.includes("access_token")) return;
+if (hash.includes("access_token")) {
+  setGoogleLoading(true);
+}
+
+if (!hash.includes("access_token")) return;
 
       const accessToken = hash
         .split("access_token=")[1]
@@ -89,20 +93,24 @@ useEffect(() => {
       console.log("Login Success");
 
       // Redirect
-      window.location.href = "/dashboard";
+      navigate("/dashboard", {
+  replace: true,
+});
 
     } catch (err) {
-      console.error(
-        "Google Login Error:",
-        err
-      );
+  setGoogleLoading(false);
 
-      alert(
-        err.response?.data?.message ||
-        err.message ||
-        "Google Login Failed"
-      );
-    }
+  console.error(
+    "Google Login Error:",
+    err
+  );
+
+  alert(
+    err.response?.data?.message ||
+    err.message ||
+    "Google Login Failed"
+  );
+}
   };
 
   handleGoogleLogin();
@@ -163,6 +171,23 @@ localStorage.setItem("user", JSON.stringify(res.data.user));
       alert(err.response?.data?.message || "Error");
     }
   };
+  if (googleLoading) {
+  return (
+    <div className="google-loading">
+      <div className="loader"></div>
+
+      <h1>Sarathi</h1>
+
+      <h3>
+        Planning your journey...
+      </h3>
+
+      <p>
+        Signing you in...
+      </p>
+    </div>
+  );
+}
 
   return (
     <div className="main-container">
