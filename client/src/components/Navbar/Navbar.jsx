@@ -33,13 +33,17 @@ const Navbar = ({ toggleSidebar }) => {
   className="profile-section"
   onClick={() => navigate("/profile")}
 >
+
   <img
     src={profilePic}
-    alt="Profile"
+    alt="profile"
     className="profile-pic"
   />
 
-  <span>{userName}</span>
+  <span>
+    {username}
+  </span>
+
 </div>
 
   const appItems = [
