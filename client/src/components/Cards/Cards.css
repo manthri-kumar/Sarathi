@@ -126,10 +126,142 @@
   100% {
     left: 125%;
   }
-}/* ===== MOBILE CARDS ===== */
-@media (max-width: 768px) {
-  .cards {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+}
+/* ==========================
+   MOBILE + TABLET PREMIUM
+========================== */
+
+@media (max-width: 1024px) {
+
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:14px;
+    margin-top:16px;
   }
+
+  .card{
+
+    min-height:110px;
+
+    padding:14px;
+
+    border-radius:22px;
+
+    display:flex;
+    flex-direction:column;
+
+    align-items:flex-start;
+    justify-content:center;
+
+    gap:10px;
+
+    backdrop-filter:blur(20px);
+
+    border:1px solid
+    rgba(255,255,255,.08);
+
+    box-shadow:
+      0 8px 24px
+      rgba(0,0,0,.25);
+
+    transition:.35s ease;
+  }
+
+  .card:hover{
+    transform:
+      translateY(-4px);
+
+    box-shadow:
+      0 12px 28px
+      rgba(0,0,0,.35);
+  }
+
+  /* ICON */
+
+  .card-icon{
+
+    width:34px;
+    height:34px;
+
+    padding:0;
+
+    border-radius:10px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:
+      rgba(255,255,255,.12);
+
+    backdrop-filter:blur(12px);
+  }
+
+  .card-icon svg{
+    width:16px;
+    height:16px;
+  }
+
+  /* TEXT */
+
+  .card h3{
+
+    font-size:15px;
+    font-weight:700;
+
+    line-height:1.3;
+
+    margin:0;
+  }
+
+  .card p{
+
+    font-size:12px;
+
+    line-height:1.4;
+
+    opacity:.8;
+
+    margin:0;
+  }
+
+  /* APPLE STYLE COLORS */
+
+  .blue{
+    background:
+      linear-gradient(
+        135deg,
+        #1f3b8f,
+        #2959d9
+      );
+  }
+
+  .green{
+    background:
+      linear-gradient(
+        135deg,
+        #046c55,
+        #14b87a
+      );
+  }
+
+  .purple{
+    background:
+      linear-gradient(
+        135deg,
+        #5a25b6,
+        #8d63ff
+      );
+  }
+
+  .orange{
+    background:
+      linear-gradient(
+        135deg,
+        #b24a0b,
+        #ff7a1a
+      );
+  }
+
 }

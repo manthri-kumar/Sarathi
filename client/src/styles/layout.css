@@ -34,8 +34,8 @@ a {
 }
 
 .main-content {
-  margin-left: 250px;
-  width: calc(100% - 250px);
+  margin-left: 260px;
+  width: calc(100% - 260px);
 
   min-height: 100vh;
 
