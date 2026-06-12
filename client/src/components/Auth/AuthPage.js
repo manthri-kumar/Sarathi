@@ -38,8 +38,8 @@ function AuthPage() {
         setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
       }, 1600);
 
-      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 4200);
-      const removeTimer = setTimeout(() => setShowSplash(false), 5000);
+      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 3200);
+      const removeTimer = setTimeout(() => setShowSplash(false), 4100);
 
       return () => {
         clearInterval(slideInterval);
