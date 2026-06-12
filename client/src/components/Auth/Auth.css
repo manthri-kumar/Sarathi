@@ -418,35 +418,11 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
 .splash-bg {
   position: absolute;
   inset: 0;
-  background: #0d3526;   /* deep forest green matching your screenshot */
+   background: radial-gradient(circle at left, #1a4a1a, #020402);
   z-index: 0;
 }
 
-/* ── Story bar — top of screen ── */
-.splash-story-bar {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  display: flex;
-  gap: 4px;
-  z-index: 2;
-}
 
-.splash-story-segment {
-  flex: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.splash-story-fill {
-  height: 100%;
-  background: #ffffff;
-  border-radius: 2px;
-  width: 0%;
-}
 
 @keyframes storyFill {
   from { width: 0%; }
