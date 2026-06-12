@@ -322,7 +322,7 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
 .google-auth-loader {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  background: linear-gradient(135deg, #023b12, #4a8d07, #000000);
   display: flex;
   align-items: center;
   justify-content: center;

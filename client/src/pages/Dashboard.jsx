@@ -6,6 +6,7 @@ import ChatPanel from "../components/ChatPanel/ChatPanel";
 import Hero from "../components/Hero/Hero";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
 import { useTranslation } from "react-i18next";
+import logo from "../../assets/icon/icon.png";
 
 import "../styles/layout.css";
 
