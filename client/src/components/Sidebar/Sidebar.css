@@ -1,13 +1,25 @@
-/* ===== SIDEBAR ===== */
-.sidebar {
-  width: 250px;
-  height: 100vh;
+/* =========================================
+   SIDEBAR
+========================================= */
 
+.sidebar {
   position: fixed;
   top: 0;
   left: 0;
+  bottom: 0;
 
-  background: radial-gradient(circle at 20% 0%, rgba(0, 255, 149, 0.13), transparent 40%), #020402;
+  width: 250px;
+  max-width: 100%;
+
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(0, 255, 136, 0.12),
+      transparent 35%
+    ),
+    #020402;
+
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 
   padding: 24px 16px;
 
@@ -15,30 +27,54 @@
   flex-direction: column;
   justify-content: space-between;
 
-  border-right: 1px solid rgba(255,255,255,0.05);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  box-sizing: border-box;
 
   z-index: 1200;
+
+  scrollbar-width: none;
 }
 
-/* ===== LOGO ===== */
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================
+   LOGO
+========================================= */
+
 .logo-section {
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .logo-section h2 {
-  font-size: 22px;
+  margin: 0;
+  font-size: 28px;
   font-weight: 700;
   color: white;
-  margin: 0;
 }
 
 .logo-section p {
+  margin-top: 6px;
   font-size: 12px;
   color: #9ca3af;
-  margin-top: 4px;
+  line-height: 1.4;
 }
 
-/* ===== MENU ===== */
+/* =========================================
+   TOP CONTENT
+========================================= */
+
+.sidebar-top {
+  flex: 1;
+}
+
+/* =========================================
+   MENU
+========================================= */
+
 .menu {
   list-style: none;
   padding: 0;
@@ -46,7 +82,7 @@
 
   display: flex;
   flex-direction: column;
-  gap: 35px;
+  gap: 10px;
 }
 
 .menu li {
@@ -54,103 +90,181 @@
   align-items: center;
   gap: 12px;
 
-  padding: 12px 14px;
-  border-radius: 12px;
+  min-height: 52px;
+
+  padding: 0 16px;
+
+  border-radius: 14px;
 
   cursor: pointer;
-  color: rgba(255,255,255,0.6);
+
+  color: rgba(255,255,255,0.7);
 
   transition: all 0.25s ease;
+
   position: relative;
+
+  font-size: 15px;
+  font-weight: 500;
 }
 
-/* ICON */
 .menu li svg {
   min-width: 18px;
 }
 
-/* HOVER */
+/* Hover */
+
 .menu li:hover {
   background: rgba(255,255,255,0.05);
   color: white;
 }
 
-/* ACTIVE */
-.menu li.active {
-  background: linear-gradient(135deg, #00ff88, #00ff5e);
-  color: black;
-  font-weight: 500;
+/* Active */
 
-  box-shadow: 0 8px 20px rgba(0,255,120,0.25);
+.menu li.active {
+  background: linear-gradient(
+    135deg,
+    #00ff88,
+    #00ff66
+  );
+
+  color: #000;
+
+  font-weight: 600;
+
+  box-shadow:
+    0 10px 25px rgba(0,255,136,0.25);
 }
 
-/* ACTIVE LEFT BAR */
 .menu li.active::before {
   content: "";
+
   position: absolute;
-  left: -6px;
+
+  left: -8px;
   top: 50%;
+
   transform: translateY(-50%);
 
   width: 4px;
-  height: 60%;
+  height: 65%;
+
+  border-radius: 999px;
 
   background: #00ff88;
-  border-radius: 4px;
 }
 
-/* ===== BOTTOM ===== */
+/* =========================================
+   BOTTOM
+========================================= */
+
 .bottom-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-top: 24px;
 
   border-top: 1px solid rgba(255,255,255,0.05);
-  padding-top: 16px;
+
+  padding-top: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* LOGOUT */
 .logout {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 3rem;
 
   color: rgba(255,255,255,0.7);
+
   cursor: pointer;
-  transition: 0.2s;
+
+  transition: all .25s ease;
 }
 
 .logout:hover {
   color: #4ade80;
 }
 
-/* SETTINGS */
 .settings-icon {
   color: rgba(255,255,255,0.7);
-  cursor: pointer;
-  transition: 0.2s;
-    margin-bottom: 3rem;
 
+  cursor: pointer;
+
+  transition: all .25s ease;
 }
 
 .settings-icon:hover {
   color: #4ade80;
 }
 
-/* ===================================================== */
-/* ================= MOBILE ============================= */
-/* ===================================================== */
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 1024px) {
+
+  .sidebar {
+    width: 230px;
+  }
+
+  .logo-section h2 {
+    font-size: 24px;
+  }
+
+  .menu li {
+    min-height: 48px;
+    font-size: 14px;
+  }
+}
+
+/* =========================================
+   MOBILE
+========================================= */
 
 @media (max-width: 768px) {
 
   .sidebar {
+    width: 280px;
+
     left: -100%;
-    transition: left 0.3s ease;
+
+    transition: left 0.35s ease;
+
+    box-shadow:
+      0 0 40px rgba(0,0,0,0.5);
   }
 
   .sidebar.open {
     left: 0;
   }
 
+  .logo-section h2 {
+    font-size: 24px;
+  }
+
+  .menu li {
+    min-height: 50px;
+  }
+}
+
+/* =========================================
+   SMALL PHONES
+========================================= */
+
+@media (max-width: 480px) {
+
+  .sidebar {
+    width: 260px;
+    padding: 20px 14px;
+  }
+
+  .menu li {
+    font-size: 14px;
+    gap: 10px;
+  }
+
+  .logo-section p {
+    font-size: 11px;
+  }
 }
