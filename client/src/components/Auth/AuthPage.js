@@ -4,39 +4,76 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
 
+// ─── Splash images (travel themed) ──────────────────
+const SPLASH_IMAGES = [
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80", // mountains
+  "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&q=80", // india taj
+  "https://images.unsplash.com/photo-1588416936097-41850ab3d86d?w=600&q=80", // kerala
+];
+
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "" });
 
-  // 🔑 Key change: detect Google redirect BEFORE first render
   const [isGoogleRedirect, setIsGoogleRedirect] = useState(
     () => window.location.hash.includes("access_token")
   );
   const [googleError, setGoogleError] = useState(null);
 
+  // ─── Splash state ────────────────────────────────
+  const [showSplash, setShowSplash] = useState(false);
+  const [splashFadingOut, setSplashFadingOut] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+
   const navigate = useNavigate();
 
-  // GOOGLE REDIRECT HANDLER
+  // ─── Show splash only on mobile/tablet, only once per session ───
+  useEffect(() => {
+    const isMobileOrTablet = window.matchMedia("(max-width: 1024px)").matches;
+    const splashSeen = sessionStorage.getItem("sarathi_splash_seen");
+
+    if (isMobileOrTablet && !splashSeen && !isGoogleRedirect) {
+      setShowSplash(true);
+      sessionStorage.setItem("sarathi_splash_seen", "true");
+
+      // Auto-slide images every 1.6s
+      const slideInterval = setInterval(() => {
+        setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
+      }, 1600);
+
+      // Start fade-out at 4.5s, remove at 5s
+      const fadeTimer = setTimeout(() => {
+        setSplashFadingOut(true);
+      }, 4500);
+
+      const removeTimer = setTimeout(() => {
+        setShowSplash(false);
+      }, 5200);
+
+      return () => {
+        clearInterval(slideInterval);
+        clearTimeout(fadeTimer);
+        clearTimeout(removeTimer);
+      };
+    }
+  }, [isGoogleRedirect]);
+
+  // ─── Google Redirect Handler ─────────────────────
   useEffect(() => {
     const handleGoogleLogin = async () => {
       const hash = window.location.hash;
       if (!hash.includes("access_token")) return;
 
-      // isGoogleRedirect is already true from useState initializer,
-      // so the loader is already showing — no flicker possible.
-
       try {
         const accessToken = hash.split("access_token=")[1]?.split("&")[0];
         if (!accessToken) throw new Error("No access token found in URL");
 
-        // Get Google User Info
         const googleRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (!googleRes.ok) throw new Error("Failed to fetch Google user info");
         const googleUser = await googleRes.json();
 
-        // Send to backend
         const backendRes = await axios.post(
           "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
           { email: googleUser.email, name: googleUser.name, picture: googleUser.picture }
@@ -47,25 +84,21 @@ function AuthPage() {
         localStorage.setItem("token", backendRes.data.token);
         localStorage.setItem("user", JSON.stringify(backendRes.data.user));
 
-        // Clear URL hash
         window.history.replaceState({}, document.title, window.location.pathname);
-
-        // Navigate directly — loader stays visible until this fires
         navigate("/dashboard", { replace: true });
 
       } catch (err) {
         console.error("Google Login Error:", err);
-        // Clear hash so the loader doesn't re-trigger on refresh
         window.history.replaceState({}, document.title, window.location.pathname);
         setGoogleError(err.response?.data?.message || err.message || "Google Login Failed");
-        setIsGoogleRedirect(false); // show auth form again with error
+        setIsGoogleRedirect(false);
       }
     };
 
     handleGoogleLogin();
   }, [navigate]);
 
-  // GOOGLE CLICK
+  // ─── Google Click ────────────────────────────────
   const handleGoogleClick = () => {
     const CLIENT_ID = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
     const REDIRECT_URI = window.location.origin;
@@ -80,7 +113,7 @@ function AuthPage() {
       `&prompt=select_account`;
   };
 
-  // LOGIN / SIGNUP
+  // ─── Login / Signup ──────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -105,7 +138,7 @@ function AuthPage() {
     }
   };
 
-  // ─── FULL-SCREEN LOADER (shown during Google redirect) ───────────────────
+  // ─── GOOGLE AUTH LOADER ──────────────────────────
   if (isGoogleRedirect) {
     return (
       <div className="google-auth-loader">
@@ -118,9 +151,57 @@ function AuthPage() {
     );
   }
 
-  // ─── NORMAL AUTH PAGE ─────────────────────────────────────────────────────
+  // ─── MOBILE/TABLET SPLASH SCREEN ─────────────────
+  if (showSplash) {
+    return (
+      <div className={`splash-screen ${splashFadingOut ? "splash-fade-out" : "splash-fade-in"}`}>
+
+        {/* Background sliding images */}
+        <div className="splash-images">
+          {SPLASH_IMAGES.map((src, i) => (
+            <div
+              key={i}
+              className={`splash-img ${i === activeSlide ? "active" : ""}`}
+              style={{ backgroundImage: `url(${src})` }}
+            />
+          ))}
+          {/* Dark overlay */}
+          <div className="splash-overlay" />
+        </div>
+
+        {/* Content */}
+        <div className="splash-content">
+          <div className="splash-logo-wrap">
+            <h1 className="splash-logo">Sarathi</h1>
+            <p className="splash-tagline">Your Journey, Our Guidance</p>
+          </div>
+
+          {/* Dot indicators */}
+          <div className="splash-dots">
+            {SPLASH_IMAGES.map((_, i) => (
+              <div key={i} className={`splash-dot ${i === activeSlide ? "active" : ""}`} />
+            ))}
+          </div>
+
+          {/* Skip button */}
+          <button
+            className="splash-skip"
+            onClick={() => {
+              setSplashFadingOut(true);
+              setTimeout(() => setShowSplash(false), 500);
+            }}
+          >
+            Skip →
+          </button>
+        </div>
+
+      </div>
+    );
+  }
+
+  // ─── NORMAL AUTH PAGE ────────────────────────────
   return (
-    <div className="main-container">
+    <div className="main-container auth-fade-in">
 
       {/* LEFT PANEL */}
       <div className="left-panel">
@@ -144,20 +225,15 @@ function AuthPage() {
             {isLogin ? "Sign in to continue" : "Create your account"}
           </p>
 
-          {/* Show Google error if auth failed */}
           {googleError && (
-            <div className="auth-error-banner">
-              ⚠️ {googleError}
-            </div>
+            <div className="auth-error-banner">⚠️ {googleError}</div>
           )}
 
-          {/* TOGGLE */}
           <div className="toggle">
             <button className={!isLogin ? "active" : ""} onClick={() => setIsLogin(false)}>Sign Up</button>
             <button className={isLogin ? "active" : ""} onClick={() => setIsLogin(true)}>Log In</button>
           </div>
 
-          {/* FORM */}
           <form onSubmit={handleSubmit} autoComplete="off">
             {!isLogin && (
               <input
