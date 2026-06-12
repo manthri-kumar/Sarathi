@@ -4,11 +4,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
 
-// ─── Splash images (travel themed) ──────────────────
 const SPLASH_IMAGES = [
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80", // mountains
-  "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&q=80", // india taj
-  "https://images.unsplash.com/photo-1588416936097-41850ab3d86d?w=600&q=80", // kerala
+  "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&q=80",
+  "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80",
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
 ];
 
 function AuthPage() {
@@ -20,35 +19,27 @@ function AuthPage() {
   );
   const [googleError, setGoogleError] = useState(null);
 
-  // ─── Splash state ────────────────────────────────
   const [showSplash, setShowSplash] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
 
   const navigate = useNavigate();
 
-  // ─── Show splash only on mobile/tablet, only once per session ───
+  /* ── Splash: mobile/tablet only, once per session ── */
   useEffect(() => {
     const isMobileOrTablet = window.matchMedia("(max-width: 1024px)").matches;
-    const splashSeen = sessionStorage.getItem("sarathi_splash_seen");
+    const seen = sessionStorage.getItem("sarathi_splash_seen");
 
-    if (isMobileOrTablet && !splashSeen && !isGoogleRedirect) {
+    if (isMobileOrTablet && !seen && !isGoogleRedirect) {
       setShowSplash(true);
       sessionStorage.setItem("sarathi_splash_seen", "true");
 
-      // Auto-slide images every 1.6s
       const slideInterval = setInterval(() => {
         setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
       }, 1600);
 
-      // Start fade-out at 4.5s, remove at 5s
-      const fadeTimer = setTimeout(() => {
-        setSplashFadingOut(true);
-      }, 4500);
-
-      const removeTimer = setTimeout(() => {
-        setShowSplash(false);
-      }, 5200);
+      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 4500);
+      const removeTimer = setTimeout(() => setShowSplash(false), 5200);
 
       return () => {
         clearInterval(slideInterval);
@@ -58,7 +49,7 @@ function AuthPage() {
     }
   }, [isGoogleRedirect]);
 
-  // ─── Google Redirect Handler ─────────────────────
+  /* ── Google redirect handler ── */
   useEffect(() => {
     const handleGoogleLogin = async () => {
       const hash = window.location.hash;
@@ -83,7 +74,6 @@ function AuthPage() {
 
         localStorage.setItem("token", backendRes.data.token);
         localStorage.setItem("user", JSON.stringify(backendRes.data.user));
-
         window.history.replaceState({}, document.title, window.location.pathname);
         navigate("/dashboard", { replace: true });
 
@@ -98,22 +88,18 @@ function AuthPage() {
     handleGoogleLogin();
   }, [navigate]);
 
-  // ─── Google Click ────────────────────────────────
+  /* ── Google OAuth click ── */
   const handleGoogleClick = () => {
     const CLIENT_ID = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
     const REDIRECT_URI = window.location.origin;
     const scope = encodeURIComponent("openid email profile");
-
     window.location.href =
       `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${CLIENT_ID}` +
-      `&redirect_uri=${REDIRECT_URI}` +
-      `&response_type=token` +
-      `&scope=${scope}` +
-      `&prompt=select_account`;
+      `client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}` +
+      `&response_type=token&scope=${scope}&prompt=select_account`;
   };
 
-  // ─── Login / Signup ──────────────────────────────
+  /* ── Login / Signup ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -138,7 +124,9 @@ function AuthPage() {
     }
   };
 
-  // ─── GOOGLE AUTH LOADER ──────────────────────────
+  /* ════════════════════════════════════════
+     RENDER: Google auth loader
+  ════════════════════════════════════════ */
   if (isGoogleRedirect) {
     return (
       <div className="google-auth-loader">
@@ -151,55 +139,57 @@ function AuthPage() {
     );
   }
 
-  // ─── MOBILE/TABLET SPLASH SCREEN ─────────────────
+  /* ════════════════════════════════════════
+     RENDER: Splash screen
+  ════════════════════════════════════════ */
   if (showSplash) {
     return (
-      <div className={`splash-screen ${splashFadingOut ? "splash-fade-out" : "splash-fade-in"}`}>
+      <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
 
-        {/* Background sliding images */}
-        <div className="splash-images">
-          {SPLASH_IMAGES.map((src, i) => (
-            <div
-              key={i}
-              className={`splash-img ${i === activeSlide ? "active" : ""}`}
-              style={{ backgroundImage: `url(${src})` }}
-            />
+        {/* Story-bar dots — top like your reference image */}
+        <div className="splash-story-bar">
+          {SPLASH_IMAGES.map((_, i) => (
+            <div key={i} className="splash-story-segment">
+              <div
+                className="splash-story-fill"
+                style={{
+                  animationDelay: `${i * 1.6}s`,
+                  animationPlayState: i <= activeSlide ? "running" : "paused",
+                  width: i < activeSlide ? "100%" : i === activeSlide ? undefined : "0%",
+                  animation: i === activeSlide ? "storyFill 1.6s linear forwards" : "none",
+                }}
+              />
+            </div>
           ))}
-          {/* Dark overlay */}
-          <div className="splash-overlay" />
         </div>
 
-        {/* Content */}
-        <div className="splash-content">
-          <div className="splash-logo-wrap">
-            <h1 className="splash-logo">Sarathi</h1>
-            <p className="splash-tagline">Your Journey, Our Guidance</p>
-          </div>
+        {/* Background — solid dark green like your image, no photos needed */}
+        <div className="splash-bg" />
 
-          {/* Dot indicators */}
-          <div className="splash-dots">
-            {SPLASH_IMAGES.map((_, i) => (
-              <div key={i} className={`splash-dot ${i === activeSlide ? "active" : ""}`} />
-            ))}
-          </div>
-
-          {/* Skip button */}
-          <button
-            className="splash-skip"
-            onClick={() => {
-              setSplashFadingOut(true);
-              setTimeout(() => setShowSplash(false), 500);
-            }}
-          >
-            Skip →
-          </button>
+        {/* Center content */}
+        <div className="splash-center">
+          <h1 className="splash-title">Sarathi</h1>
+          <p className="splash-sub">Your Journey, Our Guidance</p>
         </div>
+
+        {/* Skip */}
+        <button
+          className="splash-skip"
+          onClick={() => {
+            setSplashFadingOut(true);
+            setTimeout(() => setShowSplash(false), 500);
+          }}
+        >
+          Skip
+        </button>
 
       </div>
     );
   }
 
-  // ─── NORMAL AUTH PAGE ────────────────────────────
+  /* ════════════════════════════════════════
+     RENDER: Auth page
+  ════════════════════════════════════════ */
   return (
     <div className="main-container auth-fade-in">
 

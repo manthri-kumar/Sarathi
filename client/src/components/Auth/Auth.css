@@ -377,10 +377,10 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
 }
 
 
-/* ═══════════════════════════════════════════════
-   SPLASH SCREEN — Mobile & Tablet only
-   Desktop never sees this (JS matchMedia guard)
-═══════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════
+   SPLASH SCREEN
+   Mobile & tablet only — JS guards desktop
+════════════════════════════════════════════════ */
 
 .splash-screen {
   position: fixed;
@@ -388,158 +388,139 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
   width: 100vw;
   height: 100dvh;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  overflow: hidden;
   z-index: 9999;
+  overflow: hidden;
 }
 
-/* ── Fade in/out ── */
-.splash-fade-in {
-  animation: splashIn 0.6s ease forwards;
+/* ── Fade animations ── */
+.splash-in {
+  animation: splashFadeIn 0.5s ease forwards;
 }
 
-.splash-fade-out {
-  animation: splashOut 0.7s ease forwards;
+.splash-out {
+  animation: splashFadeOut 0.6s ease forwards;
 }
 
-@keyframes splashIn {
+@keyframes splashFadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-@keyframes splashOut {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(1.03); }
+@keyframes splashFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
-/* ── Background images ── */
-.splash-images {
+/* ── Background — dark green exactly like your image ── */
+.splash-bg {
   position: absolute;
   inset: 0;
+  background: #0d3526;   /* deep forest green matching your screenshot */
+  z-index: 0;
 }
 
-.splash-img {
+/* ── Story bar — top of screen ── */
+.splash-story-bar {
   position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  transform: scale(1.04);
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
 }
 
-.splash-img.active {
-  opacity: 1;
-  transform: scale(1);
-  transition: opacity 0.8s ease, transform 5s ease;
+.splash-story-segment {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
 }
 
-/* ── Dark gradient overlay ── */
-.splash-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.25) 0%,
-    rgba(0, 0, 0, 0.15) 40%,
-    rgba(0, 0, 0, 0.75) 100%
-  );
+.splash-story-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 2px;
+  width: 0%;
 }
 
-/* ── Content on top ── */
-.splash-content {
+@keyframes storyFill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* ── Center content — title exactly center of screen ── */
+.splash-center {
   position: relative;
   z-index: 2;
-  width: 100%;
-  padding: 0 28px 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  animation: splashContentUp 0.8s ease 0.3s both;
+  justify-content: center;
+  text-align: center;
+  animation: splashContentIn 0.7s ease 0.2s both;
 }
 
-@keyframes splashContentUp {
-  from { opacity: 0; transform: translateY(20px); }
+@keyframes splashContentIn {
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Logo ── */
-.splash-logo-wrap {
-  text-align: center;
-}
-
-.splash-logo {
-  font-size: 3rem;
-  font-weight: 800;
+.splash-title {
+  font-size: 2.8rem;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.4);
-  margin: 0;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px 0;
   line-height: 1;
 }
 
-.splash-tagline {
+.splash-sub {
   font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 6px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
   font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
-/* ── Dot indicators ── */
-.splash-dots {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.splash-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
-  transition: all 0.4s ease;
-}
-
-.splash-dot.active {
-  width: 24px;
-  border-radius: 4px;
-  background: #ffffff;
-}
-
-/* ── Skip button ── */
+/* ── Skip button — bottom right like your image ── */
 .splash-skip {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-  padding: 10px 24px;
-  border-radius: 24px;
-  font-size: 0.875rem;
+  position: absolute;
+  bottom: 28px;
+  right: 20px;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background 0.2s;
-  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  letter-spacing: 0.03em;
 }
 
-.splash-skip:hover {
-  background: rgba(255, 255, 255, 0.25);
+.splash-skip:active {
+  color: #ffffff;
 }
 
-/* ── Auth page fade-in after splash ── */
+/* ── Auth page entry animation ── */
 .auth-fade-in {
-  animation: authPageIn 0.6s ease forwards;
+  animation: authFadeIn 0.5s ease forwards;
 }
 
-@keyframes authPageIn {
-  from { opacity: 0; transform: translateY(8px); }
+@keyframes authFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Google auth loader (existing, keep as is) ── */
+/* ════════════════════════════════════════════════
+   GOOGLE AUTH LOADER
+════════════════════════════════════════════════ */
+
 .google-auth-loader {
   position: fixed;
   inset: 0;
@@ -582,6 +563,10 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
   color: rgba(255, 255, 255, 0.55);
   margin: 0;
 }
+
+/* ════════════════════════════════════════════════
+   AUTH ERROR BANNER
+════════════════════════════════════════════════ */
 
 .auth-error-banner {
   background: rgba(239, 68, 68, 0.12);
