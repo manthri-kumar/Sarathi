@@ -1,322 +1,156 @@
-/* =========================================
-   SIDEBAR
-========================================= */
-
+/* ===== SIDEBAR ===== */
 .sidebar {
+  width: 250px;
+  height: 100vh;
+
   position: fixed;
   top: 0;
   left: 0;
-  bottom: 0;
 
-  width: 250px;
+  background: radial-gradient(circle at 20% 0%, rgba(0, 255, 149, 0.13), transparent 40%), #020402;
 
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba(0, 255, 136, 0.12),
-      transparent 35%
-    ),
-    #020402;
-
-  border-right: 1px solid rgba(255,255,255,0.06);
-
-  padding: 22px 16px;
+  padding: 24px 16px;
 
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 
-  box-sizing: border-box;
+  border-right: 1px solid rgba(255,255,255,0.05);
 
   z-index: 1200;
 }
 
-/* =========================================
-   HIDE SCROLLBAR
-========================================= */
-
-.sidebar::-webkit-scrollbar {
-  display: none;
-}
-
-.sidebar {
-  scrollbar-width: none;
-}
-
-/* =========================================
-   TOP AREA
-========================================= */
-
-.sidebar-top {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* =========================================
-   LOGO
-========================================= */
-
+/* ===== LOGO ===== */
 .logo-section {
-  margin-bottom: 28px;
+  margin-bottom: 30px;
 }
 
 .logo-section h2 {
-  margin: 0;
-
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-
-  color: #ffffff;
+  color: white;
+  margin: 0;
 }
 
 .logo-section p {
-  margin-top: 6px;
-
   font-size: 12px;
   color: #9ca3af;
-
-  line-height: 1.4;
+  margin-top: 4px;
 }
 
-/* =========================================
-   MENU
-========================================= */
-
+/* ===== MENU ===== */
 .menu {
   list-style: none;
-
   padding: 0;
   margin: 0;
 
   display: flex;
   flex-direction: column;
-
-  gap: 12px;
+  gap: 35px;
 }
 
 .menu li {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 
-  min-height: 54px;
-
-  padding: 0 16px;
-
-  border-radius: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
 
   cursor: pointer;
+  color: rgba(255,255,255,0.6);
 
-  color: rgba(255,255,255,0.70);
-
-  transition: all .25s ease;
-
-  font-size: 15px;
-  font-weight: 500;
-
+  transition: all 0.25s ease;
   position: relative;
 }
 
+/* ICON */
 .menu li svg {
   min-width: 18px;
 }
 
-/* Hover */
-
+/* HOVER */
 .menu li:hover {
   background: rgba(255,255,255,0.05);
-
-  color: #ffffff;
-
-  transform: translateX(4px);
+  color: white;
 }
 
-/* Active */
-
+/* ACTIVE */
 .menu li.active {
-  background:
-    linear-gradient(
-      135deg,
-      #00ff88,
-      #00ff66
-    );
+  background: linear-gradient(135deg, #00ff88, #00ff5e);
+  color: black;
+  font-weight: 500;
 
-  color: #000000;
-
-  font-weight: 600;
-
-  box-shadow:
-    0 10px 25px rgba(0,255,136,0.25);
+  box-shadow: 0 8px 20px rgba(0,255,120,0.25);
 }
 
+/* ACTIVE LEFT BAR */
 .menu li.active::before {
   content: "";
-
   position: absolute;
-
-  left: -8px;
+  left: -6px;
   top: 50%;
-
   transform: translateY(-50%);
 
   width: 4px;
-  height: 65%;
-
-  border-radius: 999px;
+  height: 60%;
 
   background: #00ff88;
+  border-radius: 4px;
 }
 
-/* =========================================
-   BOTTOM SECTION
-========================================= */
-
+/* ===== BOTTOM ===== */
 .bottom-section {
-  margin-top: auto;
-
-  border-top: 1px solid rgba(255,255,255,0.06);
-
-  padding-top: 18px;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
 
-  flex-shrink: 0;
-
-  background: #020402;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 16px;
 }
 
-/* Logout */
-
+/* LOGOUT */
 .logout {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-bottom: 3rem;
 
   color: rgba(255,255,255,0.7);
-
   cursor: pointer;
-
-  transition: all .25s ease;
+  transition: 0.2s;
 }
 
 .logout:hover {
   color: #4ade80;
 }
 
-/* Settings */
-
+/* SETTINGS */
 .settings-icon {
   color: rgba(255,255,255,0.7);
-
   cursor: pointer;
+  transition: 0.2s;
+    margin-bottom: 3rem;
 
-  transition: all .25s ease;
 }
 
 .settings-icon:hover {
   color: #4ade80;
 }
 
-/* =========================================
-   TABLET
-========================================= */
-
-@media (max-width: 1024px) {
-
-  .sidebar {
-    width: 230px;
-  }
-
-  .logo-section h2 {
-    font-size: 24px;
-  }
-
-  .menu {
-    gap: 10px;
-  }
-
-  .menu li {
-    min-height: 50px;
-    font-size: 14px;
-  }
-}
-
-/* =========================================
-   MOBILE
-========================================= */
+/* ===================================================== */
+/* ================= MOBILE ============================= */
+/* ===================================================== */
 
 @media (max-width: 768px) {
 
   .sidebar {
-    width: 280px;
-
     left: -100%;
-
-    transition: left .35s ease;
-
-    box-shadow:
-      0 0 40px rgba(0,0,0,0.55);
+    transition: left 0.3s ease;
   }
 
   .sidebar.open {
     left: 0;
   }
 
-  .logo-section {
-    margin-bottom: 24px;
-  }
-
-  .logo-section h2 {
-    font-size: 24px;
-  }
-
-  .menu {
-    gap: 8px;
-  }
-
-  .menu li {
-    min-height: 48px;
-    font-size: 14px;
-  }
-
-  .bottom-section {
-    padding-top: 14px;
-  }
-}
-
-/* =========================================
-   SMALL PHONES
-========================================= */
-
-@media (max-width: 480px) {
-
-  .sidebar {
-    width: 260px;
-
-    padding: 20px 14px;
-  }
-
-  .menu {
-    gap: 8px;
-  }
-
-  .menu li {
-    min-height: 46px;
-
-    font-size: 13px;
-
-    gap: 10px;
-
-    padding: 0 14px;
-  }
-
-  .logo-section h2 {
-    font-size: 22px;
-  }
-
-  .logo-section p {
-    font-size: 11px;
-  }
 }
