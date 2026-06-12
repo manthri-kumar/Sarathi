@@ -39,15 +39,18 @@ const profilePic =
   className="profile-section"
   onClick={() => navigate("/profile")}
 >
+
   <img
     src={profilePic}
     alt="profile"
     className="profile-pic"
   />
 
-  <span>{username}</span>
-</div>
+  <span>
+    {username}
+  </span>
 
+</div>
   const appItems = [
     {
       name: "Dashboard",
