@@ -29,9 +29,18 @@ const Navbar = ({ toggleSidebar }) => {
     user?.name ||
     "User";
 
-  const profilePic =
-    user?.picture ||
-    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  <div
+  className="profile-section"
+  onClick={() => navigate("/profile")}
+>
+  <img
+    src={profilePic}
+    alt="Profile"
+    className="profile-pic"
+  />
+
+  <span>{userName}</span>
+</div>
 
   const appItems = [
     {
