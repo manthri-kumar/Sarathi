@@ -142,7 +142,7 @@ const Itinerary = () => {
           {/* PREMIUM SEARCHBAR BAR */}
           <div className="search-wrapper-card">
             <div className="input-group-icon">
-              <span className="geo-icon">📍</span>
+              <span className="geo-icon"></span>
               <input
                 type="text"
                 placeholder="Search city..."
@@ -161,7 +161,7 @@ const Itinerary = () => {
               {/* SUGGESTED PLACES BLOCK */}
               <div className="panel-card-container suggested-panel">
                 <div className="panel-header">
-                  <span className="panel-title-icon">👜</span>
+                  <span className="panel-title-icon"></span>
                   <div>
                     <h2>Suggested Places</h2>
                     <p>Top places recommended for you</p>
@@ -330,7 +330,7 @@ const Itinerary = () => {
             /* COMPLETED PREMIUM FINAL SUMMARY VIEW */
             <div className="premium-final-view animate-fade-in">
               <div className="final-view-header">
-                <h2>✨ Your Ultimate Itinerary</h2>
+                <h2>Your Ultimate Itinerary</h2>
                 <p>Perfectly curated sequence optimized by dates and timestamp metrics.</p>
               </div>
 
@@ -338,12 +338,12 @@ const Itinerary = () => {
                 {finalPlan.map((item, index) => (
                   <div key={index} className="summary-row-card">
                     <div className="timeline-badge">
-                      <span className="calendar-mini">📅</span>
+                      <span className="calendar-mini"></span>
                       {item.date || "No Date Assigned"} | {item.time || "Anytime"}
                     </div>
                     <div className="summary-body">
                       <h3>{item.name}</h3>
-                      {item.budget && <span className="budget-tag">💰 Estimated Cost: ₹{item.budget}</span>}
+                      {item.budget && <span className="budget-tag"> Estimated Cost: ₹{item.budget}</span>}
                       {item.note && <p className="notes-block-view">📝 <strong>Notes:</strong> {item.note}</p>}
                     </div>
                   </div>
