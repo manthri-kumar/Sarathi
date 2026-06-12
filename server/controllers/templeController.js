@@ -12,15 +12,18 @@ const getNearbyTemples = async (req, res) => {
   }
 
   try {
-    const response = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: {
-        location: `${lat},${lng}`,
-        radius,
-        keyword: "temple",
-        type: "hindu_temple|place_of_worship",
-        key: GOOGLE_PLACES_KEY,
-      },
-    });
+   const response = await axios.get(
+  `${PLACES_BASE}/nearbysearch/json`,
+  {
+    params: {
+      location: `${lat},${lng}`,
+      radius,
+      keyword: "temple",
+      type: "hindu_temple",
+      key: GOOGLE_PLACES_KEY,
+    },
+  }
+);
 
     const raw = response.data.results;
 
@@ -67,6 +70,10 @@ const getTempleDetails = async (req, res) => {
         key: GOOGLE_PLACES_KEY,
       },
     });
+    console.log(
+  "Google Places Response:",
+  JSON.stringify(response.data, null, 2)
+);
 
     const place = response.data.result;
 
@@ -103,9 +110,15 @@ const getTempleDetails = async (req, res) => {
 
     res.json({ temple: details });
   } catch (err) {
-    console.error("Temple details error:", err.message);
-    res.status(500).json({ error: "Failed to fetch temple details" });
-  }
+  console.error(
+    "Temple nearby error:",
+    err.response?.data || err.message
+  );
+
+  res.status(500).json({
+    error: "Failed to fetch nearby temples",
+  });
+}
 };
 
 // GET /api/temples/search?query=...&lat=...&lng=...
