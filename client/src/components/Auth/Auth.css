@@ -463,25 +463,6 @@ background: linear-gradient(90deg, #b6ff00, #84ff00);
   letter-spacing: 0.01em;
 }
 
-/* ── Skip button — bottom right like your image ── */
-.splash-skip {
-  position: absolute;
-  bottom: 28px;
-  right: 20px;
-  z-index: 2;
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 8px 12px;
-  letter-spacing: 0.03em;
-}
-
-.splash-skip:active {
-  color: #ffffff;
-}
 
 /* ── Auth page entry animation ── */
 .auth-fade-in {

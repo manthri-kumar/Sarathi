@@ -38,8 +38,8 @@ function AuthPage() {
         setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
       }, 1600);
 
-      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 4500);
-      const removeTimer = setTimeout(() => setShowSplash(false), 5200);
+      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 4300);
+      const removeTimer = setTimeout(() => setShowSplash(false), 5000);
 
       return () => {
         clearInterval(slideInterval);
@@ -145,24 +145,6 @@ function AuthPage() {
   if (showSplash) {
     return (
       <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
-
-        {/* Story-bar dots — top like your reference image */}
-        <div className="splash-story-bar">
-          {SPLASH_IMAGES.map((_, i) => (
-            <div key={i} className="splash-story-segment">
-              <div
-                className="splash-story-fill"
-                style={{
-                  animationDelay: `${i * 1.6}s`,
-                  animationPlayState: i <= activeSlide ? "running" : "paused",
-                  width: i < activeSlide ? "100%" : i === activeSlide ? undefined : "0%",
-                  animation: i === activeSlide ? "storyFill 1.6s linear forwards" : "none",
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
         {/* Background — solid dark green like your image, no photos needed */}
         <div className="splash-bg" />
 
@@ -171,17 +153,6 @@ function AuthPage() {
           <h1 className="splash-title">Sarathi</h1>
           <p className="splash-sub">Your Journey, Our Guidance</p>
         </div>
-
-        {/* Skip */}
-        <button
-          className="splash-skip"
-          onClick={() => {
-            setSplashFadingOut(true);
-            setTimeout(() => setShowSplash(false), 500);
-          }}
-        >
-          Skip
-        </button>
 
       </div>
     );
