@@ -12,12 +12,6 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { library } from "@fortawesome/fontawesome-svg-core";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGopuram } from "@fortawesome/pro-solid-svg-icons";
-
-// Register the icon in the library
-library.add(faGopuram);
 
 const Sidebar = ({ isOpen }) => {
   const navigate = useNavigate();
@@ -59,7 +53,7 @@ const Sidebar = ({ isOpen }) => {
     {
       name: t("temples") || "Temples",
       path: "/temples",
-      icon: <FontAwesomeIcon icon={faGopuram} style={{ width: 18, height: 18 }} />,
+      icon: <span className="menu-emoji-icon">🛕</span>,
     },
     {
       name: t("profile"),
