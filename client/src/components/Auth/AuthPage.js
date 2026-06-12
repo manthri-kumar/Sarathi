@@ -112,7 +112,7 @@ setGoogleLoading(true);
   };
 
   handleGoogleLogin();
-}, []);
+}, [[navigate]]);
 
   // GOOGLE CLICK
   const handleGoogleClick = () => {
