@@ -153,3 +153,13 @@
   }
 
 }
+
+/* ===== TEMPLE EMOJI ICON ===== */
+.menu-emoji-icon {
+  font-size: 16px;
+  min-width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
