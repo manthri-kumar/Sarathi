@@ -10,7 +10,6 @@ const PlacesSection = ({
   places = [],
   title,
 }) => {
-
   const { t } = useTranslation();
 
   const defaultPlaces = [
@@ -57,13 +56,12 @@ const PlacesSection = ({
   ];
 
   const destinationData =
-    places.length > 0
+    places?.length > 0
       ? places
       : defaultPlaces;
 
   const handleNavigate = (destination) => {
-
-    if (!destination.lat || !destination.lng) {
+    if (!destination?.lat || !destination?.lng) {
       alert("Location coordinates unavailable");
       return;
     }
@@ -80,7 +78,7 @@ const PlacesSection = ({
       <div className="destinations-header">
 
         <h2>
-          ✨ {title || "Popular Destinations"}
+          ✨ {title || t("popularPlaces")}
         </h2>
 
         <button className="view-destinations-btn">
@@ -91,73 +89,107 @@ const PlacesSection = ({
 
       <div className="destinations-grid">
 
-        {destinationData.map((destination, index) => (
+        {destinationData.map((destination, index) => {
 
-          <div
-            key={index}
-            className="destination-card"
-          >
+          const image =
+            destination.image ||
+            destination.photos?.[0] ||
+            img1;
 
-            <div className="destination-image">
+          const location =
+            destination.location ||
+            destination.vicinity ||
+            "India";
 
-              <img
-                src={destination.image}
-                alt={destination.name}
-              />
+          const rating =
+            destination.rating || "4.5";
 
-              <button className="favorite-btn">
-                ♡
-              </button>
+          const reviews =
+            destination.reviews || "1k";
 
-              <span
-                className={`destination-badge ${
-                  index === 0
-                    ? "trending"
-                    : index === 1
-                    ? "popular"
-                    : index === 2
-                    ? "toprated"
-                    : "bestforyou"
-                }`}
-              >
-                {destination.badge}
-              </span>
+          const badge =
+            destination.badge ||
+            (index === 0
+              ? "Trending"
+              : index === 1
+              ? "Popular"
+              : index === 2
+              ? "Top Rated"
+              : "Best For You");
 
-            </div>
+          return (
 
-            <div className="destination-content">
+            <div
+              key={index}
+              className="destination-card"
+            >
 
-              <h3>{destination.name}</h3>
+              <div className="destination-image">
 
-              <p>
-                {destination.location}
-              </p>
+                <img
+                  src={image}
+                  alt={destination.name}
+                  onError={(e) => {
+                    e.target.src = img1;
+                  }}
+                />
 
-              <div className="destination-footer">
-
-                <div className="destination-rating">
-                  ⭐ {destination.rating}
-                  <span>
-                    ({destination.reviews})
-                  </span>
-                </div>
-
-                <button
-                  className="explore-btn"
-                  onClick={() =>
-                    handleNavigate(destination)
-                  }
-                >
-                  Explore →
+                <button className="favorite-btn">
+                  ♡
                 </button>
+
+                <span
+                  className={`destination-badge ${
+                    index === 0
+                      ? "trending"
+                      : index === 1
+                      ? "popular"
+                      : index === 2
+                      ? "toprated"
+                      : "bestforyou"
+                  }`}
+                >
+                  {badge}
+                </span>
+
+              </div>
+
+              <div className="destination-content">
+
+                <h3>
+                  {destination.name}
+                </h3>
+
+                <p>
+                  {location}
+                </p>
+
+                <div className="destination-footer">
+
+                  <div className="destination-rating">
+                    ⭐ {rating}
+                    <span>
+                      ({reviews})
+                    </span>
+                  </div>
+
+                  <button
+                    className="explore-btn"
+                    onClick={() =>
+                      handleNavigate(destination)
+                    }
+                  >
+                    Explore →
+                  </button>
+
+                </div>
 
               </div>
 
             </div>
 
-          </div>
-
-        ))}
+          );
+        })}
 
       </div>
 
