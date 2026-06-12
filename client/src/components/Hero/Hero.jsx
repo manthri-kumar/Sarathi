@@ -21,9 +21,18 @@ const Hero = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <section className="hero">
+  const nextSlide = () => {
+    setIndex((prev) => (prev + 1) % images.length);
+  };
 
+  const prevSlide = () => {
+    setIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  return (
+    <div className="hero">
+
+      {/* Background Slider */}
       <div
         className="slider-wrapper"
         style={{
@@ -41,6 +50,10 @@ const Hero = () => {
         ))}
       </div>
 
+      {/* Dark Overlay */}
+      <div className="hero-dark-overlay"></div>
+
+      {/* Content */}
       <div className="hero-overlay">
 
         <span className="hero-badge">
@@ -48,23 +61,44 @@ const Hero = () => {
         </span>
 
         <h1>
-          Discover the
-          <span> Unexplored</span>
+          {t("discover")}
         </h1>
 
         <p>
-          AI-powered recommendations,
-          curated just for you.
-          Discover, plan and make memories.
+          {t("recommendations")}
         </p>
 
-        <button className="explore-btn">
-          Explore Places →
-        </button>
+        <div className="hero-buttons">
+
+          <button className="explore-btn">
+            {t("explorePlaces")} →
+          </button>
+
+          
+
+        </div>
 
       </div>
 
+      {/* Left Arrow */}
+      <button
+        className="arrow left"
+        onClick={prevSlide}
+      >
+        ❮
+      </button>
+
+      {/* Right Arrow */}
+      <button
+        className="arrow right"
+        onClick={nextSlide}
+      >
+        ❯
+      </button>
+
+      {/* Dots */}
       <div className="dots">
+
         {images.map((_, i) => (
           <span
             key={i}
@@ -73,12 +107,15 @@ const Hero = () => {
                 ? "dot active"
                 : "dot"
             }
-            onClick={() => setIndex(i)}
+            onClick={() =>
+              setIndex(i)
+            }
           />
         ))}
+
       </div>
 
-    </section>
+    </div>
   );
 };
 

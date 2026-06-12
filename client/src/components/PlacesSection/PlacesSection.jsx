@@ -93,7 +93,6 @@ const PlacesSection = ({
 
           const image =
             destination.image ||
-            destination.photos?.[0] ||
             img1;
 
           const location =
@@ -109,13 +108,7 @@ const PlacesSection = ({
 
           const badge =
             destination.badge ||
-            (index === 0
-              ? "Trending"
-              : index === 1
-              ? "Popular"
-              : index === 2
-              ? "Top Rated"
-              : "Best For You");
+            "Popular";
 
           return (
 
@@ -133,6 +126,8 @@ const PlacesSection = ({
                     e.target.src = img1;
                   }}
                 />
+
+                <div className="image-fade"></div>
 
                 <button className="favorite-btn">
                   ♡
@@ -152,35 +147,35 @@ const PlacesSection = ({
                   {badge}
                 </span>
 
-              </div>
+                <div className="destination-content">
 
-              <div className="destination-content">
+                  <h3>
+                    {destination.name}
+                  </h3>
 
-                <h3>
-                  {destination.name}
-                </h3>
+                  <p>
+                    {location}
+                  </p>
 
-                <p>
-                  {location}
-                </p>
+                  <div className="destination-footer">
 
-                <div className="destination-footer">
+                    <div className="destination-rating">
+                      ⭐ {rating}
+                      <span>
+                        ({reviews})
+                      </span>
+                    </div>
 
-                  <div className="destination-rating">
-                    ⭐ {rating}
-                    <span>
-                      ({reviews})
-                    </span>
+                    <button
+                      className="explore-btn"
+                      onClick={() =>
+                        handleNavigate(destination)
+                      }
+                    >
+                      Explore →
+                    </button>
+
                   </div>
-
-                  <button
-                    className="explore-btn"
-                    onClick={() =>
-                      handleNavigate(destination)
-                    }
-                  >
-                    Explore →
-                  </button>
 
                 </div>
 

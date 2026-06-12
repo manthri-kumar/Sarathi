@@ -1,259 +1,331 @@
-.destinations-showcase{
-  margin-top:40px;
+/* =========================================
+   DESTINATIONS SECTION
+========================================= */
+
+.destinations-showcase {
+  margin-top: 40px;
 }
 
-.destinations-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:24px;
+/* =========================================
+   HEADER
+========================================= */
+
+.destinations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
-.destinations-header h2{
-  font-size:30px;
-  font-weight:800;
-  color:white;
+.destinations-header h2 {
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
 }
 
-.view-destinations-btn{
-  background:transparent;
-  color:white;
+.view-destinations-btn {
+  background: transparent;
+  color: white;
 
-  border:1px solid
-  rgba(255,255,255,.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
-  padding:12px 18px;
+  padding: 10px 18px;
 
-  border-radius:14px;
+  border-radius: 14px;
 
-  cursor:pointer;
+  cursor: pointer;
 
-  transition:.3s;
+  transition: 0.3s;
 }
 
-.view-destinations-btn:hover{
-  border-color:#22c55e;
-  color:#22c55e;
+.view-destinations-btn:hover {
+  border-color: #22c55e;
+  color: #22c55e;
 }
 
-.destinations-grid{
-  display:grid;
-  grid-template-columns:
-  repeat(4,1fr);
+/* =========================================
+   GRID
+========================================= */
 
-  gap:22px;
+.destinations-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
 }
 
-/* CARD */
+/* =========================================
+   CARD
+========================================= */
 
-.destination-card{
+.destination-card {
+  position: relative;
 
-  background:#08111f;
+  height: 320px;
 
-  border-radius:24px;
+  border-radius: 24px;
 
-  overflow:hidden;
+  overflow: hidden;
 
-  border:1px solid
-  rgba(255,255,255,.06);
+  cursor: pointer;
 
-  transition:.35s ease;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  transition: all 0.35s ease;
 }
 
-.destination-card:hover{
+.destination-card:hover {
+  transform: translateY(-8px);
 
-  transform:
-  translateY(-8px);
-
-  border-color:
-  rgba(34,197,94,.3);
+  border-color: rgba(34, 197, 94, 0.3);
 
   box-shadow:
-  0 20px 45px
-  rgba(0,0,0,.35);
+    0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
-/* IMAGE */
+/* =========================================
+   IMAGE
+========================================= */
 
-.destination-image{
-  position:relative;
-  height:220px;
+.destination-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
-.destination-image img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
+.destination-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  transition: transform 0.6s ease;
 }
 
-/* FAVORITE */
+.destination-card:hover img {
+  transform: scale(1.05);
+}
 
-.favorite-btn{
+/* =========================================
+   PREMIUM FADE
+========================================= */
 
-  position:absolute;
-  top:14px;
-  left:14px;
-
-  width:38px;
-  height:38px;
-
-  border:none;
-
-  border-radius:50%;
+.image-fade {
+  position: absolute;
+  inset: 0;
 
   background:
-  rgba(255,255,255,.15);
-
-  backdrop-filter:blur(10px);
-
-  color:white;
-
-  cursor:pointer;
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 10%,
+      rgba(0, 0, 0, 0.15) 40%,
+      rgba(0, 0, 0, 0.55) 70%,
+      rgba(2, 6, 23, 0.98) 100%
+    );
 }
 
-/* BADGES */
+/* =========================================
+   FAVORITE BUTTON
+========================================= */
 
-.destination-badge{
+.favorite-btn {
+  position: absolute;
 
-  position:absolute;
+  top: 14px;
+  left: 14px;
 
-  top:14px;
-  right:14px;
+  width: 38px;
+  height: 38px;
 
-  padding:6px 12px;
+  border: none;
+  border-radius: 50%;
 
-  border-radius:999px;
+  background: rgba(255, 255, 255, 0.18);
 
-  color:white;
+  backdrop-filter: blur(12px);
 
-  font-size:11px;
+  color: white;
 
-  font-weight:700;
+  cursor: pointer;
+
+  z-index: 5;
+
+  transition: 0.3s;
 }
 
-.trending{
-  background:#f97316;
+.favorite-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.popular{
-  background:#16a34a;
+/* =========================================
+   BADGES
+========================================= */
+
+.destination-badge {
+  position: absolute;
+
+  top: 14px;
+  right: 14px;
+
+  padding: 6px 12px;
+
+  border-radius: 999px;
+
+  color: white;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  z-index: 5;
 }
 
-.toprated{
-  background:#7c3aed;
+.trending {
+  background: #f97316;
 }
 
-.bestforyou{
-  background:#2563eb;
+.popular {
+  background: #16a34a;
 }
 
-/* CONTENT */
-
-.destination-content{
-  padding:18px;
+.toprated {
+  background: #7c3aed;
 }
 
-.destination-content h3{
-  color:white;
-  font-size:22px;
-  margin-bottom:6px;
+.bestforyou {
+  background: #2563eb;
 }
 
-.destination-content p{
-  color:#94a3b8;
-  font-size:14px;
-  margin-bottom:18px;
+/* =========================================
+   CONTENT OVER IMAGE
+========================================= */
+
+.destination-content {
+  position: absolute;
+
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+
+  z-index: 5;
 }
 
-/* FOOTER */
+.destination-content h3 {
+  color: white;
 
-.destination-footer{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+  font-size: 28px;
+
+  font-weight: 700;
+
+  margin-bottom: 6px;
 }
 
-.destination-rating{
-  color:#22c55e;
-  font-size:14px;
+.destination-content p {
+  color: #d1d5db;
+
+  font-size: 14px;
+
+  margin-bottom: 16px;
 }
 
-.destination-rating span{
-  color:#94a3b8;
+/* =========================================
+   FOOTER
+========================================= */
+
+.destination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* BUTTON */
+.destination-rating {
+  color: #22c55e;
 
-.explore-btn{
+  font-size: 14px;
 
-  border:none;
+  font-weight: 600;
+}
 
-  cursor:pointer;
+.destination-rating span {
+  color: #cbd5e1;
+}
 
-  padding:10px 18px;
+/* =========================================
+   EXPLORE BUTTON
+========================================= */
 
-  border-radius:12px;
+.explore-btn {
+  border: none;
 
+  padding: 10px 16px;
+
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  backdrop-filter: blur(12px);
+
+  color: white;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+
+.explore-btn:hover {
   background:
-  rgba(255,255,255,.05);
+    linear-gradient(
+      135deg,
+      #00ff94,
+      #22c55e
+    );
 
-  border:
-  1px solid rgba(255,255,255,.08);
-
-  color:white;
-
-  transition:.3s;
+  color: #000;
 }
 
-.explore-btn:hover{
+/* =========================================
+   TABLET
+========================================= */
 
-  background:
-  linear-gradient(
-    135deg,
-    #00ff94,
-    #22c55e
-  );
+@media (max-width: 1200px) {
 
-  color:black;
-}
-
-/* TABLET */
-
-@media(max-width:1200px){
-
-  .destinations-grid{
-    grid-template-columns:
-    repeat(2,1fr);
+  .destinations-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
 }
 
-/* MOBILE */
+/* =========================================
+   MOBILE
+========================================= */
 
-@media(max-width:768px){
+@media (max-width: 768px) {
 
-  .destinations-grid{
-    grid-template-columns:1fr;
+  .destinations-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
-  .destinations-header{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:10px;
+  .destinations-header h2 {
+    font-size: 24px;
   }
 
-  .destination-image{
-    height:180px;
+  .destinations-grid {
+    grid-template-columns: 1fr;
   }
 
-  .destination-footer{
-    flex-direction:column;
-    gap:12px;
-    align-items:stretch;
+  .destination-card {
+    height: 280px;
   }
 
-  .explore-btn{
-    width:100%;
+  .destination-content h3 {
+    font-size: 22px;
+  }
+
+  .destination-footer {
+    flex-direction: row;
+  }
+
+  .explore-btn {
+    padding: 8px 14px;
   }
 
 }

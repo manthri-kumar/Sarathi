@@ -1,242 +1,140 @@
+/* HERO */
 .hero {
-  position: relative;
   width: 100%;
-  height: 380px;
-
-  border-radius: 28px;
+  height: 260px;
+  border-radius: 18px;
   overflow: hidden;
-
-  margin-top: 24px;
-
-  border: 1px solid rgba(
-    255,
-    255,
-    255,
-    0.05
-  );
-
-  box-shadow:
-    0 20px 50px
-    rgba(0, 0, 0, 0.35);
+  position: relative;
+  margin-top: 20px;
 }
 
-/* Slider */
-
+/* ===== SLIDER FIX ===== */
 .slider-wrapper {
   display: flex;
-  width: 100%;
   height: 100%;
 
-  transition:
-    transform 0.8s ease;
+  /* 🔥 KEY FIX */
+  width: 100%;
+  transition: transform 0.6s ease-in-out;
 }
 
+/* Each slide */
 .slide {
-  min-width: 100%;
+  min-width: 100%;   /* 🔥 VERY IMPORTANT */
   height: 100%;
 
   background-size: cover;
   background-position: center;
-
-  animation:
-    zoomEffect 10s linear infinite;
 }
-
-@keyframes zoomEffect {
-  from {
-    transform: scale(1);
-  }
-
-  to {
-    transform: scale(1.08);
-  }
-}
-
-/* Overlay */
-
+/* ===== OVERLAY ===== */
 .hero-overlay {
   position: absolute;
   inset: 0;
 
-  z-index: 2;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.2)
+  );
 
+  padding: 30px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-
-  padding: 40px;
-
-  background:
-    linear-gradient(
-      90deg,
-      rgba(0,0,0,0.82) 0%,
-      rgba(0,0,0,0.45) 40%,
-      rgba(0,0,0,0.1) 100%
-    );
 }
 
-/* Badge */
-
-.hero-badge {
-  color: #00ff94;
-
-  font-size: 15px;
-
-  font-weight: 700;
-
-  margin-bottom: 18px;
+.hero h2 {
+  font-size: 14px;
+  color: #9ca3af;
 }
-
-/* Heading */
 
 .hero h1 {
-  font-size: 64px;
-
-  line-height: 1.05;
-
-  font-weight: 800;
-
-  color: white;
-
-  max-width: 500px;
-
-  margin-bottom: 16px;
+  font-size: 28px;
+  margin: 5px 0;
 }
-
-.hero h1 span {
-  color: #00ff94;
-}
-
-/* Description */
 
 .hero p {
-  color: #d1d5db;
-
-  max-width: 520px;
-
-  font-size: 18px;
-
-  line-height: 1.7;
-
-  margin-bottom: 28px;
+  color: #cbd5f5;
+  margin-bottom: 15px;
 }
 
 /* Button */
-
 .explore-btn {
-  width: fit-content;
-
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border: none;
-
-  cursor: pointer;
-
-  padding: 16px 30px;
-
-  border-radius: 16px;
-
-  font-size: 16px;
-
-  font-weight: 700;
-
+  padding: 10px 20px;
+  border-radius: 10px;
   color: white;
-
-  background:
-    linear-gradient(
-      135deg,
-      #00ff94,
-      #22c55e
-    );
-
-  transition: .3s;
+  cursor: pointer;
+  width: fit-content;
+  transition: 0.3s;
 }
 
 .explore-btn:hover {
-  transform:
-    translateY(-3px);
-
-  box-shadow:
-    0 10px 30px
-    rgba(
-      34,
-      197,
-      94,
-      0.35
-    );
+  transform: scale(1.05);
 }
 
-/* Dots */
+/* ===== ARROWS ===== */
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: white;
+  font-size: 20px;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+}
 
+.arrow.left {
+  left: 15px;
+}
+
+.arrow.right {
+  right: 15px;
+}
+
+/* ===== DOTS ===== */
 .dots {
   position: absolute;
-
-  bottom: 22px;
-
+  bottom: 15px;
   left: 50%;
-
-  transform:
-    translateX(-50%);
-
+  transform: translateX(-50%);
   display: flex;
-
-  gap: 10px;
-
-  z-index: 10;
+  gap: 8px;
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
-
+  width: 8px;
+  height: 8px;
+  background: rgba(255,255,255,0.4);
   border-radius: 50%;
-
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      0.35
-    );
-
   cursor: pointer;
-
-  transition: .3s;
 }
 
 .dot.active {
-  width: 28px;
-
-  border-radius: 20px;
-
-  background: #00ff94;
+  background: white;
 }
 
-/* Hide arrows */
-
-.arrow {
-  display: none;
-}
-
-/* Mobile */
-
+/* ===== MOBILE HERO ===== */
 @media (max-width: 768px) {
 
   .hero {
-    height: 280px;
+    height: 200px;
   }
 
   .hero-overlay {
-    padding: 20px;
+    padding: 15px;
   }
 
   .hero h1 {
-    font-size: 34px;
+    font-size: 20px;
   }
 
   .hero p {
-    font-size: 14px;
+    font-size: 12px;
   }
 
-  .explore-btn {
-    padding: 12px 20px;
-  }
 }
