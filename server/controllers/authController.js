@@ -1,88 +1,120 @@
-const axios = require("axios");
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-/* GET NEARBY TEMPLES */
-exports.getAllTemples = async (req, res) => {
+// ================= SIGNUP =================
+exports.signup = async (req, res) => {
   try {
-    const { lat, lng } = req.query;
+    const { username, email, password } = req.body;
 
-    if (!lat || !lng) {
-      return res.status(400).json({
-        message: "Latitude and Longitude required",
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+    });
+
+    res.status(201).json({
+      message: "Signup successful",
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= LOGIN =================
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= GOOGLE LOGIN (FIXED) =================
+exports.googleLogin = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email required" });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        username: name,
+        email,
+        password: "google_auth",
       });
     }
 
-    const url =
-      `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
-      `?location=${lat},${lng}` +
-      `&radius=10000` +
-      `&keyword=temple` +
-      `&key=${process.env.GOOGLE_PLACES_KEY}`;
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    const response = await axios.get(url);
-
-    const temples = response.data.results.map((place) => ({
-      id: place.place_id,
-      name: place.name,
-      address: place.vicinity,
-      rating: place.rating || 0,
-      totalRatings: place.user_ratings_total || 0,
-      latitude: place.geometry.location.lat,
-      longitude: place.geometry.location.lng,
-      photo: place.photos?.[0]
-        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${process.env.GOOGLE_PLACES_KEY}`
-        : null,
-    }));
-
-    res.json(temples);
-
-  } catch (err) {
-    console.log(err.response?.data || err.message);
-
-    res.status(500).json({
-      message: "Failed to fetch temples",
-      error: err.message,
+    res.json({
+      message: "Google login successful",
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+      },
     });
-  }
-};
 
-/* GET TEMPLE DETAILS */
-exports.getTempleById = async (req, res) => {
-  try {
-    const placeId = req.params.placeId;
-
-    const url =
-      `https://maps.googleapis.com/maps/api/place/details/json` +
-      `?place_id=${placeId}` +
-      `&key=${process.env.GOOGLE_PLACES_KEY}`;
-
-    const response = await axios.get(url);
-
-    res.json(response.data.result);
-
-  } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
-  }
-};
-
-/* SEARCH TEMPLES */
-exports.searchTemples = async (req, res) => {
-  try {
-    const { search } = req.query;
-
-    const url =
-      `https://maps.googleapis.com/maps/api/place/textsearch/json` +
-      `?query=${search}+temple` +
-      `&key=${process.env.GOOGLE_PLACES_KEY}`;
-
-    const response = await axios.get(url);
-
-    res.json(response.data.results);
-
-  } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Google login failed" });
   }
 };
