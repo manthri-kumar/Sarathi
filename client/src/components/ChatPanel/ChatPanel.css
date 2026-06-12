@@ -602,3 +602,57 @@
     height: 50px;
   }
 }
+
+/* ─── MOBILE CRITICAL FIXES ──────────────────── */
+@media (max-width: 768px) {
+
+  /* Panel takes full screen on mobile */
+  .chat-panel {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;   /* dvh respects mobile browser chrome */
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    z-index: 9999;
+  }
+
+  /* Body fills available space */
+  .chat-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Force buttons into a row */
+  .quick-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+  }
+
+  .quick-actions button {
+    flex: 1 !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    font-size: 0.78rem !important;
+    padding: 8px 4px !important;
+  }
+}
+
+/* ─── DESKTOP PANEL (sidebar style) ─────────── */
+@media (min-width: 769px) {
+  .chat-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 320px;
+    height: 100vh;
+    border-radius: 0;
+    z-index: 9999;
+  }
+}
