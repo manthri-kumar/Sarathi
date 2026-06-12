@@ -113,8 +113,7 @@ useEffect(() => {
   const CLIENT_ID =
     "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
 
-  const REDIRECT_URI =
-    "https://sarathi-6w2qneb0z-manthri-kumars-projects.vercel.app";
+  const REDIRECT_URI = window.location.origin;
 
   const scope = encodeURIComponent(
     "openid email profile"
