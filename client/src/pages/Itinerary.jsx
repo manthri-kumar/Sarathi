@@ -155,7 +155,7 @@ const Itinerary = () => {
           {/* PREMIUM SEARCHBAR BAR */}
           <div className="search-wrapper-card">
             <div className="input-group-icon">
-              <span className="geo-icon">📍</span>
+              <span className="geo-icon"></span>
               <input
                 type="text"
                 placeholder="Search city (e.g., kashmir)..."
@@ -175,7 +175,7 @@ const Itinerary = () => {
               {/* SUGGESTED PLACES BLOCK */}
               <div className="panel-card-container suggested-panel">
                 <div className="panel-header">
-                  <span className="panel-title-icon">👜</span>
+                  <span className="panel-title-icon"></span>
                   <div>
                     <h2>Suggested Places</h2>
                     <p>Top places recommended for you</p>
@@ -276,7 +276,7 @@ const Itinerary = () => {
               {/* DESKTOP SPLIT VIEW PLAN CONTAINER */}
               <div className="panel-card-container planner-panel">
                 <div className="panel-header border-b">
-                  <span className="panel-title-icon green-icon">📋</span>
+                  <span className="panel-title-icon green-icon"></span>
                   <div>
                     <h2>Your Plan</h2>
                     <p>Add places and details to finalize your trip</p>
@@ -352,7 +352,7 @@ const Itinerary = () => {
             /* COMPLETED PREMIUM FINAL SUMMARY VIEW */
             <div className="premium-final-view animate-fade-in">
               <div className="final-view-header">
-                <h2>✨ Your Ultimate Itinerary</h2>
+                <h2>Your Ultimate Itinerary</h2>
                 <p>Perfectly curated sequence optimized by dates and timestamp metrics.</p>
               </div>
 
@@ -365,8 +365,8 @@ const Itinerary = () => {
                     </div>
                     <div className="summary-body">
                       <h3>{item.name}</h3>
-                      {item.budget && <span className="budget-tag">💰 Estimated Cost: ₹{item.budget}</span>}
-                      {item.note && <p className="notes-block-view">📝 <strong>Notes:</strong> {item.note}</p>}
+                      {item.budget && <span className="budget-tag">Estimated Cost: ₹{item.budget}</span>}
+                      {item.note && <p className="notes-block-view"><strong>Notes:</strong> {item.note}</p>}
                     </div>
                   </div>
                 ))}
