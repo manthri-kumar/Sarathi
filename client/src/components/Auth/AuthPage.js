@@ -22,11 +22,9 @@ useEffect(() => {
     try {
       const hash = window.location.hash;
 
-if (hash.includes("access_token")) {
-  setGoogleLoading(true);
-}
+      if (!hash.includes("access_token")) return;
 
-if (!hash.includes("access_token")) return;
+setGoogleLoading(true);
 
       const accessToken = hash
         .split("access_token=")[1]
