@@ -130,8 +130,7 @@
   color: rgba(255,255,255,0.7);
   cursor: pointer;
   transition: 0.2s;
-    margin-bottom: 3rem;
-
+  margin-bottom: 3rem;
 }
 
 .settings-icon:hover {

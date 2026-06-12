@@ -9,6 +9,7 @@ import Saved from "./pages/Saved";
 import Profile from "./pages/Profile";
 import DayPlanner from "./pages/DayPlanner";
 import TripPlanner from "./pages/TripPlanner";
+import TempleExplorer from "./pages/TempleExplorer";
 
 
 /* 🔐 Protected Route */
@@ -109,6 +110,9 @@ function App() {
     </ProtectedRoute>
   }
 />
+
+<Route path="/temples" element={<ProtectedRoute><TempleExplorer /></ProtectedRoute>} />
+
 
 <Route
   path="/trip-planner"
