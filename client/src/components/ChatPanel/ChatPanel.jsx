@@ -38,21 +38,19 @@ const ChatPanel = ({ closeChat }) => {
     setTyping(true);
 
     try {
-     const res = await fetch(
-  "https://sarathi-backend-7u0y.onrender.com/api/chat",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message: msg,
-      lat: localStorage.getItem("lat"),
-      lng: localStorage.getItem("lng"),
-      city: localStorage.getItem("city"),
-    }),
-  }
-);
+      const res = await fetch(
+        "https://sarathi-backend-7u0y.onrender.com/api/chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: msg,
+            lat: localStorage.getItem("lat"),
+            lng: localStorage.getItem("lng"),
+            city: localStorage.getItem("city"),
+          }),
+        }
+      );
 
       const data = await res.json();
       setTyping(false);
@@ -63,25 +61,29 @@ const ChatPanel = ({ closeChat }) => {
       ]);
 
     } catch (err) {
-  console.error("Chat Error:", err);
-
-  setTyping(false);
-
-  setMessages(prev => [
-    ...prev,
-    {
-      text: `Server error: ${err.message}`,
-      sender: "bot"
+      console.error("Chat Error:", err);
+      setTyping(false);
+      setMessages(prev => [
+        ...prev,
+        { text: `Server error: ${err.message}`, sender: "bot" }
+      ]);
     }
-  ]);
-}
   };
+
+  /* ================= KEY PRESS ================= */
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
   return (
     <div className="chat-panel">
 
       {/* HEADER */}
       <div className="chat-header">
-        <h3> Sarathi AI</h3>
+        <h3>Sarathi AI</h3>
         <button onClick={closeChat}>✖</button>
       </div>
 
@@ -99,27 +101,18 @@ const ChatPanel = ({ closeChat }) => {
             {/* PLACES */}
             {msg.type === "places" && (
               <div className="chat-cards">
-
                 {msg.data?.map((p, i) => (
                   <div key={i} className="chat-card">
-
                     <img src={p.image} alt="" />
-
                     <div className="card-content">
                       <h4>{p.name}</h4>
                       <p>⭐ {p.rating}</p>
                       <p className="subtitle">{p.bestTime}</p>
-<p className="desc">{p.description}</p>
-
-                      {/* NAVIGATE BUTTON */}
-                      <button onClick={() => navigateTo(p)}>
-                        Navigate 
-                      </button>
+                      <p className="desc">{p.description}</p>
+                      <button onClick={() => navigateTo(p)}>Navigate</button>
                     </div>
-
                   </div>
                 ))}
-
               </div>
             )}
 
@@ -128,63 +121,39 @@ const ChatPanel = ({ closeChat }) => {
               <div className="itinerary-box">
 
                 {msg.budget && (
-  <div className="budget-card">
-
-    <div className="budget-total">
-      <span>Total Budget</span>
-      <strong>
-        ₹{msg.budget.total.toLocaleString()}
-      </strong>
-    </div>
-
-    <div className="budget-row">
-      <span>🏨 Hotel</span>
-      <span>
-        ₹{msg.budget.hotel.toLocaleString()}
-      </span>
-    </div>
-
-    <div className="budget-row">
-      <span>🍴 Food</span>
-      <span>
-        ₹{msg.budget.food.toLocaleString()}
-      </span>
-    </div>
-
-    <div className="budget-row">
-      <span>🚕 Transport</span>
-      <span>
-        ₹{msg.budget.transport.toLocaleString()}
-      </span>
-    </div>
-
-    <div className="budget-row">
-      <span>🎟 Activities</span>
-      <span>
-        ₹{msg.budget.activities.toLocaleString()}
-      </span>
-    </div>
-
-  </div>
-
-  
-)}
+                  <div className="budget-card">
+                    <div className="budget-total">
+                      <span>Total Budget</span>
+                      <strong>₹{msg.budget.total.toLocaleString()}</strong>
+                    </div>
+                    <div className="budget-row">
+                      <span>🏨 Hotel</span>
+                      <span>₹{msg.budget.hotel.toLocaleString()}</span>
+                    </div>
+                    <div className="budget-row">
+                      <span>🍴 Food</span>
+                      <span>₹{msg.budget.food.toLocaleString()}</span>
+                    </div>
+                    <div className="budget-row">
+                      <span>🚕 Transport</span>
+                      <span>₹{msg.budget.transport.toLocaleString()}</span>
+                    </div>
+                    <div className="budget-row">
+                      <span>🎟 Activities</span>
+                      <span>₹{msg.budget.activities.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
 
                 {msg.data?.map((day, i) => (
                   <div key={i} className="day-card">
-
                     <h3>Day {day.day}</h3>
-
                     {day.schedule?.map((item, idx) => (
                       <div key={idx} className="mini-card">
-
                         <img src={item.place?.image} alt="" />
-
                         <div>
                           <p>{item.place?.name}</p>
                           <small>{item.bestTime}</small>
-
-                          {/* NAVIGATE BUTTON */}
                           <button
                             onClick={() => navigateTo(item.place)}
                             style={{
@@ -196,115 +165,57 @@ const ChatPanel = ({ closeChat }) => {
                               cursor: "pointer"
                             }}
                           >
-                            Navigate 
+                            Navigate
                           </button>
-
                         </div>
-
                       </div>
                     ))}
-
                   </div>
                 ))}
 
               </div>
             )}
 
+            {/* BUDGET EXCEEDED */}
             {msg.type === "budgetExceeded" && (
-  <div className="budget-warning-card">
-
-    <h3>⚠️ Budget Exceeded</h3>
-
-    <p>
-      Sorry, your budget is exceeded because the
-      estimated trip cost is higher than your budget.
-    </p>
-
-    <div className="budget-breakdown">
-
-      <div className="budget-line">
-        <strong>🏨 Hotel</strong>
-      </div>
-
-      <div className="budget-subline">
-        ₹{msg.budgetData.hotelRate} × {msg.budgetData.days}
-        days × {msg.budgetData.roomsNeeded} rooms
-      </div>
-
-      <div className="budget-value">
-        ₹{msg.budgetData.hotelCost.toLocaleString()}
-      </div>
-
-      <hr />
-
-      <div className="budget-line">
-        <strong>🍽 Food</strong>
-      </div>
-
-      <div className="budget-subline">
-        ₹{msg.budgetData.foodRate} × {msg.budgetData.travellers}
-        travelers × {msg.budgetData.days} days
-      </div>
-
-      <div className="budget-value">
-        ₹{msg.budgetData.foodCost.toLocaleString()}
-      </div>
-
-      <hr />
-
-      <div className="budget-line">
-        <strong>🚆 Transport</strong>
-      </div>
-
-      <div className="budget-subline">
-        ₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}
-      </div>
-
-      <div className="budget-value">
-        ₹{msg.budgetData.transportCost.toLocaleString()}
-      </div>
-
-      <hr />
-
-      <div className="budget-line">
-        <strong>🎟 Activities</strong>
-      </div>
-
-      <div className="budget-value">
-        ₹{msg.budgetData.activitiesCost.toLocaleString()}
-      </div>
-
-      <hr />
-
-     <div className="budget-total">
-  Budget:
-  ₹{msg.budgetData.budget.toLocaleString()}
-</div>
-
-<div className="budget-total">
-  Required:
-  ₹{msg.budgetData.totalCost.toLocaleString()}
-</div>
-
-<div className="budget-short">
-  Need Extra:
-  ₹{msg.budgetData.shortBy.toLocaleString()}
-</div>
-
-    </div>
-
-    <div className="budget-actions">
-      <button onClick={() => sendMessage("update budget")}>
-        Update Budget
-      </button>
-
-      <button onClick={() => sendMessage("change plan")}>
-        Change Plan
-      </button>
-    </div>
-
-  </div>
-)}
+              <div className="budget-warning-card">
+                <h3>⚠️ Budget Exceeded</h3>
+                <p>
+                  Sorry, your budget is exceeded because the
+                  estimated trip cost is higher than your budget.
+                </p>
+                <div className="budget-breakdown">
+                  <div className="budget-line"><strong>🏨 Hotel</strong></div>
+                  <div className="budget-subline">
+                    ₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days × {msg.budgetData.roomsNeeded} rooms
+                  </div>
+                  <div className="budget-value">₹{msg.budgetData.hotelCost.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-line"><strong>🍽 Food</strong></div>
+                  <div className="budget-subline">
+                    ₹{msg.budgetData.foodRate} × {msg.budgetData.travellers} travelers × {msg.budgetData.days} days
+                  </div>
+                  <div className="budget-value">₹{msg.budgetData.foodCost.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-line"><strong>🚆 Transport</strong></div>
+                  <div className="budget-subline">
+                    ₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}
+                  </div>
+                  <div className="budget-value">₹{msg.budgetData.transportCost.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-line"><strong>🎟 Activities</strong></div>
+                  <div className="budget-value">₹{msg.budgetData.activitiesCost.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-total">Budget: ₹{msg.budgetData.budget.toLocaleString()}</div>
+                  <div className="budget-total">Required: ₹{msg.budgetData.totalCost.toLocaleString()}</div>
+                  <div className="budget-short">Need Extra: ₹{msg.budgetData.shortBy.toLocaleString()}</div>
+                </div>
+                <div className="budget-actions">
+                  <button onClick={() => sendMessage("update budget")}>Update Budget</button>
+                  <button onClick={() => sendMessage("change plan")}>Change Plan</button>
+                </div>
+              </div>
+            )}
 
           </div>
         ))}
@@ -332,6 +243,7 @@ const ChatPanel = ({ closeChat }) => {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Ask Sarathi..."
           />
           <button onClick={() => sendMessage()}>➤</button>
