@@ -16,137 +16,136 @@ const PlacesSection = ({
   const defaultPlaces = [
     {
       name: "Visakhapatnam",
-      vicinity: "Andhra Pradesh, India",
+      location: "Andhra Pradesh, India",
       image: img1,
       lat: 17.6868,
       lng: 83.2185,
-      tag: "Trending",
+      badge: "Trending",
       rating: "4.7",
       reviews: "1.2k",
     },
     {
       name: "Kerala",
-      vicinity: "God's Own Country",
+      location: "God's Own Country",
       image: img3,
       lat: 10.8505,
       lng: 76.2711,
-      tag: "Popular",
+      badge: "Popular",
       rating: "4.8",
       reviews: "2.5k",
     },
     {
       name: "Hyderabad",
-      vicinity: "Telangana, India",
+      location: "Telangana, India",
       image: img2,
       lat: 17.385,
       lng: 78.4867,
-      tag: "Top Rated",
+      badge: "Top Rated",
       rating: "4.6",
       reviews: "1.8k",
     },
     {
       name: "Kashmir",
-      vicinity: "Heaven on Earth",
+      location: "Heaven on Earth",
       image: img4,
       lat: 34.0837,
       lng: 74.7973,
-      tag: "Best For You",
+      badge: "Best For You",
       rating: "4.9",
       reviews: "3.1k",
     },
   ];
 
-  const displayPlaces =
+  const destinationData =
     places.length > 0
       ? places
       : defaultPlaces;
 
-  const handleNavigate = (place) => {
+  const handleNavigate = (destination) => {
 
-    if (!place.lat || !place.lng) {
-      alert("Location coordinates not available");
+    if (!destination.lat || !destination.lng) {
+      alert("Location coordinates unavailable");
       return;
     }
 
     window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`,
+      `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`,
       "_blank"
     );
   };
 
   return (
-    <section className="places-section">
+    <section className="destinations-showcase">
 
-      <div className="section-header">
+      <div className="destinations-header">
 
         <h2>
-          ✨ {title || t("popularPlaces")}
+          ✨ {title || "Popular Destinations"}
         </h2>
 
-        <button className="view-all-btn">
+        <button className="view-destinations-btn">
           View All →
         </button>
 
       </div>
 
-      <div className="places-grid">
+      <div className="destinations-grid">
 
-        {displayPlaces.map((place, index) => (
+        {destinationData.map((destination, index) => (
 
           <div
-            className="place-card"
             key={index}
+            className="destination-card"
           >
 
-            <div className="place-img">
+            <div className="destination-image">
 
               <img
-                src={place.image || img1}
-                alt={place.name}
-                onError={(e) => {
-                  e.target.src = img1;
-                }}
+                src={destination.image}
+                alt={destination.name}
               />
 
-              <button className="wishlist-btn">
+              <button className="favorite-btn">
                 ♡
               </button>
 
               <span
-                className={`place-tag ${
+                className={`destination-badge ${
                   index === 0
                     ? "trending"
                     : index === 1
                     ? "popular"
                     : index === 2
-                    ? "top"
-                    : "best"
+                    ? "toprated"
+                    : "bestforyou"
                 }`}
               >
-                {place.tag}
+                {destination.badge}
               </span>
 
             </div>
 
-            <div className="place-content">
+            <div className="destination-content">
 
-              <h3>{place.name}</h3>
+              <h3>{destination.name}</h3>
 
-              <p>{place.vicinity}</p>
+              <p>
+                {destination.location}
+              </p>
 
-              <div className="place-footer">
+              <div className="destination-footer">
 
-                <div className="rating">
-                  ⭐ {place.rating}
+                <div className="destination-rating">
+                  ⭐ {destination.rating}
                   <span>
-                    ({place.reviews})
+                    ({destination.reviews})
                   </span>
                 </div>
 
                 <button
-                  className="navigate-btn"
+                  className="explore-btn"
                   onClick={() =>
-                    handleNavigate(place)
+                    handleNavigate(destination)
                   }
                 >
                   Explore →

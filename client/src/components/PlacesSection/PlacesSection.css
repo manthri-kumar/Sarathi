@@ -1,256 +1,259 @@
-/* ================= SECTION ================= */
-
-.places-section {
-  margin-top: 40px;
-  width: 100%;
+.destinations-showcase{
+  margin-top:40px;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+.destinations-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:24px;
 }
 
-.section-header h2 {
-  font-size: 34px;
-  font-weight: 800;
-  color: white;
+.destinations-header h2{
+  font-size:30px;
+  font-weight:800;
+  color:white;
 }
 
-.view-all-btn {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.08);
-  color: white;
-  padding: 12px 18px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: .3s;
+.view-destinations-btn{
+  background:transparent;
+  color:white;
+
+  border:1px solid
+  rgba(255,255,255,.08);
+
+  padding:12px 18px;
+
+  border-radius:14px;
+
+  cursor:pointer;
+
+  transition:.3s;
 }
 
-.view-all-btn:hover {
-  border-color: #22c55e;
-  color: #22c55e;
+.view-destinations-btn:hover{
+  border-color:#22c55e;
+  color:#22c55e;
 }
 
-/* ================= GRID ================= */
+.destinations-grid{
+  display:grid;
+  grid-template-columns:
+  repeat(4,1fr);
 
-.places-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
+  gap:22px;
 }
 
-/* ================= CARD ================= */
+/* CARD */
 
-.place-card {
-  background: #08111f;
-  border-radius: 24px;
-  overflow: hidden;
+.destination-card{
 
-  border: 1px solid rgba(255,255,255,.06);
+  background:#08111f;
 
-  transition: all .35s ease;
+  border-radius:24px;
+
+  overflow:hidden;
+
+  border:1px solid
+  rgba(255,255,255,.06);
+
+  transition:.35s ease;
 }
 
-.place-card:hover {
-  transform: translateY(-8px);
+.destination-card:hover{
 
-  border-color: rgba(34,197,94,.3);
+  transform:
+  translateY(-8px);
+
+  border-color:
+  rgba(34,197,94,.3);
 
   box-shadow:
-    0 20px 50px rgba(0,0,0,.35);
+  0 20px 45px
+  rgba(0,0,0,.35);
 }
 
-/* ================= IMAGE ================= */
+/* IMAGE */
 
-.place-img {
-  position: relative;
-  width: 100%;
-  height: 220px;
+.destination-image{
+  position:relative;
+  height:220px;
 }
 
-.place-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.destination-image img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 
-/* ================= WISHLIST ================= */
+/* FAVORITE */
 
-.wishlist-btn {
-  position: absolute;
+.favorite-btn{
 
-  top: 14px;
-  left: 14px;
+  position:absolute;
+  top:14px;
+  left:14px;
 
-  width: 38px;
-  height: 38px;
+  width:38px;
+  height:38px;
 
-  border: none;
-  border-radius: 50%;
+  border:none;
 
-  background: rgba(255,255,255,.18);
-
-  backdrop-filter: blur(12px);
-
-  color: white;
-
-  cursor: pointer;
-}
-
-/* ================= BADGES ================= */
-
-.place-tag {
-  position: absolute;
-
-  top: 14px;
-  right: 14px;
-
-  padding: 6px 12px;
-
-  border-radius: 999px;
-
-  font-size: 11px;
-  font-weight: 700;
-
-  color: white;
-}
-
-.trending {
-  background: #f97316;
-}
-
-.popular {
-  background: #16a34a;
-}
-
-.top {
-  background: #7c3aed;
-}
-
-.best {
-  background: #2563eb;
-}
-
-/* ================= CONTENT ================= */
-
-.place-content {
-  padding: 18px;
-}
-
-.place-content h3 {
-  color: white;
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.place-content p {
-  color: #94a3b8;
-  font-size: 14px;
-  margin-bottom: 18px;
-}
-
-/* ================= FOOTER ================= */
-
-.place-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.rating {
-  color: #22c55e;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.rating span {
-  color: #94a3b8;
-  margin-left: 4px;
-}
-
-/* ================= EXPLORE BUTTON ================= */
-
-.navigate-btn {
-  border: none;
-
-  cursor: pointer;
-
-  padding: 10px 18px;
-
-  border-radius: 12px;
-
-  font-weight: 600;
-
-  color: white;
+  border-radius:50%;
 
   background:
-    rgba(255,255,255,.04);
+  rgba(255,255,255,.15);
+
+  backdrop-filter:blur(10px);
+
+  color:white;
+
+  cursor:pointer;
+}
+
+/* BADGES */
+
+.destination-badge{
+
+  position:absolute;
+
+  top:14px;
+  right:14px;
+
+  padding:6px 12px;
+
+  border-radius:999px;
+
+  color:white;
+
+  font-size:11px;
+
+  font-weight:700;
+}
+
+.trending{
+  background:#f97316;
+}
+
+.popular{
+  background:#16a34a;
+}
+
+.toprated{
+  background:#7c3aed;
+}
+
+.bestforyou{
+  background:#2563eb;
+}
+
+/* CONTENT */
+
+.destination-content{
+  padding:18px;
+}
+
+.destination-content h3{
+  color:white;
+  font-size:22px;
+  margin-bottom:6px;
+}
+
+.destination-content p{
+  color:#94a3b8;
+  font-size:14px;
+  margin-bottom:18px;
+}
+
+/* FOOTER */
+
+.destination-footer{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.destination-rating{
+  color:#22c55e;
+  font-size:14px;
+}
+
+.destination-rating span{
+  color:#94a3b8;
+}
+
+/* BUTTON */
+
+.explore-btn{
+
+  border:none;
+
+  cursor:pointer;
+
+  padding:10px 18px;
+
+  border-radius:12px;
+
+  background:
+  rgba(255,255,255,.05);
 
   border:
-    1px solid rgba(255,255,255,.08);
+  1px solid rgba(255,255,255,.08);
 
-  transition: .3s;
+  color:white;
+
+  transition:.3s;
 }
 
-.navigate-btn:hover {
+.explore-btn:hover{
+
   background:
-    linear-gradient(
-      135deg,
-      #00ff94,
-      #22c55e
-    );
+  linear-gradient(
+    135deg,
+    #00ff94,
+    #22c55e
+  );
 
-  color: #000;
+  color:black;
 }
 
-/* ================= TABLET ================= */
+/* TABLET */
 
-@media (max-width: 1200px) {
+@media(max-width:1200px){
 
-  .places-grid {
+  .destinations-grid{
     grid-template-columns:
-      repeat(2, 1fr);
+    repeat(2,1fr);
   }
 
 }
 
-/* ================= MOBILE ================= */
+/* MOBILE */
 
-@media (max-width: 768px) {
+@media(max-width:768px){
 
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .destinations-grid{
+    grid-template-columns:1fr;
   }
 
-  .section-header h2 {
-    font-size: 24px;
+  .destinations-header{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
   }
 
-  .places-grid {
-    grid-template-columns: 1fr;
+  .destination-image{
+    height:180px;
   }
 
-  .place-img {
-    height: 180px;
+  .destination-footer{
+    flex-direction:column;
+    gap:12px;
+    align-items:stretch;
   }
 
-  .place-content h3 {
-    font-size: 20px;
-  }
-
-  .place-footer {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  .navigate-btn {
-    width: 100%;
+  .explore-btn{
+    width:100%;
   }
 
 }
