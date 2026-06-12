@@ -12,14 +12,13 @@ const getNearbyTemples = async (req, res) => {
   }
 
   try {
-   const response = await axios.get(
+  const response = await axios.get(
   `${PLACES_BASE}/nearbysearch/json`,
   {
     params: {
       location: `${lat},${lng}`,
-      radius,
-      keyword: "temple",
-      type: "hindu_temple",
+      radius: 15000,
+      type: "place_of_worship",
       key: GOOGLE_PLACES_KEY,
     },
   }
