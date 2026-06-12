@@ -30,11 +30,16 @@ router.get("/nearby", async (req, res) => {
     res.json(response.data.elements);
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: "Failed to fetch temples"
-    });
-  }
+  console.log("OVERPASS ERROR:");
+
+  console.log(err.response?.data);
+  console.log(err.message);
+
+  res.status(500).json({
+    message: "Failed to fetch temples",
+    error: err.message
+  });
+}
 });
 
 module.exports = router;
