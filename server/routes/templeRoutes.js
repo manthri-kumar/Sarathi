@@ -13,10 +13,9 @@ router.get("/nearby", async (req, res) => {
       });
     }
 
-    // Ensure the key exists before making the call
     if (!process.env.GOOGLE_PLACES_KEY) {
       return res.status(500).json({
-        message: "Internal Server Error: Google Places API key is missing in environment variables."
+        message: "Internal Server Error: GOOGLE_PLACES_KEY is missing from environment variables."
       });
     }
 
@@ -29,7 +28,6 @@ router.get("/nearby", async (req, res) => {
 
     const response = await axios.get(url);
 
-    // Debug Google response
     console.log("Google Status:", response.data.status);
 
     if (response.data.status !== "OK") {
@@ -56,23 +54,21 @@ router.get("/nearby", async (req, res) => {
     res.json(temples);
 
   } catch (err) {
-    console.error("TEMPLE ERROR DETAILS:");
+    console.error("=== TEMPLE ERROR DETAILS ===");
     
-    // Check if the error came back from the Google API directly
     if (err.response) {
-      console.error("Data:", err.response.data);
-      console.error("Status:", err.response.status);
+      console.error("Google Server responded with status:", err.response.status);
+      console.error("Google Response Data:", err.response.data);
       
       return res.status(err.response.status).json({
-        message: "Failed to fetch temples from Google API",
+        message: "Failed to fetch temples from external Google API",
         error: err.response.data || err.message
       });
     } 
     
-    // Fallback for general server/network errors
-    console.error(err.message);
+    console.error("Local Server Network Error:", err.message);
     res.status(500).json({
-      message: "Failed to fetch temples",
+      message: "Failed to fetch temples due to internal gateway error",
       error: err.message
     });
   }
