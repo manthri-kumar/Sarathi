@@ -60,7 +60,7 @@
 .destination-card {
   position: relative;
 
-  height: 320px;
+  height: 300px;
 
   border-radius: 24px;
 
@@ -291,7 +291,6 @@
   }
 
 }
-
 /* =========================================
    MOBILE
 ========================================= */
@@ -309,23 +308,49 @@
   }
 
   .destinations-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
   }
 
   .destination-card {
-    height: 280px;
+    height: 220px;
+    border-radius: 18px;
+  }
+
+  .destination-content {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
   }
 
   .destination-content h3 {
-    font-size: 22px;
+    font-size: 16px;
+    margin-bottom: 2px;
   }
 
-  .destination-footer {
-    flex-direction: row;
+  .destination-content p {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  .destination-rating {
+    font-size: 11px;
   }
 
   .explore-btn {
-    padding: 8px 14px;
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 10px;
   }
 
+  .favorite-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .destination-badge {
+    font-size: 9px;
+    padding: 4px 8px;
+  }
 }

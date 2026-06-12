@@ -78,7 +78,7 @@ const PlacesSection = ({
       <div className="destinations-header">
 
         <h2>
-          ✨ {title || t("popularPlaces")}
+          {title || t("popularPlaces")}
         </h2>
 
         <button className="view-destinations-btn">
@@ -128,10 +128,6 @@ const PlacesSection = ({
                 />
 
                 <div className="image-fade"></div>
-
-                <button className="favorite-btn">
-                  ♡
-                </button>
 
                 <span
                   className={`destination-badge ${
