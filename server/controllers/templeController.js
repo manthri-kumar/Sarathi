@@ -1,35 +1,25 @@
 const axios = require("axios");
+const { getEnrichedTempleData, askGemini } = require("../services/templeDataService");
+const { searchTempleVideos } = require("../services/youtubeService");
 
 const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_KEY;
 const PLACES_BASE = "https://maps.googleapis.com/maps/api/place";
 
-/* ======================================================
-   DIAGNOSTIC HELPER — call once to verify key health
-====================================================== */
+/* --- startup diagnostic --- */
 const diagnoseKey = async () => {
   try {
     const test = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: {
-        location: "17.6868,83.2185",
-        radius: 1000,
-        type: "hindu_temple",
-        key: GOOGLE_PLACES_KEY,
-      },
+      params: { location: "17.6868,83.2185", radius: 1000, type: "hindu_temple", key: GOOGLE_PLACES_KEY },
     });
     console.log("[DIAG] Places API status:", test.data.status);
-    console.log("[DIAG] Error message:", test.data.error_message || "none");
     console.log("[DIAG] Result count:", test.data.results?.length ?? 0);
   } catch (e) {
     console.error("[DIAG] Axios error:", e.message);
   }
 };
-
-// Run once on startup
 diagnoseKey();
 
-/* ======================================================
-   SHAPE A PLACE OBJECT (shared between endpoints)
-====================================================== */
+/* --- shared shape helper --- */
 const shapePlace = (place) => ({
   id: place.place_id,
   name: place.name,
@@ -45,150 +35,76 @@ const shapePlace = (place) => ({
   types: place.types || [],
 });
 
-/* ======================================================
-   GET NEARBY TEMPLES
-   GET /api/temples/nearby?lat=...&lng=...&radius=...
-====================================================== */
+/* ── GET NEARBY TEMPLES ───────────────────────────────── */
 const getNearbyTemples = async (req, res) => {
   const { lat, lng, radius = 10000 } = req.query;
-
-  if (!lat || !lng) {
-    return res.status(400).json({ error: "lat and lng are required" });
-  }
-
-  if (!GOOGLE_PLACES_KEY) {
-    console.error("[TEMPLE] GOOGLE_PLACES_KEY is undefined!");
-    return res.status(500).json({ error: "API key not configured" });
-  }
-
-  console.log(`[TEMPLE] Fetching temples near ${lat},${lng} radius=${radius}`);
+  if (!lat || !lng) return res.status(400).json({ error: "lat and lng required" });
+  if (!GOOGLE_PLACES_KEY) return res.status(500).json({ error: "API key not configured" });
 
   try {
-    // Use Nearby Search — far more reliable for proximity discovery
     const response = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: {
-        location: `${lat},${lng}`,
-        radius: Number(radius),
-        keyword: "temple",        // broad keyword match
-        type: "hindu_temple",     // place type filter
-        key: GOOGLE_PLACES_KEY,
-      },
+      params: { location: `${lat},${lng}`, radius: Number(radius), keyword: "temple", type: "hindu_temple", key: GOOGLE_PLACES_KEY },
     });
 
     const { status, error_message, results = [], next_page_token } = response.data;
+    console.log("[TEMPLE] status:", status, "| count:", results.length);
 
-    // Log the full API status — this is the key diagnostic line
-    console.log("[TEMPLE] API status:", status);
-    if (error_message) console.error("[TEMPLE] API error_message:", error_message);
-    console.log("[TEMPLE] Raw result count:", results.length);
+    if (status === "REQUEST_DENIED") return res.status(403).json({ error: "API key denied", detail: error_message });
+    if (status === "OVER_QUERY_LIMIT") return res.status(429).json({ error: "Quota exceeded" });
+    if (status === "ZERO_RESULTS") return res.json({ temples: [], nextPageToken: null });
+    if (status !== "OK") return res.status(500).json({ error: `Places API: ${status}` });
 
-    // Surface API-level errors properly
-    if (status === "REQUEST_DENIED") {
-      return res.status(403).json({
-        error: "Google Places API key is invalid or Places API is not enabled",
-        detail: error_message,
-      });
-    }
-    if (status === "OVER_QUERY_LIMIT") {
-      return res.status(429).json({ error: "Google Places quota exceeded" });
-    }
-    if (status === "ZERO_RESULTS") {
-      // Valid response — just no temples nearby
-      return res.json({ temples: [], nextPageToken: null });
-    }
-    if (status !== "OK") {
-      return res.status(500).json({ error: `Places API returned: ${status}`, detail: error_message });
-    }
-
-    const temples = results.map(shapePlace);
-    return res.json({ temples, nextPageToken: next_page_token || null });
-
+    return res.json({ temples: results.map(shapePlace), nextPageToken: next_page_token || null });
   } catch (err) {
-    console.error("[TEMPLE] Axios error:", err.response?.data || err.message);
-    return res.status(500).json({ error: "Failed to fetch nearby temples" });
+    console.error("[TEMPLE] Error:", err.message);
+    return res.status(500).json({ error: "Failed to fetch temples" });
   }
 };
 
-/* ======================================================
-   SEARCH TEMPLES BY CITY / NAME
-   GET /api/temples/search?query=...&lat=...&lng=...
-====================================================== */
+/* ── SEARCH TEMPLES ───────────────────────────────────── */
 const searchTemples = async (req, res) => {
   const { query, lat, lng } = req.query;
-
-  if (!query) {
-    return res.status(400).json({ error: "query is required" });
-  }
+  if (!query) return res.status(400).json({ error: "query required" });
 
   try {
-    const params = {
-      query: `${query} temple`,
-      key: GOOGLE_PLACES_KEY,
-    };
-
-    // If user location is known, bias toward it
-    if (lat && lng) {
-      params.location = `${lat},${lng}`;
-      params.radius = 50000;
-    }
+    const params = { query: `${query} temple`, key: GOOGLE_PLACES_KEY };
+    if (lat && lng) { params.location = `${lat},${lng}`; params.radius = 50000; }
 
     const response = await axios.get(`${PLACES_BASE}/textsearch/json`, { params });
-
     const { status, error_message, results = [] } = response.data;
-    console.log("[TEMPLE SEARCH] status:", status, "| count:", results.length);
+    console.log("[SEARCH] status:", status, "| count:", results.length);
 
-    if (status === "REQUEST_DENIED") {
-      return res.status(403).json({ error: error_message });
-    }
-    if (status === "ZERO_RESULTS" || status === "OK") {
-      return res.json({ temples: results.map(shapePlace) });
-    }
-
-    return res.status(500).json({ error: `Places API: ${status}` });
-
+    if (status === "REQUEST_DENIED") return res.status(403).json({ error: error_message });
+    return res.json({ temples: results.map(shapePlace) });
   } catch (err) {
-    console.error("[TEMPLE SEARCH] Error:", err.response?.data || err.message);
-    return res.status(500).json({ error: "Failed to search temples" });
+    console.error("[SEARCH] Error:", err.message);
+    return res.status(500).json({ error: "Search failed" });
   }
 };
 
-/* ======================================================
-   GET TEMPLE DETAILS
-   GET /api/temples/details/:placeId
-====================================================== */
+/* ── GET TEMPLE DETAILS (Google Places) ──────────────── */
 const getTempleDetails = async (req, res) => {
   const { placeId } = req.params;
-
-  if (!placeId) {
-    return res.status(400).json({ error: "placeId is required" });
-  }
+  if (!placeId) return res.status(400).json({ error: "placeId required" });
 
   try {
     const response = await axios.get(`${PLACES_BASE}/details/json`, {
       params: {
         place_id: placeId,
-        fields: [
-          "name", "rating", "formatted_address", "formatted_phone_number",
-          "website", "opening_hours", "photos", "geometry",
-          "user_ratings_total", "url", "reviews",
-        ].join(","),
+        fields: "name,rating,formatted_address,formatted_phone_number,website,opening_hours,photos,geometry,user_ratings_total,url,reviews,types",
         key: GOOGLE_PLACES_KEY,
       },
     });
 
     const { status, error_message, result: place } = response.data;
-    console.log("[TEMPLE DETAILS] status:", status);
+    console.log("[DETAILS] status:", status);
 
-    if (status === "REQUEST_DENIED") {
-      return res.status(403).json({ error: error_message });
-    }
-    if (!place) {
-      return res.status(404).json({ error: "Temple not found" });
-    }
+    if (status === "REQUEST_DENIED") return res.status(403).json({ error: error_message });
+    if (!place) return res.status(404).json({ error: "Temple not found" });
 
-    const photos = (place.photos || [])
-      .slice(0, 6)
-      .map((p) => `${PLACES_BASE}/photo?maxwidth=1200&photoreference=${p.photo_reference}&key=${GOOGLE_PLACES_KEY}`);
+    const photos = (place.photos || []).slice(0, 10).map(
+      (p) => `${PLACES_BASE}/photo?maxwidth=1200&photoreference=${p.photo_reference}&key=${GOOGLE_PLACES_KEY}`
+    );
 
     return res.json({
       temple: {
@@ -205,19 +121,113 @@ const getTempleDetails = async (req, res) => {
         openNow: place.opening_hours?.open_now ?? null,
         photos,
         mapsUrl: place.url || null,
-        reviews: (place.reviews || []).slice(0, 3).map((r) => ({
+        types: place.types || [],
+        reviews: (place.reviews || []).slice(0, 5).map((r) => ({
           author: r.author_name,
           rating: r.rating,
           text: r.text,
           time: r.relative_time_description,
+          profilePhoto: r.profile_photo_url || null,
         })),
       },
     });
-
   } catch (err) {
-    console.error("[TEMPLE DETAILS] Error:", err.response?.data || err.message);
-    return res.status(500).json({ error: "Failed to fetch temple details" });
+    console.error("[DETAILS] Error:", err.message);
+    return res.status(500).json({ error: "Failed to fetch details" });
   }
 };
 
-module.exports = { getNearbyTemples, getTempleDetails, searchTemples };
+/* ── GET ENRICHED DATA (Gemini) ───────────────────────── */
+const getEnrichedTemple = async (req, res) => {
+  const { name, address } = req.query;
+  if (!name) return res.status(400).json({ error: "name required" });
+
+  try {
+    console.log(`[ENRICH] Generating data for: ${name}`);
+    const data = await getEnrichedTempleData(name, address || "India");
+    if (!data) return res.status(500).json({ error: "Gemini returned no data" });
+    return res.json(data);
+  } catch (err) {
+    console.error("[ENRICH] Error:", err.message);
+    return res.status(500).json({ error: "Enrichment failed" });
+  }
+};
+
+/* ── GET VIDEOS (YouTube) ─────────────────────────────── */
+const getTempleVideos = async (req, res) => {
+  const { name } = req.query;
+  if (!name) return res.status(400).json({ error: "name required" });
+
+  try {
+    const videos = await searchTempleVideos(name);
+    return res.json({ videos });
+  } catch (err) {
+    console.error("[VIDEOS] Error:", err.message);
+    return res.status(500).json({ error: "Videos fetch failed" });
+  }
+};
+
+/* ── GET NEARBY PLACES (hotels, restaurants, parking) ── */
+const getNearbyServicePlaces = async (req, res) => {
+  const { lat, lng } = req.query;
+  if (!lat || !lng) return res.status(400).json({ error: "lat and lng required" });
+
+  const fetchType = async (type, keyword) => {
+    try {
+      const r = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
+        params: { location: `${lat},${lng}`, radius: 2000, type, keyword, key: GOOGLE_PLACES_KEY },
+      });
+      return (r.data.results || []).slice(0, 4).map((p) => ({
+        id: p.place_id,
+        name: p.name,
+        address: p.vicinity,
+        rating: p.rating || null,
+        lat: p.geometry?.location?.lat,
+        lng: p.geometry?.location?.lng,
+        photo: p.photos?.[0]?.photo_reference
+          ? `${PLACES_BASE}/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${GOOGLE_PLACES_KEY}`
+          : null,
+        mapsUrl: `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
+      }));
+    } catch { return []; }
+  };
+
+  const [hotels, restaurants, parking] = await Promise.all([
+    fetchType("lodging", "hotel"),
+    fetchType("restaurant", "restaurant"),
+    fetchType("parking", "parking"),
+  ]);
+
+  return res.json({ hotels, restaurants, parking });
+};
+
+/* ── TEMPLE CHAT (Gemini) ─────────────────────────────── */
+const templeChat = async (req, res) => {
+  const { message, templeName, address } = req.body;
+  if (!message || !templeName) return res.status(400).json({ error: "message and templeName required" });
+
+  const prompt = `You are a knowledgeable and respectful spiritual guide for ${templeName} temple${address ? ` at ${address}` : ""}.
+Answer the following question accurately and concisely (under 150 words). 
+If you don't know something specific about this temple, say so honestly.
+Be spiritually respectful and culturally sensitive.
+
+Question: ${message}`;
+
+  try {
+    const reply = await askGemini(prompt);
+    return res.json({ reply });
+  } catch (err) {
+    console.error("[CHAT] Error:", err.message);
+    return res.status(500).json({ error: "Chat failed" });
+  }
+};
+
+module.exports = {
+  getNearbyTemples,
+  searchTemples,
+  getTempleDetails,
+  getEnrichedTemple,
+  getTempleVideos,
+  getNearbyServicePlaces,
+  templeChat,
+};

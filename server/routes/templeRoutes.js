@@ -2,13 +2,20 @@ const express = require("express");
 const router = express.Router();
 const {
   getNearbyTemples,
-  getTempleDetails,
   searchTemples,
+  getTempleDetails,
+  getEnrichedTemple,
+  getTempleVideos,
+  getNearbyServicePlaces,
+  templeChat,
 } = require("../controllers/templeController");
 
-// Public routes — no auth required for browsing temples
 router.get("/nearby", getNearbyTemples);
-router.get("/details/:placeId", getTempleDetails);
 router.get("/search", searchTemples);
+router.get("/details/:placeId", getTempleDetails);
+router.get("/enriched", getEnrichedTemple);
+router.get("/videos", getTempleVideos);
+router.get("/nearby-services", getNearbyServicePlaces);
+router.post("/chat", templeChat);
 
 module.exports = router;

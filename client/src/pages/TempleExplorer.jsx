@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import ChatPanel from "../components/ChatPanel/ChatPanel";
 import "./TempleExplorer.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+/* ─── Star Rating ───────────────────────────────────── */
 const StarRating = ({ rating }) => {
   if (!rating) return <span className="te-no-rating">No rating</span>;
   const stars = Math.round(rating);
@@ -15,7 +18,8 @@ const StarRating = ({ rating }) => {
   );
 };
 
-const TempleCard = ({ temple, onViewDetails, onSave, savedIds, userLocation }) => {
+/* ─── Temple Card ───────────────────────────────────── */
+const TempleCard = ({ temple, onViewDetails, onSave, onAskAI, savedIds, userLocation }) => {
   const isSaved = savedIds.includes(temple.id);
 
   const getDistance = () => {
@@ -46,7 +50,12 @@ const TempleCard = ({ temple, onViewDetails, onSave, savedIds, userLocation }) =
     <div className="te-card" onClick={() => onViewDetails(temple.id)}>
       <div className="te-card-image-wrap">
         {temple.photo ? (
-          <img src={temple.photo} alt={temple.name} className="te-card-img" loading="lazy" />
+          <img
+            src={temple.photo}
+            alt={temple.name}
+            className="te-card-img"
+            loading="lazy"
+          />
         ) : (
           <div className="te-card-img-placeholder">
             <span className="te-placeholder-icon">🛕</span>
@@ -68,18 +77,31 @@ const TempleCard = ({ temple, onViewDetails, onSave, savedIds, userLocation }) =
           {isSaved ? "♥" : "♡"}
         </button>
       </div>
+
       <div className="te-card-body">
         <h3 className="te-card-name">{temple.name}</h3>
         <p className="te-card-address">📍 {temple.address}</p>
         <div className="te-card-meta">
           <StarRating rating={temple.rating} />
           {temple.totalRatings > 0 && (
-            <span className="te-review-count">({temple.totalRatings.toLocaleString()})</span>
+            <span className="te-review-count">
+              ({temple.totalRatings.toLocaleString()})
+            </span>
           )}
         </div>
         <div className="te-card-actions">
-          <button className="te-btn te-btn-primary" onClick={(e) => { e.stopPropagation(); onViewDetails(temple.id); }}>
+          <button
+            className="te-btn te-btn-primary"
+            onClick={(e) => { e.stopPropagation(); onViewDetails(temple.id); }}
+          >
             View Details
+          </button>
+          <button
+            className="te-btn te-btn-ai"
+            onClick={(e) => { e.stopPropagation(); onAskAI(temple); }}
+            title="Ask AI about this temple"
+          >
+            🤖 Ask AI
           </button>
           <button className="te-btn te-btn-ghost" onClick={openInMaps}>
             Maps ↗
@@ -90,177 +112,28 @@ const TempleCard = ({ temple, onViewDetails, onSave, savedIds, userLocation }) =
   );
 };
 
-const TempleModal = ({ placeId, onClose }) => {
-  const [details, setDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [photoIdx, setPhotoIdx] = useState(0);
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const res = await axios.get(`${API_BASE}/api/temples/details/${placeId}`);
-        setDetails(res.data.temple);
-      } catch {
-        setDetails(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetails();
-  }, [placeId]);
-
-  useEffect(() => {
-    const handleKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
-  return (
-    <div className="te-modal-overlay" onClick={onClose}>
-      <div className="te-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="te-modal-close" onClick={onClose}>✕</button>
-
-        {loading && (
-          <div className="te-modal-loading">
-            <div className="te-spinner" />
-            <p>Loading temple details…</p>
-          </div>
-        )}
-
-        {!loading && !details && (
-          <div className="te-modal-error">
-            <span>🛕</span>
-            <p>Unable to load temple details.</p>
-          </div>
-        )}
-
-        {!loading && details && (
-          <>
-            {details.photos?.length > 0 && (
-              <div className="te-modal-gallery">
-                <img
-                  src={details.photos[photoIdx]}
-                  alt={details.name}
-                  className="te-modal-hero"
-                />
-                {details.photos.length > 1 && (
-                  <div className="te-modal-thumbnails">
-                    {details.photos.map((p, i) => (
-                      <img
-                        key={i}
-                        src={p}
-                        alt=""
-                        className={`te-modal-thumb ${i === photoIdx ? "active" : ""}`}
-                        onClick={() => setPhotoIdx(i)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="te-modal-body">
-              <div className="te-modal-header">
-                <h2 className="te-modal-name">{details.name}</h2>
-                <div className="te-modal-rating">
-                  <StarRating rating={details.rating} />
-                  {details.totalRatings > 0 && (
-                    <span className="te-review-count">({details.totalRatings.toLocaleString()} reviews)</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="te-modal-info">
-                {details.address && (
-                  <div className="te-info-row">
-                    <span className="te-info-icon">📍</span>
-                    <span>{details.address}</span>
-                  </div>
-                )}
-                {details.phone && (
-                  <div className="te-info-row">
-                    <span className="te-info-icon">📞</span>
-                    <a href={`tel:${details.phone}`}>{details.phone}</a>
-                  </div>
-                )}
-                {details.website && (
-                  <div className="te-info-row">
-                    <span className="te-info-icon">🌐</span>
-                    <a href={details.website} target="_blank" rel="noreferrer">
-                      {details.website.replace(/^https?:\/\//, "").slice(0, 40)}
-                    </a>
-                  </div>
-                )}
-                {details.openNow !== null && (
-                  <div className="te-info-row">
-                    <span className="te-info-icon">🕐</span>
-                    <span className={details.openNow ? "te-open-text" : "te-closed-text"}>
-                      {details.openNow ? "Currently Open" : "Currently Closed"}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {details.openingHours?.length > 0 && (
-                <div className="te-modal-hours">
-                  <h4>Opening Hours</h4>
-                  <ul>
-                    {details.openingHours.map((h, i) => (
-                      <li key={i}>{h}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {details.reviews?.length > 0 && (
-                <div className="te-modal-reviews">
-                  <h4>Visitor Reviews</h4>
-                  {details.reviews.map((r, i) => (
-                    <div key={i} className="te-review">
-                      <div className="te-review-header">
-                        <span className="te-review-author">{r.author}</span>
-                        <StarRating rating={r.rating} />
-                        <span className="te-review-time">{r.time}</span>
-                      </div>
-                      <p className="te-review-text">{r.text}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="te-modal-actions">
-                {details.mapsUrl && (
-                  <a href={details.mapsUrl} target="_blank" rel="noreferrer" className="te-btn te-btn-primary">
-                    Open in Google Maps ↗
-                  </a>
-                )}
-                {details.website && (
-                  <a href={details.website} target="_blank" rel="noreferrer" className="te-btn te-btn-ghost">
-                    Official Website ↗
-                  </a>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-
+/* ─── Main Explorer ─────────────────────────────────── */
 export default function TempleExplorer() {
+  const navigate = useNavigate();
+
   const [temples, setTemples] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [locationStatus, setLocationStatus] = useState("idle"); // idle | requesting | granted | denied
-  const [selectedPlaceId, setSelectedPlaceId] = useState(null);
+  const [locationStatus, setLocationStatus] = useState("idle");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all"); // all | open | top
+  const [filter, setFilter] = useState("all");
   const [savedIds, setSavedIds] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("sarathi_saved_temples") || "[]"); } catch { return []; }
+    try {
+      return JSON.parse(localStorage.getItem("sarathi_saved_temples") || "[]");
+    } catch { return []; }
   });
 
+  // Chat state — null means closed, object means open with temple context
+  const [chatContext, setChatContext] = useState(null);
+  // chatContext = null (closed) | { name, address } (temple mode) | "general" (general mode)
+
+  /* ─── Fetch nearby temples ──────────────────────── */
   const fetchNearby = useCallback(async (lat, lng) => {
     setLoading(true);
     setError(null);
@@ -276,6 +149,7 @@ export default function TempleExplorer() {
     }
   }, []);
 
+  /* ─── Request location ──────────────────────────── */
   const requestLocation = useCallback(() => {
     setLocationStatus("requesting");
     navigator.geolocation.getCurrentPosition(
@@ -283,6 +157,8 @@ export default function TempleExplorer() {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(loc);
         setLocationStatus("granted");
+        localStorage.setItem("lat", loc.lat);
+        localStorage.setItem("lng", loc.lng);
         fetchNearby(loc.lat, loc.lng);
       },
       () => {
@@ -296,6 +172,7 @@ export default function TempleExplorer() {
     requestLocation();
   }, [requestLocation]);
 
+  /* ─── Search ────────────────────────────────────── */
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -303,7 +180,10 @@ export default function TempleExplorer() {
     setError(null);
     try {
       const params = { query: searchQuery };
-      if (userLocation) { params.lat = userLocation.lat; params.lng = userLocation.lng; }
+      if (userLocation) {
+        params.lat = userLocation.lat;
+        params.lng = userLocation.lng;
+      }
       const res = await axios.get(`${API_BASE}/api/temples/search`, { params });
       const results = res.data.temples || [];
       if (results.length === 0) setError("No temples found for that search.");
@@ -315,6 +195,7 @@ export default function TempleExplorer() {
     }
   };
 
+  /* ─── Save ──────────────────────────────────────── */
   const handleSave = (temple) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -330,6 +211,17 @@ export default function TempleExplorer() {
     });
   };
 
+  /* ─── View details → navigate to details page ───── */
+  const handleViewDetails = (templeId) => {
+    navigate(`/temples/${templeId}`);
+  };
+
+  /* ─── Ask AI about a specific temple ───────────── */
+  const handleAskAI = (temple) => {
+    setChatContext({ name: temple.name, address: temple.address });
+  };
+
+  /* ─── Filter ────────────────────────────────────── */
   const filteredTemples = temples.filter((t) => {
     if (filter === "open") return t.openNow === true;
     if (filter === "top") return (t.rating || 0) >= 4.0;
@@ -338,7 +230,8 @@ export default function TempleExplorer() {
 
   return (
     <div className="te-root">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="te-header">
         <div className="te-header-content">
           <div className="te-header-title">
@@ -365,7 +258,7 @@ export default function TempleExplorer() {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <div className="te-controls">
         <div className="te-filters">
           {["all", "open", "top"].map((f) => (
@@ -384,15 +277,29 @@ export default function TempleExplorer() {
             <span className="te-location-tag">📍 Using your location</span>
           )}
           {temples.length > 0 && (
-            <span className="te-count">{filteredTemples.length} temple{filteredTemples.length !== 1 ? "s" : ""}</span>
+            <span className="te-count">
+              {filteredTemples.length} temple{filteredTemples.length !== 1 ? "s" : ""}
+            </span>
           )}
-          <button className="te-refresh-btn" onClick={requestLocation} title="Refresh nearby temples">
+          <button
+            className="te-refresh-btn"
+            onClick={requestLocation}
+            title="Refresh nearby temples"
+          >
             ↻ Refresh
+          </button>
+          {/* Global AI button — general chat */}
+          <button
+            className="te-ai-btn"
+            onClick={() => setChatContext("general")}
+            title="Open Sarathi AI"
+          >
+            🤖 Sarathi AI
           </button>
         </div>
       </div>
 
-      {/* States */}
+      {/* ── Status banner ── */}
       {locationStatus === "requesting" && (
         <div className="te-status-banner">
           <div className="te-spinner-sm" /> Requesting your location…
@@ -405,7 +312,7 @@ export default function TempleExplorer() {
         </div>
       )}
 
-      {/* Grid */}
+      {/* ── Grid ── */}
       {loading ? (
         <div className="te-loading">
           <div className="te-spinner" />
@@ -417,8 +324,9 @@ export default function TempleExplorer() {
             <TempleCard
               key={temple.id}
               temple={temple}
-              onViewDetails={setSelectedPlaceId}
+              onViewDetails={handleViewDetails}
               onSave={handleSave}
+              onAskAI={handleAskAI}
               savedIds={savedIds}
               userLocation={userLocation}
             />
@@ -428,7 +336,9 @@ export default function TempleExplorer() {
         <div className="te-empty">
           <span>🛕</span>
           <p>No temples match the current filter.</p>
-          <button className="te-btn te-btn-ghost" onClick={() => setFilter("all")}>Show all</button>
+          <button className="te-btn te-btn-ghost" onClick={() => setFilter("all")}>
+            Show all
+          </button>
         </div>
       ) : !loading && temples.length === 0 && !error ? (
         <div className="te-empty">
@@ -438,10 +348,20 @@ export default function TempleExplorer() {
         </div>
       ) : null}
 
-      {/* Modal */}
-      {selectedPlaceId && (
-        <TempleModal placeId={selectedPlaceId} onClose={() => setSelectedPlaceId(null)} />
+      {/* ── Chat Panel ── */}
+      {chatContext !== null && (
+        <div className="te-chat-overlay">
+          <ChatPanel
+            closeChat={() => setChatContext(null)}
+            templeContext={
+              chatContext === "general"
+                ? null
+                : chatContext
+            }
+          />
+        </div>
       )}
+
     </div>
   );
 }
