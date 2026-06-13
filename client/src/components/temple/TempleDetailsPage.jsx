@@ -9,7 +9,7 @@ import VideosTab from "./tabs/VideosTab";
 import TravelGuideTab from "./tabs/TravelGuideTab";
 import ChatPanel from "../ChatPanel/ChatPanel";
 // ✅ Correct path — matches where TempleDetails.css actually is
-import "../../styles/temple/TempleDetails.css";
+import "../temple/TempleDetails.css";
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const TABS = [
