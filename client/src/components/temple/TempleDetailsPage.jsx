@@ -8,7 +8,7 @@ import FestivalsTab from "./tabs/FestivalsTab";
 import VideosTab from "./tabs/VideosTab";
 import TravelGuideTab from "./tabs/TravelGuideTab";
 import ChatPanel from "../ChatPanel/ChatPanel";
-import "../../styles/temple/TempleDetails.css";
+import "../../styles/temple/tabs/TempleDetails.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
