@@ -297,7 +297,7 @@ function TempleDetailsPageInner() {
           onClick={() => setShowChat(true)}
           title="Ask Temple Assistant"
         >
-          🤖
+
         </button>
 
         {/* Chat */}
