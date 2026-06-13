@@ -7,44 +7,93 @@ import RitualsTab from "./tabs/RitualsTab";
 import FestivalsTab from "./tabs/FestivalsTab";
 import VideosTab from "./tabs/VideosTab";
 import TravelGuideTab from "./tabs/TravelGuideTab";
-import ChatPanel from "../ChatPanel/ChatPanel";        // ✅ ChatPanel, not TempleChat
+import ChatPanel from "../ChatPanel/ChatPanel";
 import "../../styles/temple/TempleDetails.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const TABS = [
   { id: "overview",  label: "Overview",    icon: "🛕" },
-  { id: "history",   label: "History",      icon: "📜" },
-  { id: "rituals",   label: "Rituals",      icon: "🪔" },
-  { id: "festivals", label: "Festivals",    icon: "🎊" },
-  { id: "videos",    label: "Videos",       icon: "▶️" },
-  { id: "travel",    label: "Travel Guide", icon: "🗺️" },
+  { id: "history",   label: "History",     icon: "📜" },
+  { id: "rituals",   label: "Rituals",     icon: "🪔" },
+  { id: "festivals", label: "Festivals",   icon: "🎊" },
+  { id: "videos",    label: "Videos",      icon: "▶️" },
+  { id: "travel",    label: "Travel Guide",icon: "🗺️" },
 ];
 
+/* ─── Error Boundary ─── catches any crash and shows it */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          color: "#ff6b6b", padding: "40px", background: "#0a0f1e",
+          minHeight: "100vh", fontFamily: "monospace"
+        }}>
+          <h2>⚠️ Temple Details crashed</h2>
+          <pre style={{ marginTop: 16, whiteSpace: "pre-wrap", fontSize: 13 }}>
+            {this.state.error?.toString()}
+            {"\n"}
+            {this.state.error?.stack}
+          </pre>
+          <button
+            onClick={() => window.history.back()}
+            style={{
+              marginTop: 20, padding: "10px 20px", background: "#22c55e",
+              border: "none", borderRadius: 8, cursor: "pointer", color: "#fff"
+            }}
+          >
+            ← Go Back
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function TempleDetailsPage() {
+  return (
+    <ErrorBoundary>
+      <TempleDetailsPageInner />
+    </ErrorBoundary>
+  );
+}
+
+function TempleDetailsPageInner() {
   const { placeId } = useParams();
   const navigate = useNavigate();
 
-  const [activeTab,        setActiveTab]        = useState("overview");
-  const [googleData,       setGoogleData]       = useState(null);
-  const [enriched,         setEnriched]         = useState(null);
-  const [videos,           setVideos]           = useState([]);
-  const [nearbyServices,   setNearbyServices]   = useState(null);
-  const [loadingGoogle,    setLoadingGoogle]    = useState(true);
-  const [loadingEnriched,  setLoadingEnriched]  = useState(false);
-  const [loadingVideos,    setLoadingVideos]    = useState(false);
-  const [loadingServices,  setLoadingServices]  = useState(false);
-  const [showChat,         setShowChat]         = useState(false);
-  const [error,            setError]            = useState(null);
+  const [activeTab,       setActiveTab]       = useState("overview");
+  const [googleData,      setGoogleData]      = useState(null);
+  const [enriched,        setEnriched]        = useState(null);
+  const [videos,          setVideos]          = useState([]);
+  const [nearbyServices,  setNearbyServices]  = useState(null);
+  const [loadingGoogle,   setLoadingGoogle]   = useState(true);
+  const [loadingEnriched, setLoadingEnriched] = useState(false);
+  const [loadingVideos,   setLoadingVideos]   = useState(false);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [showChat,        setShowChat]        = useState(false);
+  const [error,           setError]           = useState(null);
 
-  // 1. Google Places details
+  /* 1 — Google Places details */
   useEffect(() => {
     const fetchGoogle = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/temples/details/${placeId}`);
+        const res = await axios.get(
+          `${API_BASE}/api/temples/details/${placeId}`
+        );
         setGoogleData(res.data.temple);
-      } catch {
-        setError("Could not load temple details.");
+      } catch (e) {
+        console.error("Google fetch failed:", e.message);
+        setError("Could not load temple details. " + e.message);
       } finally {
         setLoadingGoogle(false);
       }
@@ -52,7 +101,7 @@ export default function TempleDetailsPage() {
     fetchGoogle();
   }, [placeId]);
 
-  // 2. Gemini enriched data — fires automatically once googleData is ready
+  /* 2 — Gemini enriched — background, non-blocking */
   useEffect(() => {
     if (!googleData?.name) return;
     const fetchEnriched = async () => {
@@ -64,6 +113,7 @@ export default function TempleDetailsPage() {
         setEnriched(res.data);
       } catch (e) {
         console.error("Enriched fetch failed:", e.message);
+        // Don't crash — enriched is optional enhancement
       } finally {
         setLoadingEnriched(false);
       }
@@ -71,7 +121,7 @@ export default function TempleDetailsPage() {
     fetchEnriched();
   }, [googleData]);
 
-  // 3. YouTube videos — lazy, only when Videos tab opened
+  /* 3 — Videos — lazy */
   const fetchVideos = useCallback(async () => {
     if (!googleData?.name || videos.length > 0) return;
     setLoadingVideos(true);
@@ -87,7 +137,7 @@ export default function TempleDetailsPage() {
     }
   }, [googleData, videos.length]);
 
-  // 4. Nearby services — lazy, only when Travel tab opened
+  /* 4 — Nearby services — lazy */
   const fetchNearbyServices = useCallback(async () => {
     if (!googleData?.lat || nearbyServices) return;
     setLoadingServices(true);
@@ -110,12 +160,20 @@ export default function TempleDetailsPage() {
   };
 
   if (loadingGoogle) return <LoadingSkeleton />;
-  if (error) return <ErrorState message={error} onBack={() => navigate("/temples")} />;
+  if (error) return (
+    <ErrorState message={error} onBack={() => navigate("/temples")} />
+  );
+  if (!googleData) return (
+    <ErrorState
+      message="Temple data is empty. The place ID may be invalid."
+      onBack={() => navigate("/temples")}
+    />
+  );
 
   return (
     <div className="tdp-root">
 
-      {/* Hero Banner */}
+      {/* Hero */}
       <div
         className="tdp-hero"
         style={{
@@ -126,7 +184,10 @@ export default function TempleDetailsPage() {
       >
         <div className="tdp-hero-overlay" />
         <div className="tdp-hero-content">
-          <button className="tdp-back-btn" onClick={() => navigate("/temples")}>
+          <button
+            className="tdp-back-btn"
+            onClick={() => navigate("/temples")}
+          >
             ← Back
           </button>
           <h1 className="tdp-hero-title">{googleData.name}</h1>
@@ -134,7 +195,8 @@ export default function TempleDetailsPage() {
           <div className="tdp-hero-meta">
             {googleData.rating && (
               <span className="tdp-hero-badge">
-                ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
+                ⭐ {googleData.rating} (
+                {googleData.totalRatings?.toLocaleString()})
               </span>
             )}
             {enriched?.overview?.deity && (
@@ -143,7 +205,11 @@ export default function TempleDetailsPage() {
               </span>
             )}
             {googleData.openNow !== null && (
-              <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
+              <span
+                className={`tdp-hero-badge ${
+                  googleData.openNow ? "open" : "closed"
+                }`}
+              >
                 {googleData.openNow ? "🟢 Open Now" : "🔴 Closed"}
               </span>
             )}
@@ -151,7 +217,7 @@ export default function TempleDetailsPage() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tabs */}
       <div className="tdp-tabs-wrap">
         <div className="tdp-tabs">
           {TABS.map((tab) => (
@@ -167,7 +233,7 @@ export default function TempleDetailsPage() {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Content */}
       <div className="tdp-content">
         {activeTab === "overview" && (
           <OverviewTab
@@ -198,7 +264,7 @@ export default function TempleDetailsPage() {
         )}
       </div>
 
-      {/* Floating Chat FAB */}
+      {/* FAB */}
       <button
         className="tdp-chat-fab"
         onClick={() => setShowChat(true)}
@@ -207,13 +273,10 @@ export default function TempleDetailsPage() {
         🤖
       </button>
 
-      {/* ✅ ChatPanel in temple mode — replaces TempleChat */}
+      {/* Chat */}
       {showChat && (
         <div style={{
-          position: "fixed",
-          bottom: 0,
-          right: 0,
-          zIndex: 9999,
+          position: "fixed", bottom: 0, right: 0, zIndex: 9999,
         }}>
           <ChatPanel
             closeChat={() => setShowChat(false)}
@@ -224,7 +287,6 @@ export default function TempleDetailsPage() {
           />
         </div>
       )}
-
     </div>
   );
 }

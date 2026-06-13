@@ -10,24 +10,17 @@ import Profile from "./pages/Profile";
 import DayPlanner from "./pages/DayPlanner";
 import TripPlanner from "./pages/TripPlanner";
 import TempleExplorer from "./pages/TempleExplorer";
+import TempleDetailsPage from "./components/temple/TempleDetailsPage"; // ✅ ADD THIS
 
-
-/* 🔐 Protected Route */
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/" />;
 };
 
-/* 🔁 Public Route — allow through if hash has OAuth token (mid-callback) */
 const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   const isOAuthCallback = window.location.hash.includes("access_token");
-
-  // Don't redirect if we're mid-OAuth — AuthPage will handle it
-  if (token && !isOAuthCallback) {
-    return <Navigate to="/dashboard" />;
-  }
-
+  if (token && !isOAuthCallback) return <Navigate to="/dashboard" />;
   return children;
 };
 
@@ -36,88 +29,26 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* Auth */}
-        <Route
-          path="/"
-          element={
-            <PublicRoute>
-              <AuthPage />
-            </PublicRoute>
-          }
-        />
+        <Route path="/" element={<PublicRoute><AuthPage /></PublicRoute>} />
 
-        {/* Dashboard */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Explore */}
-        <Route
-          path="/explore"
-          element={
-            <ProtectedRoute>
-              <Explore />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ✅ FIXED: Itinerary INSIDE Routes */}
-        <Route
-          path="/itinerary"
-          element={
-            <ProtectedRoute>
-              <Itinerary />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/explore"   element={<ProtectedRoute><Explore /></ProtectedRoute>} />
+        <Route path="/itinerary" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
+        <Route path="/saved"     element={<ProtectedRoute><Saved /></ProtectedRoute>} />
+        <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/day-planner"  element={<ProtectedRoute><DayPlanner /></ProtectedRoute>} />
+        <Route path="/trip-planner" element={<ProtectedRoute><TripPlanner /></ProtectedRoute>} />
 
         <Route path="/my-trips" element={<MyTrips />} />
-        <Route
-  path="/saved"
-  element={
-    <ProtectedRoute>
-      <Saved />
-    </ProtectedRoute>
-  }
-/>
-<Route
- path="/profile"
- element={
-   <ProtectedRoute>
-     <Profile />
-   </ProtectedRoute>
-}
-/>
-<Route
-  path="/day-planner"
-  element={
-    <ProtectedRoute>
-      <DayPlanner />
-    </ProtectedRoute>
-  }
-/>
 
-<Route
-  path="/trip-planner"
-  element={
-    <ProtectedRoute>
-      <TripPlanner />
-    </ProtectedRoute>
-  }
-/>
+        {/* Temple routes */}
+        <Route path="/temples" element={
+          <ProtectedRoute><TempleExplorer /></ProtectedRoute>
+        } />
+        <Route path="/temples/:placeId" element={          // ✅ THIS WAS MISSING
+          <ProtectedRoute><TempleDetailsPage /></ProtectedRoute>
+        } />
 
-<Route path="/temples" element={<ProtectedRoute><TempleExplorer /></ProtectedRoute>} />
-
-
-<Route
-  path="/trip-planner"
-  element={<TripPlanner />}
-/>
       </Routes>
     </BrowserRouter>
   );
