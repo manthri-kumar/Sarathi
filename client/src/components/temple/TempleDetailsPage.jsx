@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import Sidebar from "../components/Sidebar/Sidebar";
+import Sidebar from "../Sidebar/Sidebar";
 import OverviewTab from "./tabs/OverviewTab";
 import HistoryTab from "./tabs/HistoryTab";
 import RitualsTab from "./tabs/RitualsTab";
