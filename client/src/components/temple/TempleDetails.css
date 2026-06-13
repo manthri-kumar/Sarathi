@@ -404,3 +404,29 @@
   .tdp-layout { flex-direction: column; }
   .tdp-main   { width: 100%; }
 }
+
+
+/* ===========================
+   MAIN LAYOUT
+=========================== */
+
+.tdp-layout{
+  display:flex;
+  min-height:100vh;
+  background:#04110a;
+}
+
+.tdp-main{
+  flex:1;
+  margin-left:260px;
+  min-height:100vh;
+  overflow-x:hidden;
+  background:#04110a;
+}
+
+/* Mobile */
+@media(max-width:768px){
+  .tdp-main{
+    margin-left:0;
+  }
+}
