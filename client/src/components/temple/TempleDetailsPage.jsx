@@ -110,7 +110,7 @@ function TempleDetailsPageInner() {
         console.log("[ENRICH] Done loading");
         setLoadingEnriched(false);
       });
-  }, [googleData?.name]); // ← only re-run when temple name changes
+ }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
 
   /* ── 3. Videos — lazy ─────────────────────────── */
   const fetchVideos = useCallback(async () => {
