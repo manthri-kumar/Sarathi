@@ -699,3 +699,46 @@
   .te-card-actions { flex-direction: column; }
   .te-btn-primary { flex: unset; width: 100%; }
 }
+
+
+/* ─── Ask AI button on card ────────────────────────── */
+.te-btn-ai {
+  background: linear-gradient(135deg, #0d2016, #1a3a2a);
+  border: 1px solid #2a5a3a;
+  color: #4caf50;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.te-btn-ai:hover {
+  background: #1a4a2a;
+  border-color: #4caf50;
+  color: #fff;
+}
+
+/* ─── Sarathi AI button in controls bar ────────────── */
+.te-ai-btn {
+  background: #4caf50;
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.te-ai-btn:hover {
+  background: #388e3c;
+}
+
+/* ─── Chat overlay — bottom-right floating ─────────── */
+.te-chat-overlay {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 9999;
+}

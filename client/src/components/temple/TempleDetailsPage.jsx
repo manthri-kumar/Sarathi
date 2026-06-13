@@ -7,37 +7,37 @@ import RitualsTab from "./tabs/RitualsTab";
 import FestivalsTab from "./tabs/FestivalsTab";
 import VideosTab from "./tabs/VideosTab";
 import TravelGuideTab from "./tabs/TravelGuideTab";
-import TempleChat from "./TempleChat";
+import ChatPanel from "../ChatPanel/ChatPanel";        // ✅ ChatPanel, not TempleChat
 import "../../styles/temple/TempleDetails.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const TABS = [
-  { id: "overview",  label: "Overview",     icon: "🛕" },
-  { id: "history",   label: "History",       icon: "📜" },
-  { id: "rituals",   label: "Rituals",       icon: "🪔" },
-  { id: "festivals", label: "Festivals",     icon: "🎊" },
-  { id: "videos",    label: "Videos",        icon: "▶️" },
-  { id: "travel",    label: "Travel Guide",  icon: "🗺️" },
+  { id: "overview",  label: "Overview",    icon: "🛕" },
+  { id: "history",   label: "History",      icon: "📜" },
+  { id: "rituals",   label: "Rituals",      icon: "🪔" },
+  { id: "festivals", label: "Festivals",    icon: "🎊" },
+  { id: "videos",    label: "Videos",       icon: "▶️" },
+  { id: "travel",    label: "Travel Guide", icon: "🗺️" },
 ];
 
 export default function TempleDetailsPage() {
   const { placeId } = useParams();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab]       = useState("overview");
-  const [googleData, setGoogleData]     = useState(null);
-  const [enriched, setEnriched]         = useState(null);
-  const [videos, setVideos]             = useState([]);
-  const [nearbyServices, setNearbyServices] = useState(null);
-  const [loadingGoogle, setLoadingGoogle]   = useState(true);
-  const [loadingEnriched, setLoadingEnriched] = useState(false);
-  const [loadingVideos, setLoadingVideos]     = useState(false);
-  const [loadingServices, setLoadingServices] = useState(false);
-  const [showChat, setShowChat]         = useState(false);
-  const [error, setError]               = useState(null);
+  const [activeTab,        setActiveTab]        = useState("overview");
+  const [googleData,       setGoogleData]       = useState(null);
+  const [enriched,         setEnriched]         = useState(null);
+  const [videos,           setVideos]           = useState([]);
+  const [nearbyServices,   setNearbyServices]   = useState(null);
+  const [loadingGoogle,    setLoadingGoogle]    = useState(true);
+  const [loadingEnriched,  setLoadingEnriched]  = useState(false);
+  const [loadingVideos,    setLoadingVideos]    = useState(false);
+  const [loadingServices,  setLoadingServices]  = useState(false);
+  const [showChat,         setShowChat]         = useState(false);
+  const [error,            setError]            = useState(null);
 
-  // 1. Fetch Google Places details first
+  // 1. Google Places details
   useEffect(() => {
     const fetchGoogle = async () => {
       try {
@@ -52,7 +52,7 @@ export default function TempleDetailsPage() {
     fetchGoogle();
   }, [placeId]);
 
-  // 2. Once we have google data, fetch enriched (Gemini) in background
+  // 2. Gemini enriched data — fires automatically once googleData is ready
   useEffect(() => {
     if (!googleData?.name) return;
     const fetchEnriched = async () => {
@@ -71,7 +71,7 @@ export default function TempleDetailsPage() {
     fetchEnriched();
   }, [googleData]);
 
-  // 3. Fetch videos when Videos tab is opened
+  // 3. YouTube videos — lazy, only when Videos tab opened
   const fetchVideos = useCallback(async () => {
     if (!googleData?.name || videos.length > 0) return;
     setLoadingVideos(true);
@@ -87,7 +87,7 @@ export default function TempleDetailsPage() {
     }
   }, [googleData, videos.length]);
 
-  // 4. Fetch nearby services when Travel tab is opened
+  // 4. Nearby services — lazy, only when Travel tab opened
   const fetchNearbyServices = useCallback(async () => {
     if (!googleData?.lat || nearbyServices) return;
     setLoadingServices(true);
@@ -114,6 +114,7 @@ export default function TempleDetailsPage() {
 
   return (
     <div className="tdp-root">
+
       {/* Hero Banner */}
       <div
         className="tdp-hero"
@@ -132,10 +133,14 @@ export default function TempleDetailsPage() {
           <p className="tdp-hero-addr">📍 {googleData.address}</p>
           <div className="tdp-hero-meta">
             {googleData.rating && (
-              <span className="tdp-hero-badge">⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})</span>
+              <span className="tdp-hero-badge">
+                ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
+              </span>
             )}
             {enriched?.overview?.deity && (
-              <span className="tdp-hero-badge">🙏 {enriched.overview.deity}</span>
+              <span className="tdp-hero-badge">
+                🙏 {enriched.overview.deity}
+              </span>
             )}
             {googleData.openNow !== null && (
               <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
@@ -165,7 +170,11 @@ export default function TempleDetailsPage() {
       {/* Tab Content */}
       <div className="tdp-content">
         {activeTab === "overview" && (
-          <OverviewTab google={googleData} enriched={enriched} loading={loadingEnriched} />
+          <OverviewTab
+            google={googleData}
+            enriched={enriched}
+            loading={loadingEnriched}
+          />
         )}
         {activeTab === "history" && (
           <HistoryTab enriched={enriched} loading={loadingEnriched} />
@@ -189,19 +198,33 @@ export default function TempleDetailsPage() {
         )}
       </div>
 
-      {/* Floating Chat Button */}
-      <button className="tdp-chat-fab" onClick={() => setShowChat(true)} title="Ask Temple Assistant">
+      {/* Floating Chat FAB */}
+      <button
+        className="tdp-chat-fab"
+        onClick={() => setShowChat(true)}
+        title="Ask Temple Assistant"
+      >
         🤖
       </button>
 
-      {/* Chat Panel */}
+      {/* ✅ ChatPanel in temple mode — replaces TempleChat */}
       {showChat && (
-        <TempleChat
-          templeName={googleData.name}
-          address={googleData.address}
-          onClose={() => setShowChat(false)}
-        />
+        <div style={{
+          position: "fixed",
+          bottom: 0,
+          right: 0,
+          zIndex: 9999,
+        }}>
+          <ChatPanel
+            closeChat={() => setShowChat(false)}
+            templeContext={{
+              name: googleData.name,
+              address: googleData.address || "",
+            }}
+          />
+        </div>
       )}
+
     </div>
   );
 }
@@ -212,7 +235,9 @@ function LoadingSkeleton() {
       <div className="tdp-skeleton-hero" />
       <div className="tdp-skeleton-tabs" />
       <div className="tdp-skeleton-body">
-        {[1,2,3].map(i => <div key={i} className="tdp-skeleton-card" />)}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="tdp-skeleton-card" />
+        ))}
       </div>
     </div>
   );
