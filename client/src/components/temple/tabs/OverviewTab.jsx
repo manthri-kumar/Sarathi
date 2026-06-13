@@ -1,11 +1,11 @@
 import React from "react";
 
-const Skeleton = ({ h = 20, w = "100%" }) => (
-  <div className="tdp-skel-line" style={{ height: h, width: w }} />
+const Skel = ({ h=20, w="100%" }) => (
+  <div className="tdp-skel-line" style={{ height:h, width, marginBottom:12 }} />
 );
 
-export default function OverviewTab({ google, enriched, loading }) {
-  const o = enriched?.overview;
+export default function OverviewTab({ google, enriched, loading, enrichError }) {
+  const o       = enriched?.overview;
   const darshan = enriched?.darshan;
 
   return (
@@ -17,26 +17,82 @@ export default function OverviewTab({ google, enriched, loading }) {
           <h2 className="tdp-section-title">📸 Photo Gallery</h2>
           <div className="tdp-gallery">
             {google.photos.map((url, i) => (
-              <img key={i} src={url} alt={`${google.name} ${i+1}`} className="tdp-gallery-img"
-                onClick={() => window.open(url, "_blank")} />
+              <img
+                key={i} src={url} alt={`${google.name} ${i+1}`}
+                className="tdp-gallery-img"
+                onClick={() => window.open(url,"_blank")}
+              />
             ))}
           </div>
         </section>
       )}
 
+      {/* Temple Highlights — replaces reviews */}
+      <section className="tdp-section">
+        <h2 className="tdp-section-title">✨ Temple Highlights</h2>
+        <div className="tdp-highlights-grid">
+          <HighlightCard
+            icon="🛕"
+            label="Presiding Deity"
+            value={loading ? null : (o?.deity || "Information loading...")}
+            loading={loading}
+          />
+          <HighlightCard
+            icon="📿"
+            label="Spiritual Significance"
+            value={loading ? null : (o?.spiritualSignificance || "A sacred place of worship and divine blessings.")}
+            loading={loading}
+          />
+          <HighlightCard
+            icon="🎊"
+            label="Main Festivals"
+            value={loading ? null : (
+              enriched?.festivals?.length > 0
+                ? enriched.festivals.slice(0,3).map(f=>f.name).join(", ")
+                : "Festivals information loading..."
+            )}
+            loading={loading}
+          />
+          <HighlightCard
+            icon="🕒"
+            label="Temple Timings"
+            value={loading ? null : (
+              google.openingHours?.[0] ||
+              darshan?.timings?.[0]?.time ||
+              "Timing details available at temple"
+            )}
+            loading={loading}
+          />
+          <HighlightCard
+            icon="🙏"
+            label="Special Rituals"
+            value={loading ? null : (
+              enriched?.rituals?.length > 0
+                ? enriched.rituals.slice(0,2).map(r=>r.name).join(", ")
+                : "Daily rituals performed"
+            )}
+            loading={loading}
+          />
+          <HighlightCard
+            icon="📍"
+            label="Location"
+            value={google.address}
+          />
+        </div>
+      </section>
+
       {/* Quick Info Grid */}
       <section className="tdp-section">
         <h2 className="tdp-section-title">ℹ️ Temple Information</h2>
         <div className="tdp-info-grid">
-          {google.address && <InfoCard icon="📍" label="Address" value={google.address} />}
-          {google.phone && <InfoCard icon="📞" label="Phone" value={<a href={`tel:${google.phone}`}>{google.phone}</a>} />}
-          {google.website && <InfoCard icon="🌐" label="Website" value={<a href={google.website} target="_blank" rel="noreferrer">Visit Website</a>} />}
-          {google.rating && <InfoCard icon="⭐" label="Rating" value={`${google.rating} / 5 (${google.totalRatings?.toLocaleString()} reviews)`} />}
-          {loading ? <Skeleton h={60} /> : o?.deity && <InfoCard icon="🙏" label="Presiding Deity" value={o.deity} />}
-          {loading ? <Skeleton h={60} /> : o?.dresscode && <InfoCard icon="👗" label="Dress Code" value={o.dresscode} />}
-          {loading ? <Skeleton h={60} /> : o?.bestTimeToVisit && <InfoCard icon="🗓️" label="Best Time to Visit" value={o.bestTimeToVisit} />}
-          {loading ? <Skeleton h={60} /> : o?.recommendedDarshanTime && <InfoCard icon="⏰" label="Best Darshan Time" value={o.recommendedDarshanTime} />}
-          {loading ? <Skeleton h={60} /> : o?.crowdLevel && <InfoCard icon="👥" label="Crowd Level" value={o.crowdLevel} />}
+          {google.address    && <InfoCard icon="📍" label="Address"  value={google.address} />}
+          {google.phone      && <InfoCard icon="📞" label="Phone"    value={<a href={`tel:${google.phone}`}>{google.phone}</a>} />}
+          {google.website    && <InfoCard icon="🌐" label="Website"  value={<a href={google.website} target="_blank" rel="noreferrer">Visit Website</a>} />}
+          {google.rating     && <InfoCard icon="⭐" label="Rating"   value={`${google.rating} / 5 (${google.totalRatings?.toLocaleString()} reviews)`} />}
+          {loading ? <Skel h={60}/> : o?.dresscode          && <InfoCard icon="👗" label="Dress Code"         value={o.dresscode} />}
+          {loading ? <Skel h={60}/> : o?.bestTimeToVisit    && <InfoCard icon="🗓️" label="Best Time to Visit" value={o.bestTimeToVisit} />}
+          {loading ? <Skel h={60}/> : o?.recommendedDarshanTime && <InfoCard icon="⏰" label="Best Darshan Time" value={o.recommendedDarshanTime} />}
+          {loading ? <Skel h={60}/> : o?.crowdLevel         && <InfoCard icon="👥" label="Crowd Level"        value={o.crowdLevel} />}
         </div>
       </section>
 
@@ -45,7 +101,7 @@ export default function OverviewTab({ google, enriched, loading }) {
         <section className="tdp-section">
           <h2 className="tdp-section-title">🕐 Opening Hours</h2>
           <div className="tdp-hours">
-            {google.openingHours.map((h, i) => (
+            {google.openingHours.map((h,i) => (
               <div key={i} className="tdp-hour-row">{h}</div>
             ))}
           </div>
@@ -53,13 +109,11 @@ export default function OverviewTab({ google, enriched, loading }) {
       )}
 
       {/* Darshan Info */}
-      {loading ? (
-        <section className="tdp-section"><Skeleton h={120} /></section>
-      ) : darshan?.timings?.length > 0 && (
+      {!loading && darshan?.timings?.length > 0 && (
         <section className="tdp-section">
           <h2 className="tdp-section-title">🙏 Darshan Information</h2>
           <div className="tdp-darshan-grid">
-            {darshan.timings.map((d, i) => (
+            {darshan.timings.map((d,i) => (
               <div key={i} className="tdp-darshan-card">
                 <span className="tdp-darshan-type">{d.type}</span>
                 <span className="tdp-darshan-time">{d.time}</span>
@@ -70,28 +124,18 @@ export default function OverviewTab({ google, enriched, loading }) {
           {darshan.tips?.length > 0 && (
             <div className="tdp-tips">
               <h4>💡 Visitor Tips</h4>
-              <ul>{darshan.tips.map((t, i) => <li key={i}>{t}</li>)}</ul>
+              <ul>{darshan.tips.map((t,i)=><li key={i}>{t}</li>)}</ul>
             </div>
           )}
         </section>
       )}
 
-      {/* Spiritual Significance */}
-      {loading ? (
-        <section className="tdp-section"><Skeleton h={80} /></section>
-      ) : o?.spiritualSignificance && (
-        <section className="tdp-section">
-          <h2 className="tdp-section-title">✨ Spiritual Significance</h2>
-          <p className="tdp-para">{o.spiritualSignificance}</p>
-        </section>
-      )}
-
       {/* Spiritual Purposes */}
-      {loading ? null : enriched?.spiritualPurposes?.length > 0 && (
+      {!loading && enriched?.spiritualPurposes?.length > 0 && (
         <section className="tdp-section">
           <h2 className="tdp-section-title">🌸 Why Devotees Visit</h2>
           <div className="tdp-purpose-grid">
-            {enriched.spiritualPurposes.map((p, i) => (
+            {enriched.spiritualPurposes.map((p,i) => (
               <div key={i} className="tdp-purpose-card">
                 <span className="tdp-purpose-name">{p.purpose}</span>
                 <p className="tdp-purpose-prayer">{p.prayer}</p>
@@ -101,24 +145,14 @@ export default function OverviewTab({ google, enriched, loading }) {
         </section>
       )}
 
-      {/* Google Reviews */}
-      {google.reviews?.length > 0 && (
+      {/* Accessibility */}
+      {!loading && o?.accessibility && (
         <section className="tdp-section">
-          <h2 className="tdp-section-title">💬 Visitor Reviews</h2>
-          <div className="tdp-reviews">
-            {google.reviews.map((r, i) => (
-              <div key={i} className="tdp-review-card">
-                <div className="tdp-review-header">
-                  {r.profilePhoto && <img src={r.profilePhoto} alt={r.author} className="tdp-review-avatar" />}
-                  <div>
-                    <span className="tdp-review-author">{r.author}</span>
-                    <span className="tdp-review-stars">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span>
-                    <span className="tdp-review-time">{r.time}</span>
-                  </div>
-                </div>
-                <p className="tdp-review-text">{r.text}</p>
-              </div>
-            ))}
+          <h2 className="tdp-section-title">♿ Accessibility</h2>
+          <div className="tdp-access-grid">
+            <AccessItem icon="♿" label="Wheelchair Access" value={o.accessibility.wheelchairAccess} />
+            <AccessItem icon="🅿️" label="Parking"          value={o.accessibility.parking} />
+            <AccessItem icon="🚻" label="Restrooms"         value={o.accessibility.restrooms} />
           </div>
         </section>
       )}
@@ -131,6 +165,25 @@ export default function OverviewTab({ google, enriched, loading }) {
           </a>
         </section>
       )}
+
+      {enrichError && (
+        <div className="tdp-enrich-error">
+          ⚠️ Some detailed information could not be loaded. Basic temple info is shown above.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HighlightCard({ icon, label, value, loading }) {
+  return (
+    <div className="tdp-highlight-card">
+      <span className="tdp-highlight-icon">{icon}</span>
+      <span className="tdp-highlight-label">{label}</span>
+      {loading
+        ? <div className="tdp-skel-line" style={{ height:14, width:"80%" }} />
+        : <span className="tdp-highlight-value">{value}</span>
+      }
     </div>
   );
 }
@@ -143,6 +196,18 @@ function InfoCard({ icon, label, value }) {
         <span className="tdp-info-label">{label}</span>
         <span className="tdp-info-value">{value}</span>
       </div>
+    </div>
+  );
+}
+
+function AccessItem({ icon, label, value }) {
+  return (
+    <div className="tdp-access-item">
+      <span>{icon}</span>
+      <span>{label}</span>
+      <span className={value ? "tdp-access-yes" : "tdp-access-no"}>
+        {value ? "✅ Available" : "❌ Not Available"}
+      </span>
     </div>
   );
 }
