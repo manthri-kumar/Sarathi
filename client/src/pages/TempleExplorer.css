@@ -491,8 +491,53 @@
   z-index: 9999;
 }
 
-/* ── Screen Adapters ─────────────────────────────── */
+/* ── Hamburger toggle button configurations (Hidden on Desktop) ── */
+.te-hamburger-btn {
+  display: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #fff;
+  font-size: 22px;
+  padding: 8px 14px;
+  border-radius: var(--te-radius-sm);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.te-hamburger-btn:hover {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: var(--te-green);
+}
+
+/* ── Mobile Dark Transparent Backdrop Backdrop ── */
+.te-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1100; /* Directly sits underneath sidebar drawer layout */
+}
+
+/* ── Pad Left Margin to shift Content Root on Desktop viewports ── */
+@media (min-width: 769px) {
+  .te-root {
+    margin-left: 250px; /* Perfectly matches your Sidebar width specification */
+  }
+}
+
+/* ── Responsive Mobile Media Queries ── */
 @media (max-width: 768px) {
+  .te-hamburger-btn {
+    display: inline-flex;
+  }
+
+  .te-header-title {
+    gap: 12px;
+  }
+
   .te-page-layout {
     position: relative;
     width: 100%;
@@ -500,7 +545,6 @@
     overflow-x: hidden;
   }
 
-  /* Ensures content panel is correctly pushed back behind or placed next to absolute responsive menus */
   .te-root {
     width: 100%;
     padding-left: 0;
@@ -521,6 +565,7 @@
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;
+    gap: 8px;
   }
 
   .te-grid {

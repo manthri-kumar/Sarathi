@@ -164,6 +164,7 @@ export default function TempleExplorer() {
   const [locationStatus, setLocationStatus] = useState("idle");
   const [searchQuery, setSearchQuery]   = useState("");
   const [filter, setFilter]             = useState("all");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [savedIds, setSavedIds] = useState(() => {
     try {
@@ -284,8 +285,16 @@ export default function TempleExplorer() {
 
   return (
     <div className="te-page-layout">
-      {/* ── Left Side Global Navigation Panel ── */}
-      <Sidebar isOpen={true} />
+      {/* ── Left Side Global Navigation Panel (Controlled dynamically) ── */}
+      <Sidebar isOpen={isMobileMenuOpen} />
+
+      {/* ── Dimmed mobile backdrop overlay to close menu safely ── */}
+      {isMobileMenuOpen && (
+        <div 
+          className="te-mobile-overlay" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
       {/* ── Right Side Content Workspace ── */}
       <div className="te-root">
@@ -293,6 +302,15 @@ export default function TempleExplorer() {
         <div className="te-header">
           <div className="te-header-content">
             <div className="te-header-title">
+              {/* Responsive Hamburger Toggle Button */}
+              <button 
+                className="te-hamburger-btn"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="Toggle navigation menu"
+              >
+                ☰
+              </button>
+              
               <span className="te-header-icon">
                 <GopuramIcon size={44} color="var(--te-green)" />
               </span>
