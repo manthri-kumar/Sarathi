@@ -24,13 +24,8 @@ const TABS = [
 
 /* ─── Error Boundary ──────────────────────────────── */
 class ErrorBoundary extends React.Component {
-  constructor(props) { 
-    super(props); 
-    this.state = { hasError: false, error: null }; 
-  }
-  static getDerivedStateFromError(error) { 
-    return { hasError: true, error }; 
-  }
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
   render() {
     if (this.state.hasError) return (
       <div style={{ color:"#ff6b6b", padding:"40px", background:"#050f0a", minHeight:"100vh", fontFamily:"monospace" }}>
@@ -96,7 +91,7 @@ function TempleDetailsPageInner() {
 
     axios.get(`${API_BASE}/api/temples/enriched`, {
       params: { name: googleData.name, address: googleData.address || "" },
-      timeout: 60000, 
+      timeout: 60000, // Gemini can be slow — 60s timeout
     })
       .then(res => {
         console.log("[ENRICH] Full response:", JSON.stringify(res.data, null, 2));
@@ -115,7 +110,7 @@ function TempleDetailsPageInner() {
         console.log("[ENRICH] Done loading");
         setLoadingEnriched(false);
       });
-  }, [googleData?.name, googleData?.address]);
+ }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
 
   /* ── 3. Videos — lazy ─────────────────────────── */
   const fetchVideos = useCallback(async () => {
@@ -189,13 +184,13 @@ function TempleDetailsPageInner() {
 
   return (
     <div className="tdp-layout">
-      {/* ── Sidebar Column ── */}
+      {/* ── Sidebar ── */}
       <Sidebar />
 
-      {/* ── Main content view shifted right matching CSS grid ── */}
+      {/* ── Main Content ── */}
       <div className="tdp-main">
 
-        {/* Hero Section */}
+        {/* Hero */}
         <div
           className="tdp-hero"
           style={{
@@ -229,7 +224,7 @@ function TempleDetailsPageInner() {
           </div>
         </div>
 
-        {/* Navigation Tabs bar */}
+        {/* Tabs */}
         <div className="tdp-tabs-wrap">
           <div className="tdp-tabs">
             {TABS.map(tab => (
@@ -245,7 +240,7 @@ function TempleDetailsPageInner() {
           </div>
         </div>
 
-        {/* Target Content rendering window */}
+        {/* Content */}
         <div className="tdp-content">
           {activeTab === "overview" && (
             <OverviewTab
@@ -296,16 +291,16 @@ function TempleDetailsPageInner() {
           )}
         </div>
 
-        {/* Chat floating assistant trigger icon */}
+        {/* FAB */}
         <button
           className="tdp-chat-fab"
           onClick={() => setShowChat(true)}
           title="Ask Temple Assistant"
         >
-          💬
+
         </button>
 
-        {/* Interactive Chat Overlay context windows */}
+        {/* Chat */}
         {showChat && (
           <div style={{ position:"fixed", bottom:0, right:0, zIndex:9999 }}>
             <ChatPanel
