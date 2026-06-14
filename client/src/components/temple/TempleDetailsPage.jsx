@@ -2,13 +2,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "../Sidebar/Sidebar";
-import OverviewTab     from "./tabs/OverviewTab";
-import HistoryTab      from "./tabs/HistoryTab";
-import RitualsTab      from "./tabs/RitualsTab";
-import FestivalsTab    from "./tabs/FestivalsTab";
-import VideosTab       from "./tabs/VideosTab";
+import OverviewTab    from "./tabs/OverviewTab";
+import HistoryTab     from "./tabs/HistoryTab";
+import RitualsTab     from "./tabs/RitualsTab";
+import FestivalsTab   from "./tabs/FestivalsTab";
+import VideosTab      from "./tabs/VideosTab";
 import TravelGuideTab from "./tabs/TravelGuideTab";
-import ChatPanel       from "../ChatPanel/ChatPanel";
+import ChatPanel      from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
 
 const API_BASE =
@@ -74,57 +74,6 @@ function TempleDetailsInner() {
   const [showChat,         setShowChat]         = useState(false);
   const [pageError,        setPageError]        = useState(null);
 
-  /* Fetch Temple Videos */
-  const fetchVideos = useCallback(async () => {
-    if (!googleData?.name || videos.length > 0) return;
-
-    try {
-      setLoadingVideos(true);
-
-      const res = await axios.get(
-        `${API_BASE}/api/temples/videos`,
-        {
-          params: {
-            templeName: googleData.name,
-          },
-        }
-      );
-
-      setVideos(res.data?.videos || []);
-    } catch (err) {
-      console.error("Videos fetch failed:", err);
-      setVideos([]);
-    } finally {
-      setLoadingVideos(false);
-    }
-  }, [googleData?.name, videos.length]);
-
-  /* Fetch Nearby Services */
-  const fetchNearbyServices = useCallback(async () => {
-    if (!googleData?.lat || !googleData?.lng) return;
-
-    try {
-      setLoadingServices(true);
-
-      const res = await axios.get(
-        `${API_BASE}/api/temples/nearby-services`,
-        {
-          params: {
-            lat: googleData.lat,
-            lng: googleData.lng,
-          },
-        }
-      );
-
-      setNearbyServices(res.data || {});
-    } catch (err) {
-      console.error("Nearby services fetch failed:", err);
-      setNearbyServices(null);
-    } finally {
-      setLoadingServices(false);
-    }
-  }, [googleData?.lat, googleData?.lng]);
-
   /* 1 — Google Places details */
   useEffect(() => {
     if (!placeId) return;
@@ -171,6 +120,58 @@ function TempleDetailsInner() {
         setEnrichError(true);
       })
       .finally(() => setLoadingEnriched(false));
+
+      const fetchVideos = async () => {
+  if (!googleData?.name || videos.length > 0) return;
+
+  try {
+    setLoadingVideos(true);
+
+    const res = await axios.get(
+      `${API_BASE}/api/temples/videos`,
+      {
+        params: {
+          templeName: googleData.name,
+        },
+      }
+    );
+
+    setVideos(res.data?.videos || []);
+  } catch (err) {
+    console.error("Videos fetch failed:", err);
+    setVideos([]);
+  } finally {
+    setLoadingVideos(false);
+  }
+};
+
+const fetchNearbyServices = async () => {
+  if (!googleData?.lat || !googleData?.lng) return;
+
+  try {
+    setLoadingServices(true);
+
+    const res = await axios.get(
+      `${API_BASE}/api/temples/nearby-services`,
+      {
+        params: {
+          lat: googleData.lat,
+          lng: googleData.lng,
+        },
+      }
+    );
+
+    setNearbyServices(res.data || {});
+  } catch (err) {
+    console.error("Nearby services fetch failed:", err);
+    setNearbyServices(null);
+  } finally {
+    setLoadingServices(false);
+  }
+};
+
+  // googleData.address intentionally omitted — we only re-fetch when temple changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleData?.name, googleData?.address]);
 
   const handleTabChange = (tabId) => {
@@ -349,6 +350,7 @@ function TempleDetailsInner() {
             />
           </div>
         )}
+
       </div>
     </div>
   );
