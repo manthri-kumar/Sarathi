@@ -120,43 +120,10 @@ function TempleDetailsInner() {
         setEnrichError(true);
       })
       .finally(() => setLoadingEnriched(false));
-  }, [googleData?.name]);
 
-  /* 3 — Videos — lazy on tab open */
-  const fetchVideos = useCallback(async () => {
-    if (!googleData?.name || videos.length > 0) return;
-    console.log("[TDP] Fetching videos for:", googleData.name);
-    setLoadingVideos(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/temples/videos`, {
-        params: { name: googleData.name },
-      });
-      setVideos(res.data.videos || []);
-    } catch (e) {
-      console.error("[TDP] Videos failed:", e.message);
-      setVideos([]);
-    } finally {
-      setLoadingVideos(false);
-    }
-  }, [googleData?.name, videos.length]);
-
-  /* 4 — Nearby services — lazy on tab open */
-  const fetchNearbyServices = useCallback(async () => {
-    if (!googleData?.lat || nearbyServices) return;
-    console.log("[TDP] Fetching nearby services");
-    setLoadingServices(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
-        params: { lat: googleData.lat, lng: googleData.lng },
-      });
-      setNearbyServices(res.data);
-    } catch (e) {
-      console.error("[TDP] Services failed:", e.message);
-      setNearbyServices({ hotels: [], restaurants: [], parking: [] });
-    } finally {
-      setLoadingServices(false);
-    }
-  }, [googleData?.lat, googleData?.lng, nearbyServices]);
+  // googleData.address intentionally omitted — we only re-fetch when temple changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleData?.name, googleData?.address]);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
