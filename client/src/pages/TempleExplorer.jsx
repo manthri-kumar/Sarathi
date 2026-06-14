@@ -7,6 +7,20 @@ import "./TempleExplorer.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+/* ─── Custom Font Awesome Gopuram SVG Asset Component ─── */
+const GopuramIcon = ({ size = 18, color = "currentColor" }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 448 512" 
+    width={size} 
+    height={size} 
+    fill={color}
+    style={{ display: "inline-block", verticalAlign: "middle" }}
+  >
+    <path d="M224 0c-11.7 0-21.7 8-24.4 19.4L181.9 96H128c-17.7 0-32 14.3-32 32v48c0 5.8 1.5 11.2 4.2 16H80c-26.5 0-48 21.5-48 48v80c0 9.2 2.6 17.8 7.1 25.1L4.6 423.5C1.6 432.4 0 441.7 0 451.1C0 484.8 27.2 512 60.9 512h326.2c33.7 0 60.9-27.2 60.9-60.9c0-9.4-1.6-18.7-4.6-27.6l-34.5-104.4c4.5-7.3 7.1-15.9 7.1-25.1v-80c0-26.5-21.5-48-48-48h-20.2c2.7-4.8 4.2-10.2 4.2-16v-48c0-17.7-14.3-32-32-32h-53.9l-17.7-76.6C245.7 8 235.7 0 224 0zM192 144h64v48h-64v-48zm-48 96h160v64H144v-64zm-48 112h256v80H96v-80z"/>
+  </svg>
+);
+
 /* ─── Star Rating ───────────────────────────────────── */
 const StarRating = ({ rating }) => {
   if (!rating) return <span className="te-no-rating">No rating</span>;
@@ -68,7 +82,7 @@ const TempleCard = ({
           />
         ) : (
           <div className="te-card-img-placeholder">
-            <span className="te-placeholder-icon">🛕</span>
+            <GopuramIcon size={56} color="rgba(42, 197, 34, 0.4)" />
           </div>
         )}
 
@@ -279,7 +293,9 @@ export default function TempleExplorer() {
         <div className="te-header">
           <div className="te-header-content">
             <div className="te-header-title">
-              <span className="te-header-icon">🛕</span>
+              <span className="te-header-icon">
+                <GopuramIcon size={44} color="var(--te-green)" />
+              </span>
               <div>
                 <h1>Temple Discovery</h1>
                 <p>Find sacred temples near you, powered by Google Places</p>
@@ -384,7 +400,7 @@ export default function TempleExplorer() {
           </div>
         ) : !loading && temples.length > 0 && filteredTemples.length === 0 ? (
           <div className="te-empty">
-            <span style={{ fontSize: '48px', color: 'var(--te-green)' }}>🛕</span>
+            <GopuramIcon size={48} color="var(--te-green)" />
             <p>No temples match the current filter.</p>
             <button
               className="te-btn te-btn-ghost"
@@ -395,7 +411,7 @@ export default function TempleExplorer() {
           </div>
         ) : !loading && temples.length === 0 && !error ? (
           <div className="te-empty">
-            <span>🛕</span>
+            <GopuramIcon size={48} color="var(--te-text-dim)" />
             <p>No temples found yet.</p>
             <p className="te-empty-sub">
               Allow location access or search a city above.
