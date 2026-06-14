@@ -15,14 +15,24 @@
   --te-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* ── Root Layout Configured Next to Sidebar ──────── */
+/* ── Split Flex Container Layout ── */
+.te-page-layout {
+  display: flex;
+  width: 100vw;
+  min-height: 100vh;
+  background: #000;
+  overflow-x: hidden;
+}
+
+/* ── Content Root (Takes up the rest of the workspace space) ── */
 .te-root {
+  flex: 1;
   min-height: 100vh;
   background: linear-gradient(145deg, var(--te-bg-start) 0%, var(--te-bg-end) 100%);
   color: var(--te-text);
   font-family: "Inter", system-ui, sans-serif;
   padding-bottom: 60px;
-  flex: 1; /* Ensures workspace fills remaining horizontal space */
+  overflow-y: auto;
 }
 
 /* ── Header ───────────────────────────────────────── */
@@ -482,6 +492,9 @@
 
 /* ── Screen Adapters ─────────────────────────────── */
 @media (max-width: 768px) {
+  .te-page-layout {
+    flex-direction: column;
+  }
   .te-header { padding: 20px 16px 16px; }
   .te-header-title h1 { font-size: 1.5rem; }
   .te-header-icon { font-size: 36px; }
