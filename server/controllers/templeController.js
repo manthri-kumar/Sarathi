@@ -203,22 +203,48 @@ const getNearbyServicePlaces = async (req, res) => {
 
 /* ── TEMPLE CHAT (Gemini) ─────────────────────────────── */
 const templeChat = async (req, res) => {
+  console.log("[CHAT] Incoming request body:", req.body);
+
   const { message, templeName, address } = req.body;
-  if (!message || !templeName) return res.status(400).json({ error: "message and templeName required" });
 
-  const prompt = `You are a knowledgeable and respectful spiritual guide for ${templeName} temple${address ? ` at ${address}` : ""}.
-Answer the following question accurately and concisely (under 150 words). 
-If you don't know something specific about this temple, say so honestly.
+  if (!message) {
+    return res.status(400).json({ error: "message is required" });
+  }
+  if (!templeName) {
+    return res.status(400).json({ error: "templeName is required" });
+  }
+
+  const prompt = `You are a knowledgeable and respectful spiritual guide for ${templeName} temple${
+    address ? ` located at ${address}` : " in India"
+  }.
+
+Answer the following question accurately and concisely (under 200 words).
+Be specific to THIS temple when you know facts about it.
+If you don't know something specific, provide general Hindu temple information.
 Be spiritually respectful and culturally sensitive.
+Do not use markdown formatting. Write in plain conversational text.
 
-Question: ${message}`;
+Question: ${message}
+
+Answer:`;
 
   try {
+    console.log("[CHAT] Calling Gemini for temple:", templeName);
     const reply = await askGemini(prompt);
-    return res.json({ reply });
+    console.log("[CHAT] Gemini reply:", reply?.substring(0, 100));
+
+    if (!reply) {
+      return res.status(500).json({ error: "Empty response from AI" });
+    }
+
+    return res.json({ reply: reply.trim() });
   } catch (err) {
-    console.error("[CHAT] Error:", err.message);
-    return res.status(500).json({ error: "Chat failed" });
+    console.error("[CHAT] Gemini error:", err.response?.data || err.message);
+
+    // Return a helpful fallback instead of an error
+    return res.json({
+      reply: `I'm having trouble connecting to my knowledge base right now. Here's what I can tell you about ${templeName}: it is a sacred Hindu temple. For specific questions about darshan timings, rituals, and festivals, I recommend visiting the temple directly or checking their official website. Please try your question again in a moment.`,
+    });
   }
 };
 

@@ -1,39 +1,43 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./ChatPanel.css";
 
-const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
+const API_BASE =
+  process.env.REACT_APP_API_URL ||
+  "https://sarathi-backend-7u0y.onrender.com";
 
 const ChatPanel = ({ closeChat, templeContext = null }) => {
-  // templeContext = null → general Sarathi AI
-  // templeContext = { name, address } → Temple Guide mode
+  const isTempleMode = !!templeContext;
 
   const getInitialMessage = () => {
     if (templeContext) {
       return {
-        text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}. Ask me about history, rituals, festivals, darshan timings, or how to reach here.`,
+        text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`,
         sender: "bot",
       };
     }
-    return { text: "Hi 👋 I'm Sarathi AI. Ask me anything!", sender: "bot" };
+    return {
+      text: "Hi 👋 I'm Sarathi AI. Ask me anything!",
+      sender: "bot",
+    };
   };
 
   const [messages, setMessages] = useState([getInitialMessage()]);
-  const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
+  const [input,    setInput]    = useState("");
+  const [typing,   setTyping]   = useState(false);
   const chatEndRef = useRef(null);
 
-  // Re-initialize when templeContext changes (user clicks "Ask AI" on different temple)
+  // Reset when switching temples
   useEffect(() => {
     setMessages([getInitialMessage()]);
     setInput("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templeContext?.name]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typing]);
 
-  /* ─── Navigation ────────────────────────────────── */
+  /* ─── Navigation helper ──────────────────────────── */
   const navigateTo = (place) => {
     const lat = localStorage.getItem("lat");
     const lng = localStorage.getItem("lng");
@@ -44,72 +48,85 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     window.open(url, "_blank");
   };
 
-  /* ─── Send ──────────────────────────────────────── */
+  /* ─── Send message ───────────────────────────────── */
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
-    if (!msg) return;
+    if (!msg || typing) return;
 
     setMessages((prev) => [...prev, { text: msg, sender: "user" }]);
     setInput("");
     setTyping(true);
 
     try {
-      let responseData;
+      let endpoint = "";
+      let payload  = {};
 
-      if (templeContext) {
-        // ── Temple mode → /api/temples/chat ──────────
-        const res = await fetch(`${API_BASE}/api/temples/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: msg,
-            templeName: templeContext.name,
-            address: templeContext.address || "",
-          }),
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        responseData = {
-          text: data.reply || "I couldn't find an answer for that.",
-          sender: "bot",
+      if (isTempleMode && templeContext) {
+        endpoint = `${API_BASE}/api/temples/chat`;
+        payload  = {
+          message:    msg,
+          templeName: templeContext.name,
+          address:    templeContext.address || "",
         };
       } else {
-        // ── General mode → /api/chat ─────────────────
-        const res = await fetch(`${API_BASE}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: msg,
-            lat: localStorage.getItem("lat"),
-            lng: localStorage.getItem("lng"),
-            city: localStorage.getItem("city"),
-          }),
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        responseData = { ...data, sender: "bot", text: data.reply || "" };
+        endpoint = `${API_BASE}/api/chat`;
+        payload  = {
+          message: msg,
+          lat:     localStorage.getItem("lat"),
+          lng:     localStorage.getItem("lng"),
+          city:    localStorage.getItem("city"),
+        };
       }
 
+      console.log("[CHAT] Sending to:", endpoint);
+      console.log("[CHAT] Payload:", payload);
+
+      const res = await fetch(endpoint, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      console.log("[CHAT] HTTP status:", res.status);
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("[CHAT] HTTP error response:", errText);
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      console.log("[CHAT] Response data:", data);
+
       setTyping(false);
-      setMessages((prev) => [...prev, responseData]);
+
+      if (isTempleMode) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            text:   data.reply || "I couldn't find an answer. Please try again.",
+            sender: "bot",
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { ...data, sender: "bot", text: data.reply || "" },
+        ]);
+      }
     } catch (err) {
-      console.error("Chat Error:", err);
+      console.error("[CHAT] Error:", err.message);
       setTyping(false);
       setMessages((prev) => [
         ...prev,
         {
-          text: "Something went wrong. Please try again in a moment.",
+          text:   `Connection error: ${err.message}. Check your network and try again.`,
           sender: "bot",
         },
       ]);
     }
   };
 
-  /* ─── Key press ─────────────────────────────────── */
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -117,7 +134,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     }
   };
 
-  /* ─── Temple suggestions (shown only at start) ── */
+  /* ─── Temple quick suggestions ───────────────────── */
   const templeSuggestions = [
     "What is special about this temple?",
     "What are the darshan timings?",
@@ -126,28 +143,29 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     "How to reach this temple?",
   ];
 
-  const isTempleMode = !!templeContext;
   const showSuggestions = isTempleMode && messages.length <= 1;
 
   return (
     <div className="chat-panel">
 
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div className="chat-header">
         <h3>
           {isTempleMode
-            ? `🛕 ${templeContext.name}`
+            ? `🛕 ${templeContext.name.length > 30
+                ? templeContext.name.substring(0, 30) + "…"
+                : templeContext.name}`
             : "Sarathi AI"}
         </h3>
-        <button onClick={closeChat}>✖</button>
+        <button onClick={closeChat} aria-label="Close chat">✖</button>
       </div>
 
-      {/* ── BODY ── */}
+      {/* BODY */}
       <div className="chat-body">
         {messages.map((msg, i) => (
           <div key={i} className={`chat-row ${msg.sender}`}>
 
-            {/* Plain text bubble — both temple replies and general text */}
+            {/* Plain text — temple replies + general text */}
             {(!msg.type || msg.type === undefined) && msg.text && (
               <div className="chat-bubble">
                 {msg.text.split("\n").map((line, j) => (
@@ -216,12 +234,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                           <button
                             onClick={() => navigateTo(item.place)}
                             style={{
-                              marginTop: "5px",
-                              padding: "5px 10px",
-                              background: "#22c55e",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
+                              marginTop:"5px", padding:"5px 10px",
+                              background:"#22c55e", border:"none",
+                              borderRadius:"6px", cursor:"pointer",
                             }}
                           >
                             Navigate
@@ -238,60 +253,36 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             {msg.type === "budgetExceeded" && (
               <div className="budget-warning-card">
                 <h3>⚠️ Budget Exceeded</h3>
-                <p>
-                  Sorry, your budget is exceeded because the estimated trip
-                  cost is higher than your budget.
-                </p>
+                <p>Sorry, the estimated trip cost exceeds your budget.</p>
                 <div className="budget-breakdown">
                   <div className="budget-line"><strong>🏨 Hotel</strong></div>
                   <div className="budget-subline">
-                    ₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days ×{" "}
-                    {msg.budgetData.roomsNeeded} rooms
+                    ₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days × {msg.budgetData.roomsNeeded} rooms
                   </div>
-                  <div className="budget-value">
-                    ₹{msg.budgetData.hotelCost.toLocaleString()}
-                  </div>
+                  <div className="budget-value">₹{msg.budgetData.hotelCost.toLocaleString()}</div>
                   <hr />
                   <div className="budget-line"><strong>🍽 Food</strong></div>
                   <div className="budget-subline">
-                    ₹{msg.budgetData.foodRate} × {msg.budgetData.travellers}{" "}
-                    travelers × {msg.budgetData.days} days
+                    ₹{msg.budgetData.foodRate} × {msg.budgetData.travellers} travelers × {msg.budgetData.days} days
                   </div>
-                  <div className="budget-value">
-                    ₹{msg.budgetData.foodCost.toLocaleString()}
-                  </div>
+                  <div className="budget-value">₹{msg.budgetData.foodCost.toLocaleString()}</div>
                   <hr />
                   <div className="budget-line"><strong>🚆 Transport</strong></div>
                   <div className="budget-subline">
-                    ₹{msg.budgetData.transportRate} ×{" "}
-                    {msg.budgetData.travellers}
+                    ₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}
                   </div>
-                  <div className="budget-value">
-                    ₹{msg.budgetData.transportCost.toLocaleString()}
-                  </div>
+                  <div className="budget-value">₹{msg.budgetData.transportCost.toLocaleString()}</div>
                   <hr />
                   <div className="budget-line"><strong>🎟 Activities</strong></div>
-                  <div className="budget-value">
-                    ₹{msg.budgetData.activitiesCost.toLocaleString()}
-                  </div>
+                  <div className="budget-value">₹{msg.budgetData.activitiesCost.toLocaleString()}</div>
                   <hr />
-                  <div className="budget-total">
-                    Budget: ₹{msg.budgetData.budget.toLocaleString()}
-                  </div>
-                  <div className="budget-total">
-                    Required: ₹{msg.budgetData.totalCost.toLocaleString()}
-                  </div>
-                  <div className="budget-short">
-                    Need Extra: ₹{msg.budgetData.shortBy.toLocaleString()}
-                  </div>
+                  <div className="budget-total">Budget: ₹{msg.budgetData.budget.toLocaleString()}</div>
+                  <div className="budget-total">Required: ₹{msg.budgetData.totalCost.toLocaleString()}</div>
+                  <div className="budget-short">Need Extra: ₹{msg.budgetData.shortBy.toLocaleString()}</div>
                 </div>
                 <div className="budget-actions">
-                  <button onClick={() => sendMessage("update budget")}>
-                    Update Budget
-                  </button>
-                  <button onClick={() => sendMessage("change plan")}>
-                    Change Plan
-                  </button>
+                  <button onClick={() => sendMessage("update budget")}>Update Budget</button>
+                  <button onClick={() => sendMessage("change plan")}>Change Plan</button>
                 </div>
               </div>
             )}
@@ -303,7 +294,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         {typing && (
           <div className="chat-row bot">
             <div className="typing">
-              {isTempleMode ? "Consulting temple records..." : "Thinking..."}
+              {isTempleMode ? "Consulting temple records…" : "Thinking…"}
             </div>
           </div>
         )}
@@ -311,17 +302,17 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         <div ref={chatEndRef} />
       </div>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <div className="chat-footer">
 
-        {/* Temple suggestions — only show at conversation start */}
+        {/* Temple suggestions at conversation start */}
         {showSuggestions && (
           <div className="quick-actions temple-suggestions">
             {templeSuggestions.map((s, i) => (
               <button
                 key={i}
                 onClick={() => sendMessage(s)}
-                style={{ fontSize: "0.72rem", textAlign: "left" }}
+                style={{ fontSize:"0.72rem", textAlign:"left" }}
               >
                 {s}
               </button>
@@ -329,7 +320,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           </div>
         )}
 
-        {/* General quick actions — only in general mode */}
+        {/* General quick actions */}
         {!isTempleMode && (
           <div className="quick-actions">
             <button onClick={() => sendMessage("plan trip")}>Trip</button>
@@ -345,11 +336,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             onKeyDown={handleKeyDown}
             placeholder={
               isTempleMode
-                ? `Ask about ${templeContext.name}...`
+                ? `Ask about ${
+                    templeContext.name.length > 25
+                      ? templeContext.name.substring(0, 25) + "…"
+                      : templeContext.name
+                  }...`
                 : "Ask Sarathi..."
             }
+            disabled={typing}
           />
-          <button onClick={() => sendMessage()}>➤</button>
+          <button onClick={() => sendMessage()} disabled={typing}>
+            ➤
+          </button>
         </div>
 
       </div>
