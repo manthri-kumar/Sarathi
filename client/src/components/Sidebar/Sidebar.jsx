@@ -53,7 +53,7 @@ const Sidebar = ({ isOpen }) => {
     {
       name: t("temples") || "Temples",
       path: "/temples",
-      icon: <span className="menu-emoji-icon">🛕</span>,
+      icon: <FontAwesomeIcon icon={faPlaceOfWorship} size="lg" />,
     },
     {
       name: t("profile"),

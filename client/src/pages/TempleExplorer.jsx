@@ -279,7 +279,7 @@ export default function TempleExplorer() {
         <div className="te-header">
           <div className="te-header-content">
             <div className="te-header-title">
-              <span className="te-header-icon">🛕</span>
+              <FontAwesomeIcon icon={faPlaceOfWorship} size="lg" />
               <div>
                 <h1>Temple Discovery</h1>
                 <p>Find sacred temples near you, powered by Google Places</p>
@@ -395,7 +395,7 @@ export default function TempleExplorer() {
           </div>
         ) : !loading && temples.length === 0 && !error ? (
           <div className="te-empty">
-            <span>🛕</span>
+           <FontAwesomeIcon icon={faPlaceOfWorship} size="lg" />
             <p>No temples found yet.</p>
             <p className="te-empty-sub">
               Allow location access or search a city above.
