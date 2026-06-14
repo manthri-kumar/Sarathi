@@ -4,6 +4,7 @@ import axiosInstance from "axios";
 import ChatPanel from "../components/ChatPanel/ChatPanel";
 import Sidebar from "../components/Sidebar/Sidebar"; // Adjusted import relative path based on standard layout structure
 import "./TempleExplorer.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -384,7 +385,7 @@ export default function TempleExplorer() {
           </div>
         ) : !loading && temples.length > 0 && filteredTemples.length === 0 ? (
           <div className="te-empty">
-            <span>🛕</span>
+            <FontAwesomeIcon icon={byPrefixAndName.fas['gopuram']} />
             <p>No temples match the current filter.</p>
             <button
               className="te-btn te-btn-ghost"
