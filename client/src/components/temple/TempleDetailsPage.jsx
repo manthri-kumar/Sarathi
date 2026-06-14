@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "../Sidebar/Sidebar";
@@ -120,6 +120,57 @@ function TempleDetailsInner() {
         setEnrichError(true);
       })
       .finally(() => setLoadingEnriched(false));
+
+     /* Fetch Temple Videos */
+const fetchVideos = async () => {
+  if (!googleData?.name || videos.length > 0) return;
+
+  try {
+    setLoadingVideos(true);
+
+    const res = await axios.get(
+      `${API_BASE}/api/temples/videos`,
+      {
+        params: {
+          templeName: googleData.name,
+        },
+      }
+    );
+
+    setVideos(res.data?.videos || []);
+  } catch (err) {
+    console.error("Videos fetch failed:", err);
+    setVideos([]);
+  } finally {
+    setLoadingVideos(false);
+  }
+};
+
+/* Fetch Nearby Services */
+const fetchNearbyServices = async () => {
+  if (!googleData?.lat || !googleData?.lng) return;
+
+  try {
+    setLoadingServices(true);
+
+    const res = await axios.get(
+      `${API_BASE}/api/temples/nearby-services`,
+      {
+        params: {
+          lat: googleData.lat,
+          lng: googleData.lng,
+        },
+      }
+    );
+
+    setNearbyServices(res.data || {});
+  } catch (err) {
+    console.error("Nearby services fetch failed:", err);
+    setNearbyServices(null);
+  } finally {
+    setLoadingServices(false);
+  }
+};
 
   // googleData.address intentionally omitted — we only re-fetch when temple changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -279,7 +330,6 @@ function TempleDetailsInner() {
             />
           )}
         </div>
-
         {/* Floating AI Chat Button */}
         <button
           className="tdp-fab"
@@ -288,7 +338,6 @@ function TempleDetailsInner() {
         >
           {showChat ? "✕" : "🤖"}
         </button>
-
         {/* Chat Panel */}
         {showChat && (
           <div className="tdp-chat-drawer">
@@ -301,12 +350,10 @@ function TempleDetailsInner() {
             />
           </div>
         )}
-
       </div>
     </div>
   );
 }
-
 function LoadingSkeleton() {
   return (
     <div className="tdp-skeleton-wrap">
