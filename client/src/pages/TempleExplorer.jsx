@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "react-dom"; // Assumed configuration setup
-import axiosInstance from "axios"; // Modified to match code structure
+import axiosInstance from "axios"; 
 import ChatPanel from "../components/ChatPanel/ChatPanel";
 import "./TempleExplorer.css";
 
