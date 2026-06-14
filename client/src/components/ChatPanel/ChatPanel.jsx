@@ -61,6 +61,11 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             message:    msg,
             templeName: templeContext.name,
             address:    templeContext.address || "",
+            // pass any extra context fields if available
+            rating:     templeContext.rating   || null,
+            openNow:    templeContext.openNow  ?? null,
+            deity:      templeContext.deity    || null,
+            enriched:   templeContext.enriched || null,
           }
         : {
             message: msg,
@@ -79,17 +84,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
       console.log("[CHAT] HTTP", res.status);
 
-      // Parse response — works for both success and error JSON
       let data;
       try {
         data = await res.json();
       } catch {
-        throw new Error(`Server returned non-JSON response (HTTP ${res.status})`);
+        throw new Error(`Server returned a non-JSON response (HTTP ${res.status}). The backend may be starting up — please try again in a moment.`);
       }
 
       if (!res.ok) {
-        // Backend returned error with message
-        throw new Error(data?.error || `Server error (HTTP ${res.status})`);
+        throw new Error(
+          data?.error ||
+          `Server error (HTTP ${res.status}). Please try again.`
+        );
       }
 
       console.log("[CHAT] ✓ Reply:", data.reply?.substring(0, 80));
@@ -99,7 +105,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         setMessages((prev) => [
           ...prev,
           {
-            text:   data.reply || "No response received. Please try again.",
+            text:   data.reply || "I couldn't retrieve a response. Please try again.",
             sender: "bot",
           },
         ]);
@@ -112,12 +118,30 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     } catch (err) {
       console.error("[CHAT] ✗ Error:", err.message);
       setTyping(false);
+
+      // Provide a specific, helpful error message
+      let userFacingError = err.message;
+      if (
+        err.message.includes("Failed to fetch") ||
+        err.message.includes("NetworkError") ||
+        err.message.includes("ECONNREFUSED")
+      ) {
+        userFacingError =
+          "Unable to reach the server. Please check your connection or try again in a moment.";
+      } else if (err.message.includes("503") || err.message.includes("502")) {
+        userFacingError =
+          "The AI service is temporarily unavailable. Please try again shortly.";
+      } else if (err.message.includes("429")) {
+        userFacingError =
+          "Too many requests — the AI is busy. Please wait a few seconds and try again.";
+      }
+
       setMessages((prev) => [
         ...prev,
         {
-          text:      err.message || "Something went wrong. Please try again.",
-          sender:    "bot",
-          isError:   true,
+          text:    userFacingError,
+          sender:  "bot",
+          isError: true,
         },
       ]);
     }
@@ -172,7 +196,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         {messages.map((msg, i) => (
           <div key={i} className={`chat-row ${msg.sender}`}>
 
-            {/* Bot avatar dot */}
+            {/* Bot avatar */}
             {msg.sender === "bot" && (
               <div className="chat-avatar">
                 {isTempleMode ? "🛕" : "✦"}
