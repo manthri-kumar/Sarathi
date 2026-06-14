@@ -1,9 +1,9 @@
 :root {
   --te-bg-start: #0a0d0e;
   --te-bg-end: #0d101f;
-  --te-green: #2248c5;
-  --te-green-dim: #1618a3;
-  --te-green-glow: rgba(34, 50, 197, 0.18);
+  --te-green: #22c545c7;
+  --te-green-dim: #43a316;
+  --te-green-glow: rgba(34, 197, 94, 0.18);
   --te-gold: #f59e0b;
   --te-card-bg: rgba(255, 255, 255, 0.04);
   --te-card-border: rgba(34, 197, 94, 0.15);
