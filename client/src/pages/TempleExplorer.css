@@ -13,204 +13,16 @@
   --te-radius: 16px;
   --te-radius-sm: 10px;
   --te-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --te-sidebar-width: 280px;
 }
 
-/* ── Root ─────────────────────────────────────────── */
+/* ── Root Layout Configured Next to Sidebar ──────── */
 .te-root {
   min-height: 100vh;
   background: linear-gradient(145deg, var(--te-bg-start) 0%, var(--te-bg-end) 100%);
   color: var(--te-text);
   font-family: "Inter", system-ui, sans-serif;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ── Layout Containers ────────────────────────────── */
-.te-main-container {
-  display: flex;
-  flex: 1;
-  position: relative;
-  overflow-x: hidden;
-}
-
-.te-content-workspace {
-  flex: 1;
   padding-bottom: 60px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ── Sidebar Component ───────────────────────────── */
-.te-sidebar {
-  width: var(--te-sidebar-width);
-  background: rgba(10, 20, 10, 0.6);
-  border-right: 1px solid var(--te-card-border);
-  backdrop-filter: blur(20px);
-  padding: 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shrink: 0;
-  z-index: 10;
-}
-
-.te-sidebar.collapsed {
-  width: 0;
-  padding: 24px 0;
-  overflow: hidden;
-  border-right-color: transparent;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.te-sidebar-toggle-btn {
-  background: var(--te-card-bg);
-  border: 1px solid var(--te-card-border);
-  color: var(--te-text);
-  font-size: 1.2rem;
-  padding: 6px 12px;
-  border-radius: var(--te-radius-sm);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.te-sidebar-toggle-btn:hover {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: var(--te-green);
-}
-
-.te-sidebar-section h3 {
-  margin: 0 0 12px;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--te-green);
-}
-
-/* Sidebar Custom Filters */
-.te-sidebar-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.te-sidebar-filter-item {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--te-text-dim);
-  text-align: left;
-  padding: 10px 14px;
-  border-radius: var(--te-radius-sm);
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.2s;
-}
-
-.te-sidebar-filter-item:hover {
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--te-text);
-}
-
-.te-sidebar-filter-item.active {
-  background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(34, 197, 94, 0.2);
-  color: var(--te-text);
-}
-
-.te-filter-bullet {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.te-sidebar-filter-item.active .te-filter-bullet {
-  background: var(--te-green);
-  box-shadow: 0 0 8px var(--te-green);
-}
-
-/* Sidebar Saved List */
-.te-sidebar-saved-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.te-sidebar-saved-list::-webkit-scrollbar {
-  width: 4px;
-}
-.te-sidebar-saved-list::-webkit-scrollbar-thumb {
-  background: rgba(34, 197, 94, 0.2);
-  border-radius: 4px;
-}
-
-.te-sidebar-saved-item {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  padding: 10px 12px;
-  border-radius: var(--te-radius-sm);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  gap: 8px;
-}
-
-.te-sidebar-saved-item:hover {
-  background: rgba(34, 197, 94, 0.05);
-  border-color: rgba(34, 197, 94, 0.15);
-}
-
-.te-saved-item-info {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.te-saved-item-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.te-saved-item-address {
-  font-size: 0.75rem;
-  color: var(--te-text-dim);
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  margin-top: 2px;
-}
-
-.te-saved-item-remove {
-  background: transparent;
-  border: none;
-  color: var(--te-text-dim);
-  font-size: 1.2rem;
-  cursor: pointer;
-  line-height: 1;
-  padding: 4px;
-}
-
-.te-saved-item-remove:hover {
-  color: #f87171;
-}
-
-.te-sidebar-empty-text {
-  font-size: 0.8rem;
-  color: var(--te-text-dim);
-  margin: 0;
-  font-style: italic;
+  flex: 1; /* Ensures workspace fills remaining horizontal space */
 }
 
 /* ── Header ───────────────────────────────────────── */
@@ -221,7 +33,7 @@
 }
 
 .te-header-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -304,9 +116,9 @@
 
 .te-search-btn:hover { background: #16a34a; transform: scale(1.03); }
 
-/* ── Controls Row ─────────────────────────────────── */
+/* ── Controls ─────────────────────────────────────── */
 .te-controls {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 20px auto 0;
   padding: 0 24px;
   display: flex;
@@ -316,10 +128,30 @@
   gap: 12px;
 }
 
-.te-view-label {
-  font-size: 0.85rem;
+.te-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.te-filter-btn {
+  background: var(--te-card-bg);
+  border: 1px solid var(--te-card-border);
   color: var(--te-text-dim);
-  font-weight: 500;
+  border-radius: 50px;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+
+.te-filter-btn:hover { color: var(--te-text); border-color: rgba(34,197,94,0.3); }
+.te-filter-btn.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--te-green);
+  color: var(--te-green);
+  font-weight: 600;
 }
 
 .te-meta {
@@ -358,10 +190,10 @@
   color: var(--te-green);
 }
 
-/* ── Status / Error Banners ───────────────────────── */
+/* ── Status Banners ──────────────────────────────── */
 .te-status-banner,
 .te-error-banner {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 16px auto 0;
   padding: 12px 24px;
   border-radius: var(--te-radius-sm);
@@ -385,7 +217,7 @@
   color: #f87171;
 }
 
-/* ── Loading / Empty states ────────────────────────── */
+/* ── Loading Animation ───────────────────────────── */
 .te-loading,
 .te-empty {
   display: flex;
@@ -422,17 +254,17 @@
 
 @keyframes te-spin { to { transform: rotate(360deg); } }
 
-/* ── Grid Layout ──────────────────────────────────── */
+/* ── Responsive Grids ────────────────────────────── */
 .te-grid {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 24px auto 0;
   padding: 0 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
 
-/* ── Card Component ────────────────────────────────── */
+/* ── Individual Cards ────────────────────────────── */
 .te-card {
   background: var(--te-card-bg);
   border: 1px solid var(--te-card-border);
@@ -451,7 +283,7 @@
 
 .te-card-image-wrap {
   position: relative;
-  height: 180px;
+  height: 200px;
   overflow: hidden;
   background: rgba(34,197,94,0.05);
 }
@@ -574,7 +406,7 @@
   gap: 8px;
 }
 
-/* ── Action Buttons ─────────────────────────────────── */
+/* ── Standardized Base Actions ───────────────────── */
 .te-btn {
   border: none;
   border-radius: var(--te-radius-sm);
@@ -609,7 +441,6 @@
   border-color: rgba(34,197,94,0.3);
 }
 
-/* ── Ask AI button on card ────────────────────────── */
 .te-btn-ai {
   background: linear-gradient(135deg, #0d2016, #1a3a2a);
   border: 1px solid #2a5a3a;
@@ -627,7 +458,6 @@
   color: #fff;
 }
 
-/* ── Sarathi AI button in controls bar ────────────── */
 .te-ai-btn {
   background: #4caf50;
   border: none;
@@ -643,7 +473,6 @@
   background: #388e3c;
 }
 
-/* ── Chat overlay — bottom-right floating ─────────── */
 .te-chat-overlay {
   position: fixed;
   bottom: 0;
@@ -651,47 +480,30 @@
   z-index: 9999;
 }
 
-/* ── Responsive Viewports ──────────────────────────── */
-@media (max-width: 1024px) {
-  .te-sidebar {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    box-shadow: 20px 0 40px rgba(0,0,0,0.7);
-  }
-}
-
+/* ── Screen Adapters ─────────────────────────────── */
 @media (max-width: 768px) {
   .te-header { padding: 20px 16px 16px; }
   .te-header-title h1 { font-size: 1.5rem; }
   .te-header-icon { font-size: 36px; }
 
-  .te-sidebar {
-    width: 100%;
-    position: fixed;
-    inset: auto 0 0 0;
-    height: 300px;
-    border-right: none;
-    border-top: 1px solid var(--te-card-border);
-    transform: translateY(100%);
-  }
-
-  .te-sidebar.open {
-    transform: translateY(0);
+  .te-controls {
+    padding: 0 16px;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .te-grid {
     padding: 0 16px;
     grid-template-columns: 1fr;
   }
-  
+
   .te-status-banner,
   .te-error-banner { margin-left: 16px; margin-right: 16px; }
 }
 
 @media (max-width: 480px) {
   .te-search-btn { padding: 10px 16px; font-size: 0.8rem; }
+  .te-filter-btn { padding: 7px 14px; font-size: 0.8rem; }
   .te-card-actions { flex-direction: column; }
   .te-btn-primary { flex: unset; width: 100%; }
 }
