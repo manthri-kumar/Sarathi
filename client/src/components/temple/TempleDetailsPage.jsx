@@ -2,62 +2,51 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "../Sidebar/Sidebar";
-import OverviewTab    from "./tabs/OverviewTab";
-import HistoryTab     from "./tabs/HistoryTab";
-import RitualsTab     from "./tabs/RitualsTab";
-import FestivalsTab   from "./tabs/FestivalsTab";
-import VideosTab      from "./tabs/VideosTab";
+import OverviewTab from "./tabs/OverviewTab";
+import HistoryTab from "./tabs/HistoryTab";
+import RitualsTab from "./tabs/RitualsTab";
+import FestivalsTab from "./tabs/FestivalsTab";
+import VideosTab from "./tabs/VideosTab";
 import TravelGuideTab from "./tabs/TravelGuideTab";
-import ChatPanel      from "../ChatPanel/ChatPanel";
+import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
 
-const API_BASE =
-  process.env.REACT_APP_API_URL ||
-  "https://sarathi-backend-7u0y.onrender.com";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const TABS = [
   { id: "overview",  label: "Overview",     icon: "🛕" },
   { id: "history",   label: "History",      icon: "📜" },
   { id: "rituals",   label: "Rituals",      icon: "🪔" },
   { id: "festivals", label: "Festivals",    icon: "🎊" },
-  { id: "videos",    label: "Videos",       icon: "▶️" },
+  { id: "videos",    label: "Videos",       icon: "▶️"  },
   { id: "travel",    label: "Travel Guide", icon: "🗺️" },
 ];
 
 /* ─── Error Boundary ──────────────────────────────── */
 class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
   render() {
-    if (this.state.hasError) {
-      return (
-        <div className="tdp-crash">
-          <h2>⚠️ Something crashed</h2>
-          <pre>{this.state.error?.message}</pre>
-          <button onClick={() => window.history.back()}>← Go Back</button>
-        </div>
-      );
-    }
+    if (this.state.hasError) return (
+      <div style={{ color:"#ff6b6b", padding:"40px", background:"#050f0a", minHeight:"100vh", fontFamily:"monospace" }}>
+        <h2>⚠️ Crashed: {this.state.error?.toString()}</h2>
+        <pre style={{ marginTop:16, whiteSpace:"pre-wrap", fontSize:12 }}>{this.state.error?.stack}</pre>
+        <button onClick={() => window.history.back()} style={{ marginTop:20, padding:"10px 20px", background:"#22c55e", border:"none", borderRadius:8, cursor:"pointer", color:"#fff" }}>← Go Back</button>
+      </div>
+    );
     return this.props.children;
   }
 }
 
-/* ─── Default export wraps inner with boundary ───── */
 export default function TempleDetailsPage() {
   return (
     <ErrorBoundary>
-      <TempleDetailsInner />
+      <TempleDetailsPageInner />
     </ErrorBoundary>
   );
 }
 
-/* ─── Inner component ─────────────────────────────── */
-function TempleDetailsInner() {
+function TempleDetailsPageInner() {
   const { placeId } = useParams();
   const navigate    = useNavigate();
 
@@ -72,107 +61,94 @@ function TempleDetailsInner() {
   const [loadingVideos,    setLoadingVideos]    = useState(false);
   const [loadingServices,  setLoadingServices]  = useState(false);
   const [showChat,         setShowChat]         = useState(false);
-  const [pageError,        setPageError]        = useState(null);
+  const [error,            setError]            = useState(null);
 
-  /* 1 — Google Places details */
+  /* ── 1. Google Places details ─────────────────── */
   useEffect(() => {
     if (!placeId) return;
     setLoadingGoogle(true);
-    setPageError(null);
+    setError(null);
 
-    axios
-      .get(`${API_BASE}/api/temples/details/${placeId}`)
-      .then((res) => {
-        console.log("[TDP] Google data received:", res.data.temple?.name);
+    axios.get(`${API_BASE}/api/temples/details/${placeId}`)
+      .then(res => {
+        console.log("[TEMPLE] Google data:", res.data.temple);
         setGoogleData(res.data.temple);
       })
-      .catch((e) => {
-        console.error("[TDP] Google fetch failed:", e.message);
-        setPageError("Could not load temple details. " + e.message);
+      .catch(e => {
+        console.error("[TEMPLE] Google fetch failed:", e.message);
+        setError("Could not load temple details: " + e.message);
       })
       .finally(() => setLoadingGoogle(false));
   }, [placeId]);
 
-  /* 2 — Gemini enriched — non-blocking background fetch */
+  /* ── 2. Gemini enriched — runs once googleData is ready ── */
   useEffect(() => {
     if (!googleData?.name) return;
 
-    console.log("[TDP] Starting Gemini enrichment for:", googleData.name);
+    console.log("[ENRICH] Starting fetch for:", googleData.name);
     setLoadingEnriched(true);
     setEnrichError(false);
 
-    axios
-      .get(`${API_BASE}/api/temples/enriched`, {
-        params:  { name: googleData.name, address: googleData.address || "" },
-        timeout: 60000,
-      })
-      .then((res) => {
-        console.log("[TDP] Enriched data received, keys:", Object.keys(res.data || {}));
-        if (res.data && Object.keys(res.data).length > 0) {
+    axios.get(`${API_BASE}/api/temples/enriched`, {
+      params: { name: googleData.name, address: googleData.address || "" },
+      timeout: 60000, // Gemini can be slow — 60s timeout
+    })
+      .then(res => {
+        console.log("[ENRICH] Full response:", JSON.stringify(res.data, null, 2));
+        if (res.data && typeof res.data === "object") {
           setEnriched(res.data);
         } else {
-          console.warn("[TDP] Enriched data empty");
+          console.warn("[ENRICH] Unexpected response format:", res.data);
           setEnrichError(true);
         }
       })
-      .catch((e) => {
-        console.error("[TDP] Enrichment failed:", e.message, e.response?.data);
+      .catch(e => {
+        console.error("[ENRICH] Failed:", e.message, e.response?.data);
         setEnrichError(true);
       })
-      .finally(() => setLoadingEnriched(false));
+      .finally(() => {
+        console.log("[ENRICH] Done loading");
+        setLoadingEnriched(false);
+      });
+ }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
 
-      const fetchVideos = async () => {
-  if (!googleData?.name || videos.length > 0) return;
-
-  try {
+  /* ── 3. Videos — lazy ─────────────────────────── */
+  const fetchVideos = useCallback(async () => {
+    if (!googleData?.name || videos.length > 0) return;
+    console.log("[VIDEOS] Fetching for:", googleData.name);
     setLoadingVideos(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/temples/videos`, {
+        params: { name: googleData.name },
+      });
+      console.log("[VIDEOS] Got:", res.data.videos?.length, "videos");
+      setVideos(res.data.videos || []);
+    } catch (e) {
+      console.error("[VIDEOS] Failed:", e.message);
+      setVideos([]);
+    } finally {
+      setLoadingVideos(false);
+    }
+  }, [googleData?.name, videos.length]);
 
-    const res = await axios.get(
-      `${API_BASE}/api/temples/videos`,
-      {
-        params: {
-          templeName: googleData.name,
-        },
-      }
-    );
-
-    setVideos(res.data?.videos || []);
-  } catch (err) {
-    console.error("Videos fetch failed:", err);
-    setVideos([]);
-  } finally {
-    setLoadingVideos(false);
-  }
-};
-
-const fetchNearbyServices = async () => {
-  if (!googleData?.lat || !googleData?.lng) return;
-
-  try {
+  /* ── 4. Nearby services — lazy ────────────────── */
+  const fetchNearbyServices = useCallback(async () => {
+    if (!googleData?.lat || nearbyServices) return;
+    console.log("[SERVICES] Fetching near:", googleData.lat, googleData.lng);
     setLoadingServices(true);
-
-    const res = await axios.get(
-      `${API_BASE}/api/temples/nearby-services`,
-      {
-        params: {
-          lat: googleData.lat,
-          lng: googleData.lng,
-        },
-      }
-    );
-
-    setNearbyServices(res.data || {});
-  } catch (err) {
-    console.error("Nearby services fetch failed:", err);
-    setNearbyServices(null);
-  } finally {
-    setLoadingServices(false);
-  }
-};
-
-  // googleData.address intentionally omitted — we only re-fetch when temple changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleData?.name, googleData?.address]);
+    try {
+      const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
+        params: { lat: googleData.lat, lng: googleData.lng },
+      });
+      console.log("[SERVICES]", res.data);
+      setNearbyServices(res.data);
+    } catch (e) {
+      console.error("[SERVICES] Failed:", e.message);
+      setNearbyServices({ hotels: [], restaurants: [], parking: [] });
+    } finally {
+      setLoadingServices(false);
+    }
+  }, [googleData?.lat, googleData?.lng, nearbyServices]);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -180,45 +156,41 @@ const fetchNearbyServices = async () => {
     if (tabId === "travel") fetchNearbyServices();
   };
 
-  /* ── Render: Loading ────────────────────────────── */
-  if (loadingGoogle) {
-    return (
-      <div className="tdp-page-wrap">
-        <Sidebar />
-        <div className="tdp-content-wrap">
-          <LoadingSkeleton />
-        </div>
-      </div>
-    );
-  }
+  /* ── Guards ───────────────────────────────────── */
+  if (loadingGoogle) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main"><LoadingSkeleton /></div>
+    </div>
+  );
 
-  /* ── Render: Error ──────────────────────────────── */
-  if (pageError || !googleData) {
-    return (
-      <div className="tdp-page-wrap">
-        <Sidebar />
-        <div className="tdp-content-wrap">
-          <div className="tdp-error">
-            <span>⚠️</span>
-            <p>{pageError || "Temple not found."}</p>
-            <button onClick={() => navigate("/temples")}>← Back to Temples</button>
-          </div>
-        </div>
+  if (error) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main">
+        <ErrorState message={error} onBack={() => navigate("/temples")} />
       </div>
-    );
-  }
+    </div>
+  );
 
-  /* ── Render: Main ───────────────────────────────── */
+  if (!googleData) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main">
+        <ErrorState message="Temple not found." onBack={() => navigate("/temples")} />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="tdp-page-wrap">
-
-      {/* Fixed sidebar */}
+    <div className="tdp-layout">
+      {/* ── Sidebar ── */}
       <Sidebar />
 
-      {/* Scrollable main content */}
-      <div className="tdp-content-wrap">
+      {/* ── Main Content ── */}
+      <div className="tdp-main">
 
-        {/* Hero Banner */}
+        {/* Hero */}
         <div
           className="tdp-hero"
           style={{
@@ -228,33 +200,23 @@ const fetchNearbyServices = async () => {
           }}
         >
           <div className="tdp-hero-overlay" />
-          <div className="tdp-hero-inner">
-            <button
-              className="tdp-back-btn"
-              onClick={() => navigate("/temples")}
-            >
+          <div className="tdp-hero-content">
+            <button className="tdp-back-btn" onClick={() => navigate("/temples")}>
               ← Back
             </button>
             <h1 className="tdp-hero-title">{googleData.name}</h1>
             <p className="tdp-hero-addr">📍 {googleData.address}</p>
-            <div className="tdp-hero-badges">
+            <div className="tdp-hero-meta">
               {googleData.rating && (
-                <span className="tdp-badge">
-                  ⭐ {googleData.rating}{" "}
-                  ({googleData.totalRatings?.toLocaleString()})
+                <span className="tdp-hero-badge">
+                  ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
                 </span>
               )}
               {enriched?.overview?.deity && (
-                <span className="tdp-badge">
-                  🙏 {enriched.overview.deity}
-                </span>
+                <span className="tdp-hero-badge">🙏 {enriched.overview.deity}</span>
               )}
               {googleData.openNow !== null && (
-                <span
-                  className={`tdp-badge ${
-                    googleData.openNow ? "tdp-badge-open" : "tdp-badge-closed"
-                  }`}
-                >
+                <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
                   {googleData.openNow ? "🟢 Open Now" : "🔴 Closed"}
                 </span>
               )}
@@ -262,24 +224,24 @@ const fetchNearbyServices = async () => {
           </div>
         </div>
 
-        {/* Sticky Tab Navigation */}
-        <div className="tdp-tabs-bar">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              className={`tdp-tab-btn ${
-                activeTab === tab.id ? "tdp-tab-active" : ""
-              }`}
-              onClick={() => handleTabChange(tab.id)}
-            >
-              <span className="tdp-tab-icon">{tab.icon}</span>
-              <span className="tdp-tab-label">{tab.label}</span>
-            </button>
-          ))}
+        {/* Tabs */}
+        <div className="tdp-tabs-wrap">
+          <div className="tdp-tabs">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                className={`tdp-tab ${activeTab === tab.id ? "active" : ""}`}
+                onClick={() => handleTabChange(tab.id)}
+              >
+                <span className="tdp-tab-icon">{tab.icon}</span>
+                <span className="tdp-tab-label">{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="tdp-tab-content">
+        {/* Content */}
+        <div className="tdp-content">
           {activeTab === "overview" && (
             <OverviewTab
               google={googleData}
@@ -329,28 +291,24 @@ const fetchNearbyServices = async () => {
           )}
         </div>
 
-        {/* Floating AI Chat Button */}
+        {/* FAB */}
         <button
-          className="tdp-fab"
-          onClick={() => setShowChat((v) => !v)}
+          className="tdp-chat-fab"
+          onClick={() => setShowChat(true)}
           title="Ask Temple Assistant"
         >
-          {showChat ? "✕" : "🤖"}
+
         </button>
 
-        {/* Chat Panel */}
+        {/* Chat */}
         {showChat && (
-          <div className="tdp-chat-drawer">
+          <div style={{ position:"fixed", bottom:0, right:0, zIndex:9999 }}>
             <ChatPanel
               closeChat={() => setShowChat(false)}
-              templeContext={{
-                name:    googleData.name,
-                address: googleData.address || "",
-              }}
+              templeContext={{ name: googleData.name, address: googleData.address || "" }}
             />
           </div>
         )}
-
       </div>
     </div>
   );
@@ -358,14 +316,22 @@ const fetchNearbyServices = async () => {
 
 function LoadingSkeleton() {
   return (
-    <div className="tdp-skeleton-wrap">
-      <div className="tdp-skel tdp-skel-hero" />
-      <div className="tdp-skel tdp-skel-tabs" />
-      <div className="tdp-skeleton-cards">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="tdp-skel tdp-skel-card" />
-        ))}
+    <div className="tdp-skeleton">
+      <div className="tdp-skeleton-hero" />
+      <div className="tdp-skeleton-tabs" />
+      <div className="tdp-skeleton-body">
+        {[1,2,3].map(i => <div key={i} className="tdp-skeleton-card" />)}
       </div>
+    </div>
+  );
+}
+
+function ErrorState({ message, onBack }) {
+  return (
+    <div className="tdp-error">
+      <span>⚠️</span>
+      <p>{message}</p>
+      <button onClick={onBack}>← Back to Temples</button>
     </div>
   );
 }
