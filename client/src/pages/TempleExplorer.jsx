@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "axios"; 
 import ChatPanel from "../components/ChatPanel/ChatPanel";
-import Sidebar from "../components/Sidebar/Sidebar"; 
+import Sidebar from "../components/Sidebar/Sidebar"; // Adjusted import relative path based on standard layout structure
 import "./TempleExplorer.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlaceOfWorship } from "@fortawesome/free-solid-svg-icons";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -279,7 +281,7 @@ export default function TempleExplorer() {
         <div className="te-header">
           <div className="te-header-content">
             <div className="te-header-title">
-              <FontAwesomeIcon icon={faPlaceOfWorship} size="lg" />
+              <span className="te-header-icon">🛕</span>
               <div>
                 <h1>Temple Discovery</h1>
                 <p>Find sacred temples near you, powered by Google Places</p>
@@ -384,7 +386,7 @@ export default function TempleExplorer() {
           </div>
         ) : !loading && temples.length > 0 && filteredTemples.length === 0 ? (
           <div className="te-empty">
-            <span style={{ fontSize: '48px', color: 'var(--te-green)' }}>🛕</span>
+            <FontAwesomeIcon icon={byPrefixAndName.fas['gopuram']} />
             <p>No temples match the current filter.</p>
             <button
               className="te-btn te-btn-ghost"
@@ -395,7 +397,7 @@ export default function TempleExplorer() {
           </div>
         ) : !loading && temples.length === 0 && !error ? (
           <div className="te-empty">
-           <FontAwesomeIcon icon={faPlaceOfWorship} size="lg" />
+            <span>🛕</span>
             <p>No temples found yet.</p>
             <p className="te-empty-sub">
               Allow location access or search a city above.
