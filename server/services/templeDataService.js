@@ -4,6 +4,14 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
 /**
  * Core Gemini caller — tries models in order, throws on all failure
+ *
+ * UPDATED June 2026:
+ * gemini-1.5-flash / gemini-1.5-pro / gemini-2.0-flash are all shut down.
+ * Current working models as of June 2026:
+ *   gemini-2.5-flash        (fast, free tier)
+ *   gemini-2.5-flash-lite   (lighter, free tier fallback)
+ *   gemini-2.5-pro          (powerful, may need billing)
+ *   gemini-3.5-flash        (newest fast model)
  */
 const askGemini = async (prompt) => {
   if (!GEMINI_KEY) {
@@ -11,11 +19,12 @@ const askGemini = async (prompt) => {
   }
 
   // Model list — tries each in order until one works
+  // All 1.5 and 2.0 models were shut down June 1, 2026
   const models = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro",
-    "gemini-pro",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "gemini-3.5-flash",
   ];
 
   let lastError = null;
@@ -89,7 +98,9 @@ const askGemini = async (prompt) => {
       const status = err.response?.status;
       const errMsg = err.response?.data?.error?.message || err.message;
 
-      console.error(`[GEMINI] Model ${model} failed — status: ${status}, error: ${errMsg}`);
+      console.error(
+        `[GEMINI] Model ${model} failed — status: ${status}, error: ${errMsg}`
+      );
 
       // Don't retry on auth errors — key is wrong
       if (status === 400 || status === 403) {
@@ -184,7 +195,10 @@ Return ONLY this JSON structure:
     const jsonEnd   = raw.lastIndexOf("}");
 
     if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
-      console.error("[ENRICH] No valid JSON found in response. Raw:", raw.substring(0, 300));
+      console.error(
+        "[ENRICH] No valid JSON found in response. Raw:",
+        raw.substring(0, 300)
+      );
       return null;
     }
 
