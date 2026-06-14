@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "axios"; 
 import ChatPanel from "../components/ChatPanel/ChatPanel";
+import Sidebar from "../components/Sidebar/Sidebar"; 
 import "./TempleExplorer.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -268,144 +269,150 @@ export default function TempleExplorer() {
   const handleCloseChat = () => setChatContext(null);
 
   return (
-    <div className="te-root">
-      {/* ── Header Area ── */}
-      <div className="te-header">
-        <div className="te-header-content">
-          <div className="te-header-title">
-            <span className="te-header-icon">🛕</span>
-            <div>
-              <h1>Temple Discovery</h1>
-              <p>Find sacred temples near you, powered by Google Places</p>
+    <div className="te-page-layout">
+      {/* ── Left Side Global Navigation Panel ── */}
+      <Sidebar isOpen={true} />
+
+      {/* ── Right Side Content Workspace ── */}
+      <div className="te-root">
+        {/* ── Header Area ── */}
+        <div className="te-header">
+          <div className="te-header-content">
+            <div className="te-header-title">
+              <span className="te-header-icon">🛕</span>
+              <div>
+                <h1>Temple Discovery</h1>
+                <p>Find sacred temples near you, powered by Google Places</p>
+              </div>
             </div>
+
+            <form className="te-search-form" onSubmit={handleSearch}>
+              <div className="te-search-wrap">
+                <span className="te-search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search temples by city or name…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="te-search-input"
+                />
+                <button type="submit" className="te-search-btn">
+                  Search
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* ── Control Row Filters ── */}
+        <div className="te-controls">
+          <div className="te-filters">
+            {["all", "open", "top"].map((f) => (
+              <button
+                key={f}
+                className={`te-filter-btn ${filter === f ? "active" : ""}`}
+                onClick={() => setFilter(f)}
+              >
+                {f === "all"
+                  ? "All Temples"
+                  : f === "open"
+                  ? "Open Now"
+                  : "Top Rated (4★+)"}
+              </button>
+            ))}
           </div>
 
-          <form className="te-search-form" onSubmit={handleSearch}>
-            <div className="te-search-wrap">
-              <span className="te-search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder="Search temples by city or name…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="te-search-input"
-              />
-              <button type="submit" className="te-search-btn">
-                Search
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* ── Control Row Filters ── */}
-      <div className="te-controls">
-        <div className="te-filters">
-          {["all", "open", "top"].map((f) => (
+          <div className="te-meta">
+            {locationStatus === "granted" && (
+              <span className="te-location-tag">📍 Using your location</span>
+            )}
+            {temples.length > 0 && (
+              <span className="te-count">
+                {filteredTemples.length} temple
+                {filteredTemples.length !== 1 ? "s" : ""}
+              </span>
+            )}
             <button
-              key={f}
-              className={`te-filter-btn ${filter === f ? "active" : ""}`}
-              onClick={() => setFilter(f)}
+              className="te-refresh-btn"
+              onClick={requestLocation}
+              title="Refresh nearby temples"
             >
-              {f === "all"
-                ? "All Temples"
-                : f === "open"
-                ? "Open Now"
-                : "Top Rated (4★+)"}
+              ↻ Refresh
             </button>
-          ))}
+            <button
+              className="te-ai-btn"
+              onClick={() => setChatContext("general")}
+              title="Open Sarathi AI"
+            >
+              🤖 Sarathi AI
+            </button>
+          </div>
         </div>
 
-        <div className="te-meta">
-          {locationStatus === "granted" && (
-            <span className="te-location-tag">📍 Using your location</span>
-          )}
-          {temples.length > 0 && (
-            <span className="te-count">
-              {filteredTemples.length} temple
-              {filteredTemples.length !== 1 ? "s" : ""}
-            </span>
-          )}
-          <button
-            className="te-refresh-btn"
-            onClick={requestLocation}
-            title="Refresh nearby temples"
-          >
-            ↻ Refresh
-          </button>
-          <button
-            className="te-ai-btn"
-            onClick={() => setChatContext("general")}
-            title="Open Sarathi AI"
-          >
-            🤖 Sarathi AI
-          </button>
-        </div>
-      </div>
+        {/* ── Banner Alerts ── */}
+        {locationStatus === "requesting" && (
+          <div className="te-status-banner">
+            <div className="te-spinner-sm" /> Requesting your location…
+          </div>
+        )}
 
-      {/* ── Banner Alerts ── */}
-      {locationStatus === "requesting" && (
-        <div className="te-status-banner">
-          <div className="te-spinner-sm" /> Requesting your location…
-        </div>
-      )}
+        {error && (
+          <div className="te-error-banner">
+            <span>⚠️</span> {error}
+          </div>
+        )}
 
-      {error && (
-        <div className="te-error-banner">
-          <span>⚠️</span> {error}
-        </div>
-      )}
+        {/* ── Dashboard Content Layout ── */}
+        {loading ? (
+          <div className="te-loading">
+            <div className="te-spinner" />
+            <p>Finding temples near you…</p>
+          </div>
+        ) : filteredTemples.length > 0 ? (
+          <div className="te-grid">
+            {filteredTemples.map((temple) => (
+              <TempleCard
+                key={temple.id}
+                temple={temple}
+                onViewDetails={handleViewDetails}
+                onSave={handleSave}
+                onAskAI={handleAskAI}
+                savedIds={savedIds}
+                userLocation={userLocation}
+              />
+            ))}
+          </div>
+        ) : !loading && temples.length > 0 && filteredTemples.length === 0 ? (
+          <div className="te-empty">
+            <span style={{ fontSize: '48px', color: 'var(--te-green)' }}>🛕</span>
+            <p>No temples match the current filter.</p>
+            <button
+              className="te-btn te-btn-ghost"
+              onClick={() => setFilter("all")}
+            >
+              Show all
+            </button>
+          </div>
+        ) : !loading && temples.length === 0 && !error ? (
+          <div className="te-empty">
+            <span>🛕</span>
+            <p>No temples found yet.</p>
+            <p className="te-empty-sub">
+              Allow location access or search a city above.
+            </p>
+          </div>
+        ) : null}
 
-      {/* ── Dashboard Content Layout ── */}
-      {loading ? (
-        <div className="te-loading">
-          <div className="te-spinner" />
-          <p>Finding temples near you…</p>
-        </div>
-      ) : filteredTemples.length > 0 ? (
-        <div className="te-grid">
-          {filteredTemples.map((temple) => (
-            <TempleCard
-              key={temple.id}
-              temple={temple}
-              onViewDetails={handleViewDetails}
-              onSave={handleSave}
-              onAskAI={handleAskAI}
-              savedIds={savedIds}
-              userLocation={userLocation}
+        {/* ── Floating Chat Panel overlay ── */}
+        {chatContext !== null && (
+          <div className="te-chat-overlay">
+            <ChatPanel
+              closeChat={handleCloseChat}
+              templeContext={chatContext === "general" ? null : chatContext}
             />
-          ))}
-        </div>
-      ) : !loading && temples.length > 0 && filteredTemples.length === 0 ? (
-        <div className="te-empty">
-          <span>🛕</span>
-          <p>No temples match the current filter.</p>
-          <button
-            className="te-btn te-btn-ghost"
-            onClick={() => setFilter("all")}
-          >
-            Show all
-          </button>
-        </div>
-      ) : !loading && temples.length === 0 && !error ? (
-        <div className="te-empty">
-          <span>🛕</span>
-          <p>No temples found yet.</p>
-          <p className="te-empty-sub">
-            Allow location access or search a city above.
-          </p>
-        </div>
-      ) : null}
-
-      {/* ── Floating Chat Panel overlay ── */}
-      {chatContext !== null && (
-        <div className="te-chat-overlay">
-          <ChatPanel
-            closeChat={handleCloseChat}
-            templeContext={chatContext === "general" ? null : chatContext}
-          />
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
