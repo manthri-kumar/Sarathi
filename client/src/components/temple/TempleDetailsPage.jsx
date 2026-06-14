@@ -1,337 +1,418 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import Sidebar from "../Sidebar/Sidebar";
-import OverviewTab from "./tabs/OverviewTab";
-import HistoryTab from "./tabs/HistoryTab";
-import RitualsTab from "./tabs/RitualsTab";
-import FestivalsTab from "./tabs/FestivalsTab";
-import VideosTab from "./tabs/VideosTab";
-import TravelGuideTab from "./tabs/TravelGuideTab";
-import ChatPanel from "../ChatPanel/ChatPanel";
-import "./TempleDetails.css";
+import { useNavigate } from "react-router-dom";
+import axiosInstance from "axios"; 
+import ChatPanel from "../components/ChatPanel/ChatPanel";
+import Sidebar from "../components/Sidebar/Sidebar"; 
+import "./TempleExplorer.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-const TABS = [
-  { id: "overview",  label: "Overview",     icon: "🛕" },
-  { id: "history",   label: "History",      icon: "📜" },
-  { id: "rituals",   label: "Rituals",      icon: "🪔" },
-  { id: "festivals", label: "Festivals",    icon: "🎊" },
-  { id: "videos",    label: "Videos",       icon: "▶️"  },
-  { id: "travel",    label: "Travel Guide", icon: "🗺️" },
-];
-
-/* ─── Error Boundary ──────────────────────────────── */
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  render() {
-    if (this.state.hasError) return (
-      <div style={{ color:"#ff6b6b", padding:"40px", background:"#050f0a", minHeight:"100vh", fontFamily:"monospace" }}>
-        <h2>⚠️ Crashed: {this.state.error?.toString()}</h2>
-        <pre style={{ marginTop:16, whiteSpace:"pre-wrap", fontSize:12 }}>{this.state.error?.stack}</pre>
-        <button onClick={() => window.history.back()} style={{ marginTop:20, padding:"10px 20px", background:"#22c55e", border:"none", borderRadius:8, cursor:"pointer", color:"#fff" }}>← Go Back</button>
-      </div>
-    );
-    return this.props.children;
-  }
-}
-
-export default function TempleDetailsPage() {
+/* ─── Star Rating ───────────────────────────────────── */
+const StarRating = ({ rating }) => {
+  if (!rating) return <span className="te-no-rating">No rating</span>;
+  const stars = Math.round(rating);
   return (
-    <ErrorBoundary>
-      <TempleDetailsPageInner />
-    </ErrorBoundary>
+    <span className="te-stars">
+      {"★".repeat(stars)}{"☆".repeat(5 - stars)}
+      <span className="te-rating-num">{rating.toFixed(1)}</span>
+    </span>
   );
-}
+};
 
-function TempleDetailsPageInner() {
-  const { placeId } = useParams();
-  const navigate    = useNavigate();
+/* ─── Temple Card ───────────────────────────────────── */
+const TempleCard = ({
+  temple,
+  onViewDetails,
+  onSave,
+  onAskAI,
+  savedIds,
+  userLocation,
+}) => {
+  const isSaved = savedIds.includes(temple.id);
 
-  const [activeTab,        setActiveTab]        = useState("overview");
-  const [googleData,       setGoogleData]       = useState(null);
-  const [enriched,         setEnriched]         = useState(null);
-  const [enrichError,      setEnrichError]      = useState(false);
-  const [videos,           setVideos]           = useState([]);
-  const [nearbyServices,   setNearbyServices]   = useState(null);
-  const [loadingGoogle,    setLoadingGoogle]    = useState(true);
-  const [loadingEnriched,  setLoadingEnriched]  = useState(false);
-  const [loadingVideos,    setLoadingVideos]    = useState(false);
-  const [loadingServices,  setLoadingServices]  = useState(false);
-  const [showChat,         setShowChat]         = useState(false);
-  const [error,            setError]            = useState(null);
-
-  /* ── 1. Google Places details ─────────────────── */
-  useEffect(() => {
-    if (!placeId) return;
-    setLoadingGoogle(true);
-    setError(null);
-
-    axios.get(`${API_BASE}/api/temples/details/${placeId}`)
-      .then(res => {
-        console.log("[TEMPLE] Google data:", res.data.temple);
-        setGoogleData(res.data.temple);
-      })
-      .catch(e => {
-        console.error("[TEMPLE] Google fetch failed:", e.message);
-        setError("Could not load temple details: " + e.message);
-      })
-      .finally(() => setLoadingGoogle(false));
-  }, [placeId]);
-
-  /* ── 2. Gemini enriched — runs once googleData is ready ── */
-  useEffect(() => {
-    if (!googleData?.name) return;
-
-    console.log("[ENRICH] Starting fetch for:", googleData.name);
-    setLoadingEnriched(true);
-    setEnrichError(false);
-
-    axios.get(`${API_BASE}/api/temples/enriched`, {
-      params: { name: googleData.name, address: googleData.address || "" },
-      timeout: 60000, // Gemini can be slow — 60s timeout
-    })
-      .then(res => {
-        console.log("[ENRICH] Full response:", JSON.stringify(res.data, null, 2));
-        if (res.data && typeof res.data === "object") {
-          setEnriched(res.data);
-        } else {
-          console.warn("[ENRICH] Unexpected response format:", res.data);
-          setEnrichError(true);
-        }
-      })
-      .catch(e => {
-        console.error("[ENRICH] Failed:", e.message, e.response?.data);
-        setEnrichError(true);
-      })
-      .finally(() => {
-        console.log("[ENRICH] Done loading");
-        setLoadingEnriched(false);
-      });
- }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
-
-  /* ── 3. Videos — lazy ─────────────────────────── */
-  const fetchVideos = useCallback(async () => {
-    if (!googleData?.name || videos.length > 0) return;
-    console.log("[VIDEOS] Fetching for:", googleData.name);
-    setLoadingVideos(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/temples/videos`, {
-        params: { name: googleData.name },
-      });
-      console.log("[VIDEOS] Got:", res.data.videos?.length, "videos");
-      setVideos(res.data.videos || []);
-    } catch (e) {
-      console.error("[VIDEOS] Failed:", e.message);
-      setVideos([]);
-    } finally {
-      setLoadingVideos(false);
-    }
-  }, [googleData?.name, videos.length]);
-
-  /* ── 4. Nearby services — lazy ────────────────── */
-  const fetchNearbyServices = useCallback(async () => {
-    if (!googleData?.lat || nearbyServices) return;
-    console.log("[SERVICES] Fetching near:", googleData.lat, googleData.lng);
-    setLoadingServices(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
-        params: { lat: googleData.lat, lng: googleData.lng },
-      });
-      console.log("[SERVICES]", res.data);
-      setNearbyServices(res.data);
-    } catch (e) {
-      console.error("[SERVICES] Failed:", e.message);
-      setNearbyServices({ hotels: [], restaurants: [], parking: [] });
-    } finally {
-      setLoadingServices(false);
-    }
-  }, [googleData?.lat, googleData?.lng, nearbyServices]);
-
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    if (tabId === "videos") fetchVideos();
-    if (tabId === "travel") fetchNearbyServices();
+  const getDistance = () => {
+    if (!userLocation || !temple.lat || !temple.lng) return null;
+    const R = 6371;
+    const dLat = ((temple.lat - userLocation.lat) * Math.PI) / 180;
+    const dLng = ((temple.lng - userLocation.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((userLocation.lat * Math.PI) / 180) *
+        Math.cos((temple.lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return dist < 1
+      ? `${Math.round(dist * 1000)} m`
+      : `${dist.toFixed(1)} km`;
   };
 
-  /* ── Guards ───────────────────────────────────── */
-  if (loadingGoogle) return (
-    <div className="tdp-layout">
-      <Sidebar />
-      <div className="tdp-main"><LoadingSkeleton /></div>
-    </div>
-  );
+  const dist = getDistance();
 
-  if (error) return (
-    <div className="tdp-layout">
-      <Sidebar />
-      <div className="tdp-main">
-        <ErrorState message={error} onBack={() => navigate("/temples")} />
-      </div>
-    </div>
-  );
-
-  if (!googleData) return (
-    <div className="tdp-layout">
-      <Sidebar />
-      <div className="tdp-main">
-        <ErrorState message="Temple not found." onBack={() => navigate("/temples")} />
-      </div>
-    </div>
-  );
+  const openInMaps = (e) => {
+    e.stopPropagation();
+    window.open(
+      `https://maps.google.com/?q=${temple.lat},${temple.lng}`,
+      "_blank"
+    );
+  };
 
   return (
-    <div className="tdp-layout">
-      {/* ── Sidebar ── */}
-      <Sidebar />
+    <div className="te-card" onClick={() => onViewDetails(temple.id)}>
+      <div className="te-card-image-wrap">
+        {temple.photo ? (
+          <img
+            src={temple.photo}
+            alt={temple.name}
+            className="te-card-img"
+            loading="lazy"
+          />
+        ) : (
+          <div className="te-card-img-placeholder">
+            <span className="te-placeholder-icon">🛕</span>
+          </div>
+        )}
 
-      {/* ── Main Content ── */}
-      <div className="tdp-main">
+        <div className="te-card-badges">
+          {temple.openNow !== null && (
+            <span
+              className={`te-badge ${
+                temple.openNow ? "te-badge-open" : "te-badge-closed"
+              }`}
+            >
+              {temple.openNow ? "Open Now" : "Closed"}
+            </span>
+          )}
+          {dist && <span className="te-badge te-badge-dist">{dist}</span>}
+        </div>
 
-        {/* Hero */}
-        <div
-          className="tdp-hero"
-          style={{
-            backgroundImage: googleData.photos?.[0]
-              ? `url(${googleData.photos[0]})`
-              : "linear-gradient(135deg,#0a2a1a,#1a4a2a)",
+        <button
+          className={`te-save-btn ${isSaved ? "te-saved" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSave(temple);
           }}
+          title={isSaved ? "Remove from saved" : "Save temple"}
         >
-          <div className="tdp-hero-overlay" />
-          <div className="tdp-hero-content">
-            <button className="tdp-back-btn" onClick={() => navigate("/temples")}>
-              ← Back
-            </button>
-            <h1 className="tdp-hero-title">{googleData.name}</h1>
-            <p className="tdp-hero-addr">📍 {googleData.address}</p>
-            <div className="tdp-hero-meta">
-              {googleData.rating && (
-                <span className="tdp-hero-badge">
-                  ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
-                </span>
-              )}
-              {enriched?.overview?.deity && (
-                <span className="tdp-hero-badge">🙏 {enriched.overview.deity}</span>
-              )}
-              {googleData.openNow !== null && (
-                <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
-                  {googleData.openNow ? "🟢 Open Now" : "🔴 Closed"}
-                </span>
-              )}
+          {isSaved ? "♥" : "♡"}
+        </button>
+      </div>
+
+      <div className="te-card-body">
+        <h3 className="te-card-name">{temple.name}</h3>
+        <p className="te-card-address">📍 {temple.address}</p>
+
+        <div className="te-card-meta">
+          <StarRating rating={temple.rating} />
+          {temple.totalRatings > 0 && (
+            <span className="te-review-count">
+              ({temple.totalRatings.toLocaleString()})
+            </span>
+          )}
+        </div>
+
+        <div className="te-card-actions">
+          <button
+            className="te-btn te-btn-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetails(temple.id);
+            }}
+          >
+            View Details
+          </button>
+          <button
+            className="te-btn te-btn-ai"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAskAI(temple);
+            }}
+            title="Ask AI about this temple"
+          >
+            🤖 Ask AI
+          </button>
+          <button className="te-btn te-btn-ghost" onClick={openInMaps}>
+            Maps ↗
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Main TempleExplorer ───────────────────────────── */
+export default function TempleExplorer() {
+  const navigate = useNavigate();
+
+  const [temples, setTemples]           = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationStatus, setLocationStatus] = useState("idle");
+  const [searchQuery, setSearchQuery]   = useState("");
+  const [filter, setFilter]             = useState("all");
+
+  const [savedIds, setSavedIds] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("sarathi_saved_temples") || "[]"
+      );
+    } catch {
+      return [];
+    }
+  });
+
+  const [chatContext, setChatContext] = useState(null);
+
+  const fetchNearby = useCallback(async (lat, lng) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axiosInstance.get(`${API_BASE}/api/temples/nearby`, {
+        params: { lat, lng },
+      });
+      setTemples(res.data.temples || []);
+    } catch (err) {
+      console.error("Nearby fetch error:", err.message);
+      setError("Could not fetch nearby temples. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const requestLocation = useCallback(() => {
+    setLocationStatus("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+        setUserLocation(loc);
+        setLocationStatus("granted");
+        localStorage.setItem("lat", loc.lat);
+        localStorage.setItem("lng", loc.lng);
+        fetchNearby(loc.lat, loc.lng);
+      },
+      (err) => {
+        console.error("Geolocation error:", err.message);
+        setLocationStatus("denied");
+        setError("Location access denied. Please search for a city above.");
+      },
+      { timeout: 10000, maximumAge: 300000 }
+    );
+  }, [fetchNearby]);
+
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const params = { query: searchQuery };
+      if (userLocation) {
+        params.lat = userLocation.lat;
+        params.lng = userLocation.lng;
+      }
+      const res = await axiosInstance.get(`${API_BASE}/api/temples/search`, {
+        params,
+      });
+      const results = res.data.temples || [];
+      if (results.length === 0) {
+        setError("No temples found. Try a different search.");
+      }
+      setTemples(results);
+    } catch (err) {
+      console.error("Search error:", err.message);
+      setError("Search failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = (temple) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to save temples.");
+      return;
+    }
+    setSavedIds((prev) => {
+      const next = prev.includes(temple.id)
+        ? prev.filter((id) => id !== temple.id)
+        : [...prev, temple.id];
+      localStorage.setItem("sarathi_saved_temples", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleViewDetails = (templeId) => {
+    navigate(`/temples/${templeId}`);
+  };
+
+  const handleAskAI = (temple) => {
+    setChatContext({
+      name: temple.name,
+      address: temple.address || "",
+    });
+  };
+
+  const filteredTemples = temples.filter((t) => {
+    if (filter === "open") return t.openNow === true;
+    if (filter === "top") return (t.rating || 0) >= 4.0;
+    return true;
+  });
+
+  const handleCloseChat = () => setChatContext(null);
+
+  return (
+    <div className="te-page-layout">
+      {/* ── Left Side Global Navigation Panel ── */}
+      <Sidebar isOpen={true} />
+
+      {/* ── Right Side Content Workspace ── */}
+      <div className="te-root">
+        {/* ── Header Area ── */}
+        <div className="te-header">
+          <div className="te-header-content">
+            <div className="te-header-title">
+              <span className="te-header-icon">🛕</span>
+              <div>
+                <h1>Temple Discovery</h1>
+                <p>Find sacred temples near you, powered by Google Places</p>
+              </div>
             </div>
+
+            <form className="te-search-form" onSubmit={handleSearch}>
+              <div className="te-search-wrap">
+                <span className="te-search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search temples by city or name…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="te-search-input"
+                />
+                <button type="submit" className="te-search-btn">
+                  Search
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="tdp-tabs-wrap">
-          <div className="tdp-tabs">
-            {TABS.map(tab => (
+        {/* ── Control Row Filters ── */}
+        <div className="te-controls">
+          <div className="te-filters">
+            {["all", "open", "top"].map((f) => (
               <button
-                key={tab.id}
-                className={`tdp-tab ${activeTab === tab.id ? "active" : ""}`}
-                onClick={() => handleTabChange(tab.id)}
+                key={f}
+                className={`te-filter-btn ${filter === f ? "active" : ""}`}
+                onClick={() => setFilter(f)}
               >
-                <span className="tdp-tab-icon">{tab.icon}</span>
-                <span className="tdp-tab-label">{tab.label}</span>
+                {f === "all"
+                  ? "All Temples"
+                  : f === "open"
+                  ? "Open Now"
+                  : "Top Rated (4★+)"}
               </button>
             ))}
           </div>
+
+          <div className="te-meta">
+            {locationStatus === "granted" && (
+              <span className="te-location-tag">📍 Using your location</span>
+            )}
+            {temples.length > 0 && (
+              <span className="te-count">
+                {filteredTemples.length} temple
+                {filteredTemples.length !== 1 ? "s" : ""}
+              </span>
+            )}
+            <button
+              className="te-refresh-btn"
+              onClick={requestLocation}
+              title="Refresh nearby temples"
+            >
+              ↻ Refresh
+            </button>
+            <button
+              className="te-ai-btn"
+              onClick={() => setChatContext("general")}
+              title="Open Sarathi AI"
+            >
+              🤖 Sarathi AI
+            </button>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="tdp-content">
-          {activeTab === "overview" && (
-            <OverviewTab
-              google={googleData}
-              enriched={enriched}
-              loading={loadingEnriched}
-              enrichError={enrichError}
-            />
-          )}
-          {activeTab === "history" && (
-            <HistoryTab
-              enriched={enriched}
-              loading={loadingEnriched}
-              enrichError={enrichError}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "rituals" && (
-            <RitualsTab
-              enriched={enriched}
-              loading={loadingEnriched}
-              enrichError={enrichError}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "festivals" && (
-            <FestivalsTab
-              enriched={enriched}
-              loading={loadingEnriched}
-              enrichError={enrichError}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "videos" && (
-            <VideosTab
-              videos={videos}
-              loading={loadingVideos}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "travel" && (
-            <TravelGuideTab
-              google={googleData}
-              enriched={enriched}
-              services={nearbyServices}
-              loading={loadingServices}
-            />
-          )}
-        </div>
+        {/* ── Banner Alerts ── */}
+        {locationStatus === "requesting" && (
+          <div className="te-status-banner">
+            <div className="te-spinner-sm" /> Requesting your location…
+          </div>
+        )}
 
-        {/* FAB */}
-        <button
-          className="tdp-chat-fab"
-          onClick={() => setShowChat(true)}
-          title="Ask Temple Assistant"
-        >
+        {error && (
+          <div className="te-error-banner">
+            <span>⚠️</span> {error}
+          </div>
+        )}
 
-        </button>
+        {/* ── Dashboard Content Layout ── */}
+        {loading ? (
+          <div className="te-loading">
+            <div className="te-spinner" />
+            <p>Finding temples near you…</p>
+          </div>
+        ) : filteredTemples.length > 0 ? (
+          <div className="te-grid">
+            {filteredTemples.map((temple) => (
+              <TempleCard
+                key={temple.id}
+                temple={temple}
+                onViewDetails={handleViewDetails}
+                onSave={handleSave}
+                onAskAI={handleAskAI}
+                savedIds={savedIds}
+                userLocation={userLocation}
+              />
+            ))}
+          </div>
+        ) : !loading && temples.length > 0 && filteredTemples.length === 0 ? (
+          <div className="te-empty">
+            <span style={{ fontSize: '48px', color: 'var(--te-green)' }}>🛕</span>
+            <p>No temples match the current filter.</p>
+            <button
+              className="te-btn te-btn-ghost"
+              onClick={() => setFilter("all")}
+            >
+              Show all
+            </button>
+          </div>
+        ) : !loading && temples.length === 0 && !error ? (
+          <div className="te-empty">
+            <span>🛕</span>
+            <p>No temples found yet.</p>
+            <p className="te-empty-sub">
+              Allow location access or search a city above.
+            </p>
+          </div>
+        ) : null}
 
-        {/* Chat */}
-        {showChat && (
-          <div style={{ position:"fixed", bottom:0, right:0, zIndex:9999 }}>
+        {/* ── Floating Chat Panel overlay ── */}
+        {chatContext !== null && (
+          <div className="te-chat-overlay">
             <ChatPanel
-              closeChat={() => setShowChat(false)}
-              templeContext={{ name: googleData.name, address: googleData.address || "" }}
+              closeChat={handleCloseChat}
+              templeContext={chatContext === "general" ? null : chatContext}
             />
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="tdp-skeleton">
-      <div className="tdp-skeleton-hero" />
-      <div className="tdp-skeleton-tabs" />
-      <div className="tdp-skeleton-body">
-        {[1,2,3].map(i => <div key={i} className="tdp-skeleton-card" />)}
-      </div>
-    </div>
-  );
-}
-
-function ErrorState({ message, onBack }) {
-  return (
-    <div className="tdp-error">
-      <span>⚠️</span>
-      <p>{message}</p>
-      <button onClick={onBack}>← Back to Temples</button>
     </div>
   );
 }
