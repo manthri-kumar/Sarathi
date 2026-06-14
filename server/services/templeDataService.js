@@ -2,85 +2,137 @@ const axios = require("axios");
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
-// Try multiple Gemini model endpoints in order
-const GEMINI_MODELS = [
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-latest",
-  "gemini-pro",
-];
-
+/**
+ * Core Gemini caller — tries models in order, throws on all failure
+ */
 const askGemini = async (prompt) => {
   if (!GEMINI_KEY) {
-    console.error("[GEMINI] GEMINI_API_KEY is not set!");
-    throw new Error("Gemini API key not configured");
+    throw new Error("GEMINI_API_KEY environment variable is not set");
   }
+
+  // Model list — tries each in order until one works
+  const models = [
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-pro",
+    "gemini-pro",
+  ];
 
   let lastError = null;
 
-  for (const model of GEMINI_MODELS) {
+  for (const model of models) {
     try {
-      console.log(`[GEMINI] Trying model: ${model}`);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
+      console.log(`[GEMINI] Attempting model: ${model}`);
 
-      const res = await axios.post(
-        url,
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
           generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 3000,
+            temperature: 0.3,
+            maxOutputTokens: 2048,
+            topP: 0.8,
+            topK: 40,
           },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_NONE",
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_NONE",
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE",
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_NONE",
+            },
+          ],
         },
-        { timeout: 45000 }
+        {
+          params: { key: GEMINI_KEY },
+          timeout: 45000,
+          headers: { "Content-Type": "application/json" },
+        }
       );
 
-      console.log(`[GEMINI] Success with model: ${model}`);
-
-      const text =
-        res.data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-      if (!text) {
-        console.warn("[GEMINI] Empty text response");
-        throw new Error("Empty response from Gemini");
+      // Validate response structure
+      const candidate = response.data?.candidates?.[0];
+      if (!candidate) {
+        throw new Error("No candidates in Gemini response");
       }
 
-      // Clean up markdown code fences if present
-      return text
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/g, "")
-        .trim();
-    } catch (e) {
-      console.error(`[GEMINI] Model ${model} failed:`, e.response?.data || e.message);
-      lastError = e;
-      // Continue to next model
+      // Check finish reason
+      const finishReason = candidate.finishReason;
+      if (finishReason === "SAFETY") {
+        throw new Error("Gemini blocked response due to safety filters");
+      }
+
+      const text = candidate.content?.parts?.[0]?.text;
+      if (!text || text.trim() === "") {
+        throw new Error("Empty text in Gemini response");
+      }
+
+      console.log(
+        `[GEMINI] Success with ${model}, response length: ${text.length}`
+      );
+      return text.trim();
+    } catch (err) {
+      const status = err.response?.status;
+      const errMsg = err.response?.data?.error?.message || err.message;
+
+      console.error(`[GEMINI] Model ${model} failed — status: ${status}, error: ${errMsg}`);
+
+      // Don't retry on auth errors — key is wrong
+      if (status === 400 || status === 403) {
+        throw new Error(`Gemini auth/request error (${status}): ${errMsg}`);
+      }
+
+      // Don't retry on quota exceeded
+      if (status === 429) {
+        throw new Error(`Gemini quota exceeded: ${errMsg}`);
+      }
+
+      lastError = new Error(`${model}: ${errMsg}`);
+      // Continue to next model for 404 (model not found) and 5xx
     }
   }
 
   throw lastError || new Error("All Gemini models failed");
 };
 
+/**
+ * Fetch enriched temple data — returns null on failure (non-critical)
+ */
 const getEnrichedTempleData = async (templeName, address) => {
-  const prompt = `
-You are a factual Hindu temple information API.
-Provide accurate information about the temple: "${templeName}" at "${address}".
+  const prompt = `You are a factual Hindu temple information API.
+Provide accurate information about the temple: "${templeName}" located at "${address}".
 
 STRICT RULES:
 - Only include facts you are certain about
-- Use null for any field you are uncertain about  
+- Use null for any field you are uncertain about
 - Do NOT invent dates, names, or historical facts
+- Do NOT include markdown, code fences, or explanation
+- Start your response with { and end with }
 
-Return ONLY raw JSON with NO markdown, NO code fences, NO explanation.
-Start your response directly with { and end with }
-
+Return ONLY this JSON structure:
 {
   "overview": {
-    "deity": "primary deity name or null",
+    "deity": "string or null",
     "alternateNames": [],
     "bestTimeToVisit": "string or null",
     "crowdLevel": "string or null",
     "recommendedDarshanTime": "string or null",
     "dresscode": "string or null",
-    "spiritualSignificance": "2-3 sentence paragraph or null",
+    "spiritualSignificance": "string or null",
     "beliefs": [],
     "accessibility": {
       "wheelchairAccess": true,
@@ -94,42 +146,22 @@ Start your response directly with { and end with }
     "founder": "string or null",
     "dynasty": "string or null",
     "architecturalStyle": "string or null",
-    "origin": "paragraph or null",
-    "fullHistory": "400-500 word factual history or null",
-    "importantEvents": [
-      { "year": "string", "event": "string" }
-    ],
-    "source": "source name or null",
-    "sourceUrl": "url or null"
+    "origin": "string or null",
+    "fullHistory": "string or null",
+    "importantEvents": [],
+    "source": "string or null",
+    "sourceUrl": null
   },
   "mythology": {
-    "legend": "200 word legend or null",
-    "deityStory": "150 word story or null",
-    "whyFamous": "100 word paragraph or null",
+    "legend": "string or null",
+    "deityStory": "string or null",
+    "whyFamous": "string or null",
     "miracles": []
   },
-  "rituals": [
-    {
-      "name": "ritual name",
-      "description": "description",
-      "timing": "HH:MM AM/PM",
-      "duration": "X minutes",
-      "significance": "one sentence"
-    }
-  ],
-  "festivals": [
-    {
-      "name": "festival name",
-      "month": "month name",
-      "duration": "X days",
-      "description": "100 word description",
-      "importance": "why celebrated here"
-    }
-  ],
+  "rituals": [],
+  "festivals": [],
   "darshan": {
-    "timings": [
-      { "type": "Free Darshan", "time": "string", "fee": "string" }
-    ],
+    "timings": [],
     "breakTime": "string or null",
     "crowdPeak": "string or null",
     "tips": []
@@ -141,29 +173,27 @@ Start your response directly with { and end with }
     "localTransport": "string or null",
     "drivingInstructions": "string or null"
   },
-  "spiritualPurposes": [
-    { "purpose": "Health", "prayer": "specific prayer for this purpose" }
-  ]
+  "spiritualPurposes": []
 }`;
 
   try {
     const raw = await askGemini(prompt);
-    console.log("[ENRICH] Raw Gemini response (first 200 chars):", raw.substring(0, 200));
 
-    // Extract JSON - find first { to last }
-    const start = raw.indexOf("{");
-    const end   = raw.lastIndexOf("}");
+    // Extract JSON from response
+    const jsonStart = raw.indexOf("{");
+    const jsonEnd   = raw.lastIndexOf("}");
 
-    if (start === -1 || end === -1) {
-      throw new Error("No JSON object found in Gemini response");
+    if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+      console.error("[ENRICH] No valid JSON found in response. Raw:", raw.substring(0, 300));
+      return null;
     }
 
-    const jsonStr = raw.substring(start, end + 1);
+    const jsonStr = raw.substring(jsonStart, jsonEnd + 1);
     const parsed  = JSON.parse(jsonStr);
-    console.log("[ENRICH] Successfully parsed JSON for:", templeName);
+    console.log("[ENRICH] Successfully parsed data for:", templeName);
     return parsed;
-  } catch (e) {
-    console.error("[ENRICH] Parse/fetch error:", e.message);
+  } catch (err) {
+    console.error("[ENRICH] Failed for", templeName, "—", err.message);
     return null;
   }
 };

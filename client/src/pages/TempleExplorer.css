@@ -583,3 +583,71 @@
   .te-card-actions { flex-direction: column; }
   .te-btn-primary { flex: unset; width: 100%; }
 }
+
+
+/* ── Spacing fixes ───────────────────────────────── */
+
+/* Fix header overcrowding */
+.te-header {
+  padding: 28px 28px 20px;
+}
+
+.te-header-content {
+  max-width: 1160px;
+  margin: 0 auto;
+  gap: 18px;
+}
+
+/* Fix controls row alignment */
+.te-controls {
+  max-width: 1160px;
+  margin: 16px auto 0;
+  padding: 0 28px;
+  gap: 10px;
+}
+
+/* Fix grid padding */
+.te-grid {
+  max-width: 1160px;
+  margin: 20px auto 0;
+  padding: 0 28px 40px;
+  gap: 18px;
+}
+
+/* Better card body padding */
+.te-card-body {
+  padding: 14px 16px 16px;
+}
+
+/* Fix card action spacing */
+.te-card-actions {
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.te-btn {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+}
+
+/* Fix banners */
+.te-status-banner,
+.te-error-banner {
+  margin: 14px 28px 0;
+  max-width: calc(1160px);
+}
+
+/* Desktop: content shifts past sidebar */
+@media (min-width: 769px) {
+  .te-root {
+    margin-left: 250px;
+  }
+}
+
+/* Fix chat overlay position */
+.te-chat-overlay {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 9999;
+}

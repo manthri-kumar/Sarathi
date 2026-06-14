@@ -203,51 +203,81 @@ const getNearbyServicePlaces = async (req, res) => {
 
 /* ── TEMPLE CHAT (Gemini) ─────────────────────────────── */
 const templeChat = async (req, res) => {
-  console.log("[CHAT] Incoming request body:", req.body);
+  console.log("[CHAT] Request body:", JSON.stringify(req.body));
 
   const { message, templeName, address } = req.body;
 
-  if (!message) {
+  if (!message?.trim()) {
     return res.status(400).json({ error: "message is required" });
   }
-  if (!templeName) {
+  if (!templeName?.trim()) {
     return res.status(400).json({ error: "templeName is required" });
   }
 
-  const prompt = `You are a knowledgeable and respectful spiritual guide for ${templeName} temple${
-    address ? ` located at ${address}` : " in India"
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("[CHAT] GEMINI_API_KEY not set!");
+    return res.status(500).json({
+      error: "AI service not configured. Please contact support.",
+    });
+  }
+
+  const prompt = `You are an expert and respectful spiritual guide for ${templeName} temple${
+    address ? `, located at ${address}` : " in India"
   }.
 
-Answer the following question accurately and concisely (under 200 words).
-Be specific to THIS temple when you know facts about it.
-If you don't know something specific, provide general Hindu temple information.
-Be spiritually respectful and culturally sensitive.
-Do not use markdown formatting. Write in plain conversational text.
+You have deep knowledge about Hindu temples, their history, mythology, rituals, and cultural significance.
+
+Answer the following question specifically about this temple:
+- If you know specific facts about ${templeName}, share them accurately
+- If you don't know something specific to this temple, provide accurate general information about similar Hindu temples
+- Keep your answer under 180 words
+- Write in plain conversational English (no markdown, no bullet points with *, no bold with **)
+- Be warm, respectful, and informative
+- Never make up specific dates, names, or facts you are not sure about
 
 Question: ${message}
 
 Answer:`;
 
   try {
-    console.log("[CHAT] Calling Gemini for temple:", templeName);
-    const reply = await askGemini(prompt);
-    console.log("[CHAT] Gemini reply:", reply?.substring(0, 100));
+    console.log("[CHAT] Calling Gemini for:", templeName, "| Question:", message);
 
-    if (!reply) {
-      return res.status(500).json({ error: "Empty response from AI" });
+    const reply = await askGemini(prompt);
+
+    if (!reply || reply.trim().length < 5) {
+      console.error("[CHAT] Empty or too-short reply from Gemini");
+      return res.status(500).json({
+        error: "The AI returned an empty response. Please try again.",
+      });
     }
 
-    return res.json({ reply: reply.trim() });
-  } catch (err) {
-    console.error("[CHAT] Gemini error:", err.response?.data || err.message);
+    // Clean any stray markdown that slips through
+    const cleanReply = reply
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/#{1,6}\s/g, "")
+      .trim();
 
-    // Return a helpful fallback instead of an error
-    return res.json({
-      reply: `I'm having trouble connecting to my knowledge base right now. Here's what I can tell you about ${templeName}: it is a sacred Hindu temple. For specific questions about darshan timings, rituals, and festivals, I recommend visiting the temple directly or checking their official website. Please try your question again in a moment.`,
-    });
+    console.log("[CHAT] Reply preview:", cleanReply.substring(0, 120));
+    return res.json({ reply: cleanReply });
+
+  } catch (err) {
+    console.error("[CHAT] Gemini error:", err.message);
+
+    // Return specific error status so frontend can show correct message
+    const isKeyError  = err.message.includes("403") || err.message.includes("auth") || err.message.includes("API_KEY");
+    const isQuota     = err.message.includes("429") || err.message.includes("quota");
+    const isTimeout   = err.message.includes("timeout") || err.message.includes("ECONNRESET");
+
+    let userMessage = "AI service temporarily unavailable. Please try again in a moment.";
+    if (isKeyError)  userMessage = "AI service configuration error. Please contact support.";
+    if (isQuota)     userMessage = "AI service is busy. Please try again in a few seconds.";
+    if (isTimeout)   userMessage = "AI service timed out. Please try again.";
+
+    // Return 503 so frontend knows it's a server error, not empty response
+    return res.status(503).json({ error: userMessage });
   }
 };
-
 module.exports = {
   getNearbyTemples,
   searchTemples,
