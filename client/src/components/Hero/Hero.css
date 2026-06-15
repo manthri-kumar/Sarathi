@@ -1,140 +1,533 @@
-/* HERO */
+/* =========================================================
+   HERO — Sarathi Premium Travel UI
+   Targets: Desktop 600px · Tablet 500px · Mobile 420px
+   ========================================================= */
+
+/* ── Root tokens (scoped) ── */
 .hero {
-  width: 100%;
-  height: 260px;
-  border-radius: 18px;
-  overflow: hidden;
-  position: relative;
-  margin-top: 20px;
-}
-
-/* ===== SLIDER FIX ===== */
-.slider-wrapper {
-  display: flex;
-  height: 100%;
-
-  /* 🔥 KEY FIX */
-  width: 100%;
-  transition: transform 0.6s ease-in-out;
-}
-
-/* Each slide */
-.slide {
-  min-width: 100%;   /* 🔥 VERY IMPORTANT */
-  height: 100%;
-
-  background-size: cover;
-  background-position: center;
-}
-/* ===== OVERLAY ===== */
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-
-  background: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0.7),
-    rgba(0, 0, 0, 0.2)
+  --sarathi-green: #22c55e;
+  --sarathi-green-dim: #16a34a;
+  --green-gradient: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --overlay-gradient: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.46) 40%,
+    rgba(0, 0, 0, 0.14) 100%
   );
 
-  padding: 30px;
+  position: relative;
+  width: 100%;
+  height: 600px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 20px;
+  isolation: isolate;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+/* ─────────────────────────────────────────────────────────
+   SLIDER
+───────────────────────────────────────────────────────── */
+.hero-slider-track {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  transition: transform 0.7s cubic-bezier(0.77, 0, 0.18, 1);
+  will-change: transform;
+}
+
+.hero-slide {
+  min-width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────
+   CINEMATIC OVERLAY
+───────────────────────────────────────────────────────── */
+.hero-cinematic-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-gradient);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─────────────────────────────────────────────────────────
+   LEFT CONTENT
+───────────────────────────────────────────────────────── */
+.hero-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 0 52px;
+  max-width: 600px;
+  gap: 0;
 }
 
-.hero h2 {
+/* Greeting */
+.hero-greeting {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--sarathi-green);
+  letter-spacing: 0.01em;
+  margin: 0 0 16px;
+  animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.05s;
+}
+
+/* Main heading */
+.hero-heading {
+  margin: 0 0 18px;
+  line-height: 1.08;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.12s;
+}
+
+.hero-heading-line {
+  display: block;
+  font-size: 52px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hero-heading-accent {
+  background: var(--green-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtitle */
+.hero-subtitle {
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.6;
+  margin: 0 0 32px;
+  max-width: 420px;
+  animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.22s;
+}
+
+/* ─────────────────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────────────────── */
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  animation: slideUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.32s;
+}
+
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
-  color: #9ca3af;
-}
-
-.hero h1 {
-  font-size: 28px;
-  margin: 5px 0;
-}
-
-.hero p {
-  color: #cbd5f5;
-  margin-bottom: 15px;
-}
-
-/* Button */
-.explore-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  font-weight: 600;
   border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  color: white;
   cursor: pointer;
-  width: fit-content;
-  transition: 0.3s;
+  border-radius: 12px;
+  padding: 13px 24px;
+  letter-spacing: 0.01em;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+  white-space: nowrap;
 }
 
-.explore-btn:hover {
-  transform: scale(1.05);
+/* Primary */
+.hero-btn-primary {
+  background: var(--sarathi-green);
+  color: #0a0a0a;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.45);
 }
 
-/* ===== ARROWS ===== */
-.arrow {
+.hero-btn-primary:hover {
+  background: #16a34a;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 28px rgba(34, 197, 94, 0.6);
+}
+
+.hero-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.hero-btn-icon {
+  font-size: 15px;
+}
+
+/* Secondary */
+.hero-btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.hero-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.hero-btn-secondary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.hero-btn-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────
+   DESTINATION CARD — glassmorphism, bottom-right
+───────────────────────────────────────────────────────── */
+.hero-destination-card {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 3;
+
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: 16px;
+  padding: 14px 18px;
+  min-width: 240px;
+  max-width: 300px;
+  box-shadow: var(--glass-shadow);
+
+  animation: slideFromBottom 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.38s;
+
+  cursor: default;
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    background 0.28s ease;
+}
+
+.hero-destination-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(34, 197, 94, 0.25);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.hero-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-card-pin {
+  font-size: 18px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+}
+
+.hero-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hero-card-place {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-card-region {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-card-chevron {
+  font-size: 20px;
+  color: var(--sarathi-green);
+  font-weight: 700;
+  margin-left: auto;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────────────────
+   NAVIGATION ARROWS
+───────────────────────────────────────────────────────── */
+.hero-arrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0,0,0,0.4);
-  border: none;
-  color: white;
-  font-size: 20px;
-  padding: 10px;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 16px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.arrow.left {
-  left: 15px;
+.hero-arrow:hover {
+  background: rgba(34, 197, 94, 0.85);
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.5);
+  transform: translateY(-50%) scale(1.08);
 }
 
-.arrow.right {
-  right: 15px;
+.hero-arrow:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
-/* ===== DOTS ===== */
-.dots {
+.hero-arrow-left  { left: 18px; }
+.hero-arrow-right { right: 18px; }
+
+/* ─────────────────────────────────────────────────────────
+   DOT INDICATORS
+───────────────────────────────────────────────────────── */
+.hero-dots {
   position: absolute;
-  bottom: 15px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 4;
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-.dot {
+.hero-dot {
   width: 8px;
   height: 8px;
-  background: rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.35);
   border-radius: 50%;
+  border: none;
   cursor: pointer;
+  padding: 0;
+  transition:
+    background 0.3s ease,
+    width 0.3s ease,
+    border-radius 0.3s ease;
 }
 
-.dot.active {
-  background: white;
+.hero-dot-active {
+  background: var(--sarathi-green);
+  width: 22px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
 }
 
-/* ===== MOBILE HERO ===== */
-@media (max-width: 768px) {
+/* ─────────────────────────────────────────────────────────
+   KEYFRAME ANIMATIONS
+───────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   RESPONSIVE — Tablet ≤ 1024px
+───────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
   .hero {
-    height: 200px;
+    height: 500px;
   }
 
-  .hero-overlay {
-    padding: 15px;
+  .hero-content {
+    padding: 0 40px;
+    max-width: 520px;
   }
 
-  .hero h1 {
-    font-size: 20px;
+  .hero-heading-line {
+    font-size: 42px;
   }
 
-  .hero p {
-    font-size: 12px;
+  .hero-subtitle {
+    font-size: 14px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   RESPONSIVE — Mobile ≤ 768px
+───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero {
+    height: 420px;
+    border-radius: 14px;
+    margin-top: 14px;
   }
 
+  /* Stronger overlay on mobile for readability */
+  .hero-cinematic-overlay {
+    background: linear-gradient(
+      160deg,
+      rgba(0, 0, 0, 0.82) 0%,
+      rgba(0, 0, 0, 0.55) 55%,
+      rgba(0, 0, 0, 0.22) 100%
+    );
+  }
+
+  .hero-content {
+    padding: 24px 20px 100px;
+    max-width: 100%;
+    justify-content: flex-end;
+    gap: 0;
+  }
+
+  .hero-greeting {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .hero-heading {
+    margin-bottom: 10px;
+  }
+
+  .hero-heading-line {
+    font-size: 28px;
+  }
+
+  .hero-subtitle {
+    font-size: 12.5px;
+    margin-bottom: 20px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .hero-actions {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .hero-btn {
+    font-size: 13px;
+    padding: 11px 18px;
+    border-radius: 10px;
+  }
+
+  /* Destination card — stays visible on mobile */
+  .hero-destination-card {
+    bottom: 16px;
+    right: 12px;
+    left: 12px;
+    min-width: unset;
+    max-width: unset;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .hero-card-place {
+    font-size: 13px;
+  }
+
+  .hero-card-region {
+    font-size: 11px;
+  }
+
+  /* Arrows smaller on mobile */
+  .hero-arrow {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .hero-arrow-left  { left: 10px; }
+  .hero-arrow-right { right: 10px; }
+
+  /* Dots hidden on mobile — card shows location context instead */
+  .hero-dots {
+    display: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   REDUCED MOTION
+───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .hero-slider-track {
+    transition: none;
+  }
+
+  .hero-greeting,
+  .hero-heading,
+  .hero-subtitle,
+  .hero-actions,
+  .hero-destination-card {
+    animation: none;
+  }
 }
