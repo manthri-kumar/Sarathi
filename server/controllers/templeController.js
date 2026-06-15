@@ -202,215 +202,260 @@ const getNearbyServicePlaces = async (req, res) => {
 };
 
 /* ── TEMPLE CHAT (Gemini) ─────────────────────────────── */
-/* Drop-in replacement for the templeChat function in your controller */
+/* Replace ONLY this function in templeController.js       */
+/* axios is already required at the top of that file       */
+
+const GEMINI_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash-latest",
+  "gemini-1.5-flash",
+];
+
+const callGemini = async (prompt) => {
+  let lastError = null;
+
+  for (const model of GEMINI_MODELS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+    console.log(`[CHAT] Trying model: ${model}`);
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature:     0.7,
+            maxOutputTokens: 350,
+            topP:            0.8,
+          },
+          safetySettings: [
+            {
+              category:  "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE",
+            },
+          ],
+        },
+        {
+          params:  { key: process.env.GEMINI_API_KEY },
+          timeout: 25000,
+          headers: { "Content-Type": "application/json" },
+          // Tell axios NOT to throw on 4xx so we can inspect status
+          validateStatus: (status) => status < 500,
+        }
+      );
+
+      console.log(`[CHAT] ${model} → HTTP ${response.status}`);
+
+      if (response.status === 404) {
+        // This model not available — try next
+        console.warn(`[CHAT] Model ${model} returned 404, trying next`);
+        lastError = new Error(`Model ${model} not available (404)`);
+        continue;
+      }
+
+      if (response.status === 429) {
+        // Rate limited — surface immediately, no point retrying other models
+        const err = new Error("RATE_LIMITED");
+        err.statusCode = 429;
+        throw err;
+      }
+
+      if (response.status === 400) {
+        const detail = response.data?.error?.message || "Bad request";
+        console.error(`[CHAT] ${model} 400:`, detail);
+        const err = new Error(`BAD_REQUEST: ${detail}`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (response.status === 403) {
+        const err = new Error("AUTH_FAILED");
+        err.statusCode = 403;
+        throw err;
+      }
+
+      if (response.status !== 200) {
+        console.warn(`[CHAT] ${model} unexpected status ${response.status}`);
+        lastError = new Error(`HTTP ${response.status}`);
+        continue;
+      }
+
+      // ── Parse response ──────────────────────────────
+      const candidate = response.data?.candidates?.[0];
+      const rawText   = candidate?.content?.parts?.[0]?.text || "";
+
+      if (!rawText || rawText.trim().length < 5) {
+        // Blocked by safety filter or empty
+        const blockReason = candidate?.finishReason;
+        console.warn(`[CHAT] ${model} empty reply. finishReason: ${blockReason}`);
+
+        if (blockReason === "SAFETY") {
+          const err = new Error("SAFETY_BLOCKED");
+          err.statusCode = 200; // Gemini returned 200 but blocked content
+          throw err;
+        }
+
+        lastError = new Error(`Empty reply from ${model}`);
+        continue;
+      }
+
+      // Clean markdown artifacts
+      const clean = rawText
+        .replace(/\*\*/g, "")
+        .replace(/\*/g,   "")
+        .replace(/#{1,6}\s/g, "")
+        .replace(/^-\s/gm, "")
+        .trim();
+
+      console.log(`[CHAT] ✓ ${model} success. Preview: ${clean.substring(0, 100)}`);
+      return clean;
+
+    } catch (err) {
+      // Re-throw non-retryable errors immediately
+      if (
+        err.statusCode === 429 ||
+        err.statusCode === 403 ||
+        err.statusCode === 400 ||
+        err.message === "SAFETY_BLOCKED"
+      ) {
+        throw err;
+      }
+
+      // Network / timeout — log and try next model
+      if (err.code === "ECONNABORTED" || err.message.includes("timeout")) {
+        console.warn(`[CHAT] ${model} timed out, trying next`);
+        lastError = err;
+        continue;
+      }
+
+      // Unexpected — try next
+      console.error(`[CHAT] ${model} threw:`, err.message);
+      lastError = err;
+    }
+  }
+
+  // All models exhausted
+  throw lastError || new Error("ALL_MODELS_FAILED");
+};
+
 
 const templeChat = async (req, res) => {
   console.log("[CHAT] Request body:", JSON.stringify(req.body));
 
-  const {
-    message,
-    templeName,
-    address,
-    rating,
-    openNow,
-    deity,
-    enriched,
-  } = req.body;
+  const { message, templeName, address, rating, openNow, deity, enriched } = req.body;
 
   if (!message?.trim()) {
     return res.status(400).json({ error: "message is required" });
   }
-  if (!templeName?.trim()) {
-    return res.status(400).json({ error: "templeName is required" });
-  }
 
   if (!process.env.GEMINI_API_KEY) {
-    console.error("[CHAT] GEMINI_API_KEY is not set in environment variables!");
+    console.error("[CHAT] GEMINI_API_KEY not set!");
     return res.status(500).json({
-      error:
-        "AI service is not configured on the server. Please contact support.",
+      error: "AI service is not configured on this server. Please contact support.",
     });
   }
 
-  /* ── Build rich context from all available data ── */
-  let contextLines = [
-    `Temple Name: ${templeName}`,
-    address  ? `Location: ${address}`            : null,
-    rating   ? `Google Rating: ${rating} / 5`    : null,
+  // ── Build context block ──────────────────────────────────────────────
+  const contextLines = [
+    templeName ? `Temple Name: ${templeName}` : null,
+    address    ? `Location: ${address}`        : null,
+    rating     ? `Google Rating: ${rating}/5`  : null,
     openNow !== null && openNow !== undefined
                ? `Currently: ${openNow ? "Open" : "Closed"}` : null,
-    deity    ? `Presiding Deity: ${deity}`        : null,
+    deity      ? `Presiding Deity: ${deity}`   : null,
   ].filter(Boolean);
 
-  // Append enriched AI data if available
   if (enriched && typeof enriched === "object") {
     try {
       const ov = enriched.overview;
-      if (ov) {
-        if (ov.deity)       contextLines.push(`Deity (enriched): ${ov.deity}`);
-        if (ov.established) contextLines.push(`Established: ${ov.established}`);
-        if (ov.architecture)contextLines.push(`Architecture: ${ov.architecture}`);
-        if (ov.significance)contextLines.push(`Significance: ${ov.significance}`);
-        if (ov.description) contextLines.push(`Overview: ${ov.description}`);
-      }
+      if (ov?.deity)        contextLines.push(`Deity (enriched): ${ov.deity}`);
+      if (ov?.established)  contextLines.push(`Established: ${ov.established}`);
+      if (ov?.architecture) contextLines.push(`Architecture: ${ov.architecture}`);
+      if (ov?.significance) contextLines.push(`Significance: ${ov.significance}`);
+      if (ov?.description)  contextLines.push(`Overview: ${ov.description}`);
 
-      const hist = enriched.history;
-      if (hist?.article) {
-        contextLines.push(`History: ${hist.article.substring(0, 600)}`);
+      if (enriched.history?.article) {
+        contextLines.push(`History: ${enriched.history.article.substring(0, 600)}`);
       }
-
-      const rituals = enriched.rituals;
-      if (Array.isArray(rituals?.daily) && rituals.daily.length) {
-        const rList = rituals.daily
-          .map((r) => `${r.name} at ${r.time}`)
-          .join(", ");
-        contextLines.push(`Daily Rituals: ${rList}`);
+      if (Array.isArray(enriched.rituals?.daily) && enriched.rituals.daily.length) {
+        contextLines.push(`Daily Rituals: ${enriched.rituals.daily.map(r => `${r.name} at ${r.time}`).join(", ")}`);
       }
-
-      const festivals = enriched.festivals;
-      if (Array.isArray(festivals) && festivals.length) {
-        const fList = festivals.map((f) => f.name).join(", ");
-        contextLines.push(`Festivals: ${fList}`);
+      if (Array.isArray(enriched.festivals) && enriched.festivals.length) {
+        contextLines.push(`Festivals: ${enriched.festivals.map(f => f.name).join(", ")}`);
       }
-
       const travel = enriched.travelInfo || enriched.travel;
       if (travel) {
-        if (travel.nearestAirport)
-          contextLines.push(`Nearest Airport: ${travel.nearestAirport}`);
-        if (travel.nearestRailway)
-          contextLines.push(`Nearest Railway: ${travel.nearestRailway}`);
-        if (travel.localTransport)
-          contextLines.push(`Local Transport: ${travel.localTransport}`);
-        if (travel.bestTime)
-          contextLines.push(`Best Time to Visit: ${travel.bestTime}`);
-      }
-
-      const darshan = enriched.darshanTimings || enriched.darshan;
-      if (darshan) {
-        contextLines.push(
-          `Darshan Info: ${JSON.stringify(darshan).substring(0, 300)}`
-        );
+        if (travel.nearestAirport)  contextLines.push(`Nearest Airport: ${travel.nearestAirport}`);
+        if (travel.nearestRailway)  contextLines.push(`Nearest Railway: ${travel.nearestRailway}`);
+        if (travel.bestTime)        contextLines.push(`Best Time to Visit: ${travel.bestTime}`);
       }
     } catch (parseErr) {
-      console.warn("[CHAT] Could not parse enriched data:", parseErr.message);
+      console.warn("[CHAT] enriched parse error:", parseErr.message);
     }
   }
 
-  const contextBlock = contextLines.join("\n");
+  // ── Guard: require temple name after context build ───────────────────
+  if (!templeName?.trim()) {
+    return res.status(400).json({ error: "templeName is required" });
+  }
 
   const prompt = `You are a knowledgeable and respectful spiritual guide assistant for Hindu temples.
 
 You have been given the following real data about the temple the user is asking about:
 
 --- TEMPLE DATA ---
-${contextBlock}
+${contextLines.join("\n")}
 --- END DATA ---
 
 INSTRUCTIONS:
 - Answer the user's question using ONLY the data provided above.
-- If the data above contains a direct answer, use it accurately.
-- If specific data is missing from the context above, say "Specific information about [topic] is not available from our current data sources for this temple" and provide a helpful general explanation about Hindu temples instead.
+- If specific data is missing, say "Specific information about [topic] is not available from our current data sources for this temple" and provide a helpful general explanation about Hindu temples.
 - Never invent specific timings, dates, names, or facts not present in the data above.
 - Keep your answer under 200 words.
 - Write in plain conversational English. No markdown, no asterisks, no bullet symbols.
-- Be warm, informative, and respectful of the spiritual nature of the topic.
+- Be warm, informative, and respectful.
 
 User Question: ${message}
 
 Answer:`;
 
   try {
-    console.log("[CHAT] Calling Gemini for:", templeName, "| Q:", message);
-    console.log("[CHAT] Context lines:", contextLines.length, "items");
-
-    // ── Call Gemini REST API directly (no SDK dependency issues) ──
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-    const geminiRes = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature:     0.7,
-          maxOutputTokens: 350,
-          topP:            0.8,
-        },
-        safetySettings: [
-          {
-            category:  "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE",
-          },
-        ],
-      }),
-    });
-
-    console.log("[CHAT] Gemini HTTP status:", geminiRes.status);
-
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      console.error("[CHAT] Gemini error body:", errBody.substring(0, 300));
-
-      if (geminiRes.status === 400) {
-        return res.status(500).json({
-          error: "The AI request was malformed. Please try rephrasing your question.",
-        });
-      }
-      if (geminiRes.status === 403) {
-        console.error("[CHAT] Gemini 403 — check GEMINI_API_KEY is valid and has Generative Language API enabled");
-        return res.status(500).json({
-          error: "AI service authentication failed. Please contact support.",
-        });
-      }
-      if (geminiRes.status === 429) {
-        return res.status(503).json({
-          error: "The AI is currently busy. Please try again in a few seconds.",
-        });
-      }
-      return res.status(503).json({
-        error: `AI service returned an error (${geminiRes.status}). Please try again.`,
-      });
-    }
-
-    const geminiData = await geminiRes.json();
-    console.log("[CHAT] Gemini response keys:", Object.keys(geminiData));
-
-    // Extract text from Gemini response
-    const candidate = geminiData?.candidates?.[0];
-    const rawReply  = candidate?.content?.parts?.[0]?.text || "";
-
-    if (!rawReply || rawReply.trim().length < 5) {
-      console.error("[CHAT] Empty reply from Gemini. Full response:", JSON.stringify(geminiData));
-      return res.status(500).json({
-        error:
-          "The AI returned an empty response. This may be a safety filter. Please try rephrasing your question.",
-      });
-    }
-
-    // Clean stray markdown
-    const cleanReply = rawReply
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/#{1,6}\s/g, "")
-      .replace(/^-\s/gm, "")
-      .trim();
-
-    console.log("[CHAT] ✓ Reply preview:", cleanReply.substring(0, 120));
-    return res.json({ reply: cleanReply });
+    const reply = await callGemini(prompt);
+    return res.json({ reply });
 
   } catch (err) {
-    console.error("[CHAT] Unexpected error:", err.message, err.stack);
+    console.error("[CHAT] Final error:", err.message);
 
-    const isNetwork = err.message.includes("fetch") || err.message.includes("ECONNRESET") || err.message.includes("timeout");
-    const userMessage = isNetwork
-      ? "Could not reach the AI service. Please check server connectivity and try again."
-      : "An unexpected error occurred. Please try again.";
+    if (err.message === "RATE_LIMITED" || err.statusCode === 429) {
+      return res.status(503).json({
+        error: "The AI is currently busy. Please try again in a few seconds.",
+      });
+    }
+    if (err.message === "AUTH_FAILED" || err.statusCode === 403) {
+      return res.status(500).json({
+        error: "AI service authentication failed. Please contact support.",
+      });
+    }
+    if (err.message?.startsWith("BAD_REQUEST")) {
+      return res.status(500).json({
+        error: "The AI request was malformed. Please try rephrasing your question.",
+      });
+    }
+    if (err.message === "SAFETY_BLOCKED") {
+      return res.status(200).json({
+        reply: "I'm unable to answer that specific question. Please try asking about the temple's history, rituals, or how to reach it.",
+      });
+    }
+    if (err.message === "ALL_MODELS_FAILED") {
+      return res.status(503).json({
+        error: "The AI service is temporarily unavailable. Please try again in a moment.",
+      });
+    }
 
-    return res.status(503).json({ error: userMessage });
+    return res.status(503).json({
+      error: "Something went wrong. Please try again.",
+    });
   }
 };
 
