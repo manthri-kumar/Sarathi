@@ -307,6 +307,8 @@ function TempleDetailsPageInner() {
     closeChat={() => setShowChat(false)}
     templeContext={{ name: googleData.name, address: googleData.address || "" }}
   />
+
+  
 )}
       </div>
     </div>
