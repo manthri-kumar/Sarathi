@@ -10,12 +10,15 @@ const {
   templeChat,
 } = require("../controllers/templeController");
 
-router.get("/nearby", getNearbyTemples);
-router.get("/search", searchTemples);
-router.get("/details/:placeId", getTempleDetails);
-router.get("/enriched", getEnrichedTemple);
-router.get("/videos", getTempleVideos);
-router.get("/nearby-services", getNearbyServicePlaces);
-router.post("/chat", templeChat);
+router.get("/nearby",            getNearbyTemples);
+router.get("/search",            searchTemples);
+router.get("/details/:placeId",  getTempleDetails);
+router.get("/enriched",          getEnrichedTemple);
+router.get("/videos",            getTempleVideos);
+router.get("/nearby-services",   getNearbyServicePlaces);
+router.post("/chat",             (req, res, next) => {
+  console.log("[ROUTE] POST /api/temples/chat hit ✓");
+  next();
+}, templeChat);
 
 module.exports = router;

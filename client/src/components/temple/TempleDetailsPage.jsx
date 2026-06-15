@@ -301,14 +301,13 @@ function TempleDetailsPageInner() {
         </button>
 
         {/* Chat */}
-        {showChat && (
-          <div style={{ position:"fixed", bottom:0, right:0, zIndex:9999 }}>
-            <ChatPanel
-              closeChat={() => setShowChat(false)}
-              templeContext={{ name: googleData.name, address: googleData.address || "" }}
-            />
-          </div>
-        )}
+        {/* Replace the existing wrapper div with: */}
+{showChat && (
+  <ChatPanel
+    closeChat={() => setShowChat(false)}
+    templeContext={{ name: googleData.name, address: googleData.address || "" }}
+  />
+)}
       </div>
     </div>
   );

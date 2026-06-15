@@ -438,14 +438,13 @@ export default function TempleExplorer() {
         ) : null}
 
         {/* ── Floating Chat Panel overlay ── */}
-        {chatContext !== null && (
-          <div className="te-chat-overlay">
-            <ChatPanel
-              closeChat={handleCloseChat}
-              templeContext={chatContext === "general" ? null : chatContext}
-            />
-          </div>
-        )}
+        {/* Replace the existing te-chat-overlay div with this */}
+{chatContext !== null && (
+  <ChatPanel
+    closeChat={handleCloseChat}
+    templeContext={chatContext === "general" ? null : chatContext}
+  />
+)}
       </div>
     </div>
   );
