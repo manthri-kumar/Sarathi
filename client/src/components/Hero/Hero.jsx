@@ -5,69 +5,61 @@ import img1 from "../../assets/Hero/img1.png";
 import img2 from "../../assets/Hero/img2.png";
 import img3 from "../../assets/Hero/img3.png";
 
-// ─── Slide metadata — extend here as images grow ───────────────────────────
 const slides = [
   {
     image: img1,
     placeName: "Visakhapatnam Beach",
-    city: "Visakhapatnam",
     region: "Andhra Pradesh, India",
   },
   {
     image: img2,
     placeName: "Araku Valley",
-    city: "Araku",
     region: "Andhra Pradesh, India",
   },
   {
     image: img3,
     placeName: "Kashmir",
-    city: "Srinagar",
     region: "Jammu & Kashmir, India",
   },
 ];
 
 const TOTAL = slides.length;
 
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning";
+  if (h < 17) return "Good Afternoon";
+  return "Good Evening";
+};
+
 const Hero = () => {
-  const [index, setIndex] = useState(0);
-  const [animKey, setAnimKey] = useState(0); // forces re-trigger of CSS animations on slide change
+  const [index, setIndex]     = useState(0);
+  const [animKey, setAnimKey] = useState(0);
+  const [userName, setUserName] = useState("Kumar");
 
-  // ─── Greeting by hour ──────────────────────────────────────────────────
-  const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good Morning";
-    if (h < 17) return "Good Afternoon";
-    return "Good Evening";
-  };
-
-  // ─── Read user name from localStorage (mirrors Dashboard.jsx pattern) ──
-  const [userName, setUserName] = useState("Explorer");
   useEffect(() => {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
-      if (user?.name || user?.username) {
+      if (user?.name || user?.username)
         setUserName(user.name || user.username);
-      }
     } catch (_) {}
   }, []);
 
-  // ─── Auto-advance ──────────────────────────────────────────────────────
   useEffect(() => {
     const id = setInterval(() => {
-      setIndex((prev) => (prev + 1) % TOTAL);
+      setIndex((p) => (p + 1) % TOTAL);
       setAnimKey((k) => k + 1);
     }, 5000);
     return () => clearInterval(id);
   }, []);
 
   const nextSlide = useCallback(() => {
-    setIndex((prev) => (prev + 1) % TOTAL);
+    setIndex((p) => (p + 1) % TOTAL);
     setAnimKey((k) => k + 1);
   }, []);
 
   const prevSlide = useCallback(() => {
-    setIndex((prev) => (prev - 1 + TOTAL) % TOTAL);
+    setIndex((p) => (p - 1 + TOTAL) % TOTAL);
     setAnimKey((k) => k + 1);
   }, []);
 
@@ -79,96 +71,93 @@ const Hero = () => {
   const current = slides[index];
 
   return (
-    <div className="hero" aria-label="Featured destinations carousel">
+    <div className="hero-root">
 
-      {/* ── Background Image Strip ── */}
+      {/* ── Slider track ── */}
       <div
-        className="hero-slider-track"
+        className="hero-track"
         style={{ transform: `translateX(-${index * 100}%)` }}
         aria-hidden="true"
       >
         {slides.map((s, i) => (
           <div
             key={i}
-            className="hero-slide"
+            className="hero-track__slide"
             style={{ backgroundImage: `url(${s.image})` }}
           />
         ))}
       </div>
 
-      {/* ── Cinematic Overlay ── */}
-      <div className="hero-cinematic-overlay" aria-hidden="true" />
+      {/* ── Left-heavy cinematic overlay ── */}
+      <div className="hero-overlay" aria-hidden="true" />
 
-      {/* ── Left Content ── */}
-      <div className="hero-content" key={animKey}>
+      {/* ── Left content panel ── */}
+      <div className="hero-left" key={animKey}>
 
-        <p className="hero-greeting">
+        <p className="hero-left__greeting">
           {getGreeting()}, {userName}! 👋
         </p>
 
-        <h1 className="hero-heading">
-          <span className="hero-heading-line">Discover.</span>
-          <span className="hero-heading-line">Explore.</span>
-          <span className="hero-heading-line hero-heading-accent">
-            Experience More.
-          </span>
+        <h1 className="hero-left__heading">
+          <span className="hero-left__heading-white">Discover. Explore.</span>
+          <span className="hero-left__heading-green">Experience More.</span>
         </h1>
 
-        <p className="hero-subtitle">
+        <p className="hero-left__sub">
           AI-powered travel companion for discovering destinations,
           hidden gems, local experiences, and unforgettable journeys.
         </p>
 
-        <div className="hero-actions">
-          <button className="hero-btn hero-btn-primary" aria-label="Explore Places">
-            <span className="hero-btn-icon">✈</span>
+        <div className="hero-left__actions">
+          <button className="hero-btn hero-btn--primary">
+            <span className="hero-btn__plane">✈</span>
             Explore Places
           </button>
-          <button className="hero-btn hero-btn-secondary" aria-label="Watch Video">
-            <span className="hero-btn-play">▶</span>
+          <button className="hero-btn hero-btn--ghost">
+            <span className="hero-btn__play-ring">
+              <span className="hero-btn__play-icon">▶</span>
+            </span>
             Watch Video
           </button>
         </div>
 
       </div>
 
-      {/* ── Destination Card (glassmorphism, bottom-right) ── */}
-      <div className="hero-destination-card" key={`card-${animKey}`} aria-live="polite">
-        <div className="hero-card-row">
-          <span className="hero-card-pin">📍</span>
-          <div className="hero-card-text">
-            <span className="hero-card-place">{current.placeName}</span>
-            <span className="hero-card-region">{current.region}</span>
-          </div>
-          <span className="hero-card-chevron">›</span>
+      {/* ── Destination card — bottom-right ── */}
+      <div
+        className="hero-card"
+        key={`card-${animKey}`}
+        aria-live="polite"
+      >
+        <span className="hero-card__pin">📍</span>
+        <div className="hero-card__body">
+          <span className="hero-card__place">{current.placeName}</span>
+          <span className="hero-card__region">{current.region}</span>
         </div>
+        <span className="hero-card__arrow">›</span>
       </div>
 
-      {/* ── Navigation Arrows ── */}
+      {/* ── Arrows ── */}
       <button
-        className="hero-arrow hero-arrow-left"
+        className="hero-nav hero-nav--prev"
         onClick={prevSlide}
         aria-label="Previous slide"
-      >
-        ❮
-      </button>
+      >❮</button>
       <button
-        className="hero-arrow hero-arrow-right"
+        className="hero-nav hero-nav--next"
         onClick={nextSlide}
         aria-label="Next slide"
-      >
-        ❯
-      </button>
+      >❯</button>
 
-      {/* ── Dot Indicators ── */}
-      <div className="hero-dots" role="tablist" aria-label="Slide indicators">
+      {/* ── Dots ── */}
+      <div className="hero-dots" role="tablist">
         {slides.map((_, i) => (
           <button
             key={i}
             role="tab"
             aria-selected={index === i}
-            aria-label={`Go to slide ${i + 1}`}
-            className={`hero-dot${index === i ? " hero-dot-active" : ""}`}
+            aria-label={`Slide ${i + 1}`}
+            className={`hero-dots__dot${index === i ? " hero-dots__dot--active" : ""}`}
             onClick={() => goTo(i)}
           />
         ))}
