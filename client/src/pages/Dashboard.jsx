@@ -218,106 +218,78 @@ useEffect(() => {
   };
 
   return (
-    <div
-      className="dashboard"
-      onTouchStart={
-        handleTouchStart
-      }
-      onTouchEnd={
-        handleTouchEnd
-      }
-    >
-      {/* Sidebar */}
+  <div
+    className="dashboard"
+    onTouchStart={handleTouchStart}
+    onTouchEnd={handleTouchEnd}
+  >
+    {/* Sidebar */}
+    <Sidebar isOpen={sidebarOpen} />
 
-      <Sidebar
-        isOpen={sidebarOpen}
+    {/* Overlay */}
+    {sidebarOpen && (
+      <div
+        className="overlay"
+        onClick={() => setSidebarOpen(false)}
+      />
+    )}
+
+    {/* Main Content */}
+    <div className="main-content">
+      <Navbar
+        toggleSidebar={() =>
+          setSidebarOpen(!sidebarOpen)
+        }
       />
 
-      {/* Overlay */}
+      {/* Greeting */}
+      <div className="greeting">
+        <h2>
+          {t("hello")} {userName}
+        </h2>
 
-      {sidebarOpen && (
-        <div
-          className="overlay"
-          onClick={() =>
-            setSidebarOpen(false)
-          }
-        />
-      )}
-
-      {/* Main Content */}
-
-      <div className="main-content">
-
-        <Navbar
-          toggleSidebar={() =>
-            setSidebarOpen(
-              !sidebarOpen
-            )
-          }
-        />
-
-        {/* Greeting */}
-
-        <div className="greeting">
-
-          <h2>
-            {t("hello")}{" "}
-            {userName}
-          </h2>
-
-          <p>
-
-            {city ? (
-              <>
-                {t("youAreIn")}{" "}
-
-                <span
-                  style={{
-                    color:
-                      "#22c55e"
-                  }}
-                >
-                  {city}
-                </span>
-              </>
-            ) : (
-              t(
-                "detectingLocation"
-              )
-            )}
-
-          </p>
-
-        </div>
-
-        <Cards
-          openChat={
-            setOpenChat
-          }
-        />
-
-        <Hero />
-
-        <PlacesSection
-          title={t(
-            "popularPlaces"
+        <p>
+          {city ? (
+            <>
+              {t("youAreIn")}{" "}
+              <span
+                style={{
+                  color: "#22c55e",
+                }}
+              >
+                {city}
+              </span>
+            </>
+          ) : (
+            t("detectingLocation")
           )}
-        />
-
+        </p>
       </div>
 
-      {/* Chat Panel */}
+      {/* Hero Section */}
+      <Hero />
 
-      {openChat && (
-        <ChatPanel
-          closeChat={() =>
-            setOpenChat(false)
-          }
-        />
-      )}
+      {/* Feature Cards */}
+      <Cards
+        openChat={setOpenChat}
+      />
 
+      {/* Popular Places */}
+      <PlacesSection
+        title={t("popularPlaces")}
+      />
     </div>
-  );
+
+    {/* Chat Panel */}
+    {openChat && (
+      <ChatPanel
+        closeChat={() =>
+          setOpenChat(false)
+        }
+      />
+    )}
+  </div>
+);
 };
 
 export default Dashboard;
