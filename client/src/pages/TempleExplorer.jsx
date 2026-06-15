@@ -142,7 +142,7 @@ const TempleCard = ({
             }}
             title="Ask AI about this temple"
           >
-            🤖 Ask AI
+            Ask AI
           </button>
           <button className="te-btn te-btn-ghost" onClick={openInMaps}>
             Maps ↗
@@ -360,7 +360,7 @@ const handleAskAI = (temple) => {
 
           <div className="te-meta">
             {locationStatus === "granted" && (
-              <span className="te-location-tag">📍 Using your location</span>
+              <span className="te-location-tag">📍Using your location</span>
             )}
             {temples.length > 0 && (
               <span className="te-count">
@@ -380,7 +380,7 @@ const handleAskAI = (temple) => {
               onClick={() => setChatContext("general")}
               title="Open Sarathi AI"
             >
-              🤖 Sarathi AI
+              Sarathi AI
             </button>
           </div>
         </div>
