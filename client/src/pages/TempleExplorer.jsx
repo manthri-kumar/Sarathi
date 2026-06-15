@@ -268,12 +268,14 @@ export default function TempleExplorer() {
     navigate(`/temples/${templeId}`);
   };
 
-  const handleAskAI = (temple) => {
-    setChatContext({
-      name: temple.name,
-      address: temple.address || "",
-    });
-  };
+const handleAskAI = (temple) => {
+  setChatContext({
+    name:    temple.name,
+    address: temple.address || "",
+    rating:  temple.rating  || null,
+    openNow: temple.openNow ?? null,
+  });
+};
 
   const filteredTemples = temples.filter((t) => {
     if (filter === "open") return t.openNow === true;
