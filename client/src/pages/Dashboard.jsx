@@ -289,7 +289,9 @@ useEffect(() => {
       />
     )}
   </div>
-);
+  );
+
+  
 };
 
 export default Dashboard;
