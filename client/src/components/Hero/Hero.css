@@ -1,521 +1,140 @@
-/* =============================================================
-   HERO — Sarathi Premium Travel UI
-   Target: Reference Image 1 / Image 3 (compact cinematic bar)
-   BEM-namespaced — zero collision with Dashboard/layout styles
-   ============================================================= */
-
-.hero-root {
-  /* ── design tokens ── */
-  --g-green:       #22c55e;
-  --g-green-lite:  #4ade80;
-  --g-green-grad:  linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
-  --glass-bg:      rgba(15, 20, 15, 0.55);
-  --glass-bd:      rgba(255, 255, 255, 0.14);
-  --glass-sh:      0 8px 32px rgba(0, 0, 0, 0.55);
-
-  /* ── container ── */
-  position:      relative;
-  width:         100%;
-  height:        420px;
-  border-radius: 20px;
-  overflow:      hidden;
-  margin-top:    16px;
-  isolation:     isolate;
-  box-shadow:    0 24px 64px rgba(0, 0, 0, 0.6);
-  flex-shrink:   0;
-  background:    #0a0f0a; /* fallback while images load */
+/* HERO */
+.hero {
+  width: 100%;
+  height: 260px;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 20px;
 }
 
-/* =============================================================
-   SLIDER
-   ============================================================= */
-.hero-track {
-  display:    flex;
-  width:      100%;
-  height:     100%;
-  transition: transform 0.8s cubic-bezier(0.77, 0, 0.18, 1);
-  will-change: transform;
+/* ===== SLIDER FIX ===== */
+.slider-wrapper {
+  display: flex;
+  height: 100%;
+
+  /* 🔥 KEY FIX */
+  width: 100%;
+  transition: transform 0.6s ease-in-out;
 }
 
-.hero-track__slide {
-  min-width:          100%;
-  height:             100%;
-  background-size:    cover;
+/* Each slide */
+.slide {
+  min-width: 100%;   /* 🔥 VERY IMPORTANT */
+  height: 100%;
+
+  background-size: cover;
   background-position: center;
-  background-repeat:  no-repeat;
-  flex-shrink:        0;
 }
-
-/* =============================================================
-   OVERLAY
-   Left: opaque enough for legible white text
-   Right: near-transparent so the destination image pops
-   ============================================================= */
+/* ===== OVERLAY ===== */
 .hero-overlay {
-  position:       absolute;
-  inset:          0;
-  z-index:        1;
-  pointer-events: none;
+  position: absolute;
+  inset: 0;
+
   background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.88) 0%,
-    rgba(0, 0, 0, 0.62) 28%,
-    rgba(0, 0, 0, 0.22) 52%,
-    rgba(0, 0, 0, 0.06) 100%
+    to right,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.2)
   );
-}
 
-/* =============================================================
-   LEFT CONTENT  —  hard-capped at 42% so image always shows
-   ============================================================= */
-.hero-left {
-  position:        absolute;
-  top:             0;
-  left:            0;
-  bottom:          0;
-  z-index:         2;
-  width:           42%;
-  max-width:       480px;
-  display:         flex;
-  flex-direction:  column;
-  justify-content: center;
-  padding:         0 44px;
-  pointer-events:  none;   /* re-enabled per child */
-}
-
-/* ── greeting ── */
-.hero-left__greeting {
-  font-size:      14px;
-  font-weight:    500;
-  color:          var(--g-green);
-  letter-spacing: 0.01em;
-  margin:         0 0 12px;
-  pointer-events: auto;
-
-  animation:       hFadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: 0.05s;
-}
-
-/* ── heading block ── */
-.hero-left__heading {
-  margin:         0 0 14px;
-  display:        flex;
+  padding: 30px;
+  display: flex;
   flex-direction: column;
-  line-height:    1.05;
-  pointer-events: auto;
-
-  animation:       hFadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: 0.12s;
-}
-
-.hero-left__heading-white {
-  display:         block;
-  font-size:       46px;
-  font-weight:     800;
-  color:           #ffffff;
-  letter-spacing:  -0.03em;
-  text-shadow:     0 2px 16px rgba(0, 0, 0, 0.6);
-  white-space:     nowrap;
-}
-
-.hero-left__heading-green {
-  display:         block;
-  font-size:       46px;
-  font-weight:     800;
-  letter-spacing:  -0.03em;
-  white-space:     nowrap;
-  background:      var(--g-green-grad);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── subtitle ── */
-.hero-left__sub {
-  font-size:      14px;
-  font-weight:    400;
-  color:          rgba(255, 255, 255, 0.72);
-  line-height:    1.58;
-  margin:         0 0 28px;
-  max-width:      340px;
-  pointer-events: auto;
-
-  animation:       hFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: 0.2s;
-}
-
-/* ── button row ── */
-.hero-left__actions {
-  display:        flex;
-  gap:            12px;
-  align-items:    center;
-  pointer-events: auto;
-
-  animation:       hSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: 0.28s;
-}
-
-/* =============================================================
-   BUTTONS
-   ============================================================= */
-.hero-btn {
-  display:         inline-flex;
-  align-items:     center;
-  gap:             9px;
-  font-size:       14px;
-  font-weight:     600;
-  border:          none;
-  cursor:          pointer;
-  border-radius:   14px;
-  height:          48px;
-  padding:         0 22px;
-  letter-spacing:  0.01em;
-  white-space:     nowrap;
-  transition:
-    transform  0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
-}
-
-/* primary — green */
-.hero-btn--primary {
-  background:  var(--g-green);
-  color:       #050f05;
-  box-shadow:  0 4px 20px rgba(34, 197, 94, 0.5);
-}
-.hero-btn--primary:hover {
-  background:  #16a34a;
-  transform:   translateY(-2px) scale(1.03);
-  box-shadow:  0 8px 28px rgba(34, 197, 94, 0.65);
-}
-.hero-btn--primary:active { transform: scale(0.97); }
-
-.hero-btn__plane { font-size: 15px; }
-
-/* ghost — transparent pill */
-.hero-btn--ghost {
-  background:  rgba(255, 255, 255, 0.09);
-  color:       #ffffff;
-  border:      1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.hero-btn--ghost:hover {
-  background:  rgba(255, 255, 255, 0.16);
-  transform:   translateY(-2px) scale(1.03);
-}
-.hero-btn--ghost:active { transform: scale(0.97); }
-
-/* circular play icon inside ghost */
-.hero-btn__play-ring {
-  display:         inline-flex;
-  align-items:     center;
   justify-content: center;
-  width:           28px;
-  height:          28px;
-  border-radius:   50%;
-  border:          1.5px solid rgba(255, 255, 255, 0.55);
-  flex-shrink:     0;
-}
-.hero-btn__play-icon {
-  font-size:   9px;
-  line-height: 1;
-  margin-left: 2px; /* optical centering of ▶ */
 }
 
-/* =============================================================
-   DESTINATION CARD  —  glassmorphism, lower-right
-   ============================================================= */
-.hero-card {
-  position:   absolute;
-  bottom:     24px;
-  right:      24px;
-  z-index:    3;
-
-  display:     flex;
-  align-items: center;
-  gap:         10px;
-
-  background:  var(--glass-bg);
-  border:      1px solid var(--glass-bd);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border-radius: 16px;
-  padding:     13px 18px;
-  min-width:   220px;
-  max-width:   290px;
-  box-shadow:  var(--glass-sh);
-  cursor:      default;
-
-  animation:       hSlideFromBottom 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: 0.34s;
-
-  transition:
-    transform  0.25s ease,
-    box-shadow 0.25s ease,
-    background 0.25s ease;
-}
-.hero-card:hover {
-  transform:  translateY(-3px);
-  box-shadow:
-    0 16px 44px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(34, 197, 94, 0.3);
-  background: rgba(15, 20, 15, 0.7);
+.hero h2 {
+  font-size: 14px;
+  color: #9ca3af;
 }
 
-.hero-card__pin {
-  font-size:  20px;
-  flex-shrink: 0;
-  filter:     drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
+.hero h1 {
+  font-size: 28px;
+  margin: 5px 0;
 }
 
-.hero-card__body {
-  display:        flex;
-  flex-direction: column;
-  gap:            3px;
-  min-width:      0;
+.hero p {
+  color: #cbd5f5;
+  margin-bottom: 15px;
 }
 
-.hero-card__place {
-  font-size:      14px;
-  font-weight:    700;
-  color:          #ffffff;
-  letter-spacing: -0.01em;
-  white-space:    nowrap;
-  overflow:       hidden;
-  text-overflow:  ellipsis;
+/* Button */
+.explore-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  width: fit-content;
+  transition: 0.3s;
 }
 
-.hero-card__region {
-  font-size:   12px;
-  font-weight: 400;
-  color:       rgba(255, 255, 255, 0.56);
-  white-space: nowrap;
-  overflow:    hidden;
-  text-overflow: ellipsis;
+.explore-btn:hover {
+  transform: scale(1.05);
 }
 
-.hero-card__arrow {
-  font-size:   22px;
-  font-weight: 700;
-  color:       var(--g-green);
-  margin-left: auto;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-/* =============================================================
-   NAV ARROWS  —  subtle, match reference
-   ============================================================= */
-.hero-nav {
-  position:  absolute;
-  top:       50%;
+/* ===== ARROWS ===== */
+.arrow {
+  position: absolute;
+  top: 50%;
   transform: translateY(-50%);
-  z-index:   4;
-
-  width:         36px;
-  height:        36px;
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: white;
+  font-size: 20px;
+  padding: 10px;
   border-radius: 50%;
-  border:        1px solid rgba(255, 255, 255, 0.14);
-  background:    rgba(0, 0, 0, 0.35);
-  color:         rgba(255, 255, 255, 0.85);
-  font-size:     14px;
-  cursor:        pointer;
-
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-
-  transition:
-    background  0.2s ease,
-    transform   0.2s ease,
-    box-shadow  0.2s ease,
-    color       0.2s ease;
+  cursor: pointer;
 }
-.hero-nav:hover {
-  background:  rgba(34, 197, 94, 0.9);
-  color:       #050f05;
-  box-shadow:  0 0 18px rgba(34, 197, 94, 0.55);
-  transform:   translateY(-50%) scale(1.1);
-}
-.hero-nav:active {
-  transform: translateY(-50%) scale(0.93);
-}
-.hero-nav--prev { left:  16px; }
-.hero-nav--next { right: 16px; }
 
-/* =============================================================
-   DOT INDICATORS
-   ============================================================= */
-.hero-dots {
-  position:  absolute;
-  bottom:    18px;
-  left:      50%;
+.arrow.left {
+  left: 15px;
+}
+
+.arrow.right {
+  right: 15px;
+}
+
+/* ===== DOTS ===== */
+.dots {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
   transform: translateX(-50%);
-  z-index:   4;
-  display:   flex;
-  gap:       7px;
-  align-items: center;
+  display: flex;
+  gap: 8px;
 }
 
-.hero-dots__dot {
-  width:         8px;
-  height:        8px;
+.dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255,255,255,0.4);
   border-radius: 50%;
-  border:        none;
-  padding:       0;
-  cursor:        pointer;
-  background:    rgba(255, 255, 255, 0.32);
-  transition:
-    width         0.3s ease,
-    border-radius 0.3s ease,
-    background    0.3s ease;
-}
-.hero-dots__dot--active {
-  width:         24px;
-  border-radius: 4px;
-  background:    var(--g-green);
-  box-shadow:    0 0 10px rgba(34, 197, 94, 0.7);
+  cursor: pointer;
 }
 
-/* =============================================================
-   KEYFRAMES  —  prefixed for broad compat
-   ============================================================= */
-@keyframes hFadeUp {
-  from { opacity: 0; transform: translateY(22px); }
-  to   { opacity: 1; transform: translateY(0);    }
-}
-@keyframes hSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0);    }
-}
-@keyframes hSlideFromBottom {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0);    }
+.dot.active {
+  background: white;
 }
 
-/* =============================================================
-   RESPONSIVE — large desktop ≥ 1280px
-   Bigger type to match reference mockup proportions
-   ============================================================= */
-@media (min-width: 1280px) {
-  .hero-root {
-    height: 460px;
-  }
-  .hero-left__heading-white,
-  .hero-left__heading-green {
-    font-size: 54px;
-  }
-  .hero-left__sub {
-    font-size: 15px;
-    max-width: 380px;
-  }
-}
+/* ===== MOBILE HERO ===== */
+@media (max-width: 768px) {
 
-/* =============================================================
-   RESPONSIVE — tablet 768–1024px
-   ============================================================= */
-@media (max-width: 1024px) {
-  .hero-root {
-    height: 380px;
-  }
-  .hero-left {
-    width:   50%;
-    padding: 0 32px;
-  }
-  .hero-left__heading-white,
-  .hero-left__heading-green {
-    font-size: 36px;
-  }
-  .hero-left__sub {
-    font-size: 13px;
-  }
-  .hero-btn {
-    height:    44px;
-    font-size: 13px;
-    padding:   0 18px;
-  }
-}
-
-/* =============================================================
-   RESPONSIVE — mobile ≤ 767px
-   ============================================================= */
-@media (max-width: 767px) {
-  .hero-root {
-    height:        480px;
-    border-radius: 14px;
-    margin-top:    12px;
+  .hero {
+    height: 200px;
   }
 
-  /* Full-coverage overlay on narrow screens */
   .hero-overlay {
-    background: linear-gradient(
-      170deg,
-      rgba(0, 0, 0, 0.88) 0%,
-      rgba(0, 0, 0, 0.65) 45%,
-      rgba(0, 0, 0, 0.28) 100%
-    );
+    padding: 15px;
   }
 
-  /* Stack content at bottom so image fills top */
-  .hero-left {
-    top:             auto;
-    bottom:          0;
-    width:           100%;
-    max-width:       100%;
-    padding:         20px 18px 118px;
-    justify-content: flex-end;
+  .hero h1 {
+    font-size: 20px;
   }
 
-  .hero-left__heading-white,
-  .hero-left__heading-green {
-    font-size:   28px;
-    white-space: normal;
-  }
-  .hero-left__sub {
-    font-size:  12.5px;
-    margin-bottom: 18px;
-  }
-  .hero-btn {
-    font-size: 13px;
-    height:    44px;
-    padding:   0 16px;
+  .hero p {
+    font-size: 12px;
   }
 
-  /* Card: full-width strip at very bottom */
-  .hero-card {
-    left:          12px;
-    right:         12px;
-    bottom:        14px;
-    min-width:     unset;
-    max-width:     unset;
-    border-radius: 13px;
-    padding:       11px 14px;
-  }
-
-  .hero-nav {
-    width:     32px;
-    height:    32px;
-    font-size: 13px;
-  }
-  .hero-nav--prev { left:  10px; }
-  .hero-nav--next { right: 10px; }
-
-  /* Dots hidden on mobile — card conveys location context */
-  .hero-dots { display: none; }
-}
-
-/* =============================================================
-   REDUCED MOTION
-   ============================================================= */
-@media (prefers-reduced-motion: reduce) {
-  .hero-track { transition: none; }
-  .hero-left__greeting,
-  .hero-left__heading,
-  .hero-left__sub,
-  .hero-left__actions,
-  .hero-card { animation: none; }
 }

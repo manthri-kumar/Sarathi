@@ -1,166 +1,118 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import "./Hero.css";
+import { useTranslation } from "react-i18next";
 
 import img1 from "../../assets/Hero/img1.png";
 import img2 from "../../assets/Hero/img2.png";
 import img3 from "../../assets/Hero/img3.png";
 
-const slides = [
-  {
-    image: img1,
-    placeName: "Visakhapatnam Beach",
-    region: "Andhra Pradesh, India",
-  },
-  {
-    image: img2,
-    placeName: "Araku Valley",
-    region: "Andhra Pradesh, India",
-  },
-  {
-    image: img3,
-    placeName: "Kashmir",
-    region: "Jammu & Kashmir, India",
-  },
-];
-
-const TOTAL = slides.length;
-
-const getGreeting = () => {
-  const h = new Date().getHours();
-  if (h < 12) return "Good Morning";
-  if (h < 17) return "Good Afternoon";
-  return "Good Evening";
-};
+const images = [img1, img2, img3];
 
 const Hero = () => {
-  const [index, setIndex]     = useState(0);
-  const [animKey, setAnimKey] = useState(0);
-  const [userName, setUserName] = useState("Kumar");
+  const [index, setIndex] = useState(0);
+
+  const { t } = useTranslation();
 
   useEffect(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user?.name || user?.username)
-        setUserName(user.name || user.username);
-    } catch (_) {}
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((p) => (p + 1) % TOTAL);
-      setAnimKey((k) => k + 1);
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % images.length);
     }, 5000);
-    return () => clearInterval(id);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const nextSlide = useCallback(() => {
-    setIndex((p) => (p + 1) % TOTAL);
-    setAnimKey((k) => k + 1);
-  }, []);
+  const nextSlide = () => {
+    setIndex((prev) => (prev + 1) % images.length);
+  };
 
-  const prevSlide = useCallback(() => {
-    setIndex((p) => (p - 1 + TOTAL) % TOTAL);
-    setAnimKey((k) => k + 1);
-  }, []);
-
-  const goTo = useCallback((i) => {
-    setIndex(i);
-    setAnimKey((k) => k + 1);
-  }, []);
-
-  const current = slides[index];
+  const prevSlide = () => {
+    setIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
 
   return (
-    <div className="hero-root">
+    <div className="hero">
 
-      {/* ── Slider track ── */}
+      {/* Background Slider */}
       <div
-        className="hero-track"
-        style={{ transform: `translateX(-${index * 100}%)` }}
-        aria-hidden="true"
+        className="slider-wrapper"
+        style={{
+          transform: `translateX(-${index * 100}%)`,
+        }}
       >
-        {slides.map((s, i) => (
+        {images.map((img, i) => (
           <div
             key={i}
-            className="hero-track__slide"
-            style={{ backgroundImage: `url(${s.image})` }}
+            className="slide"
+            style={{
+              backgroundImage: `url(${img})`,
+            }}
           />
         ))}
       </div>
 
-      {/* ── Left-heavy cinematic overlay ── */}
-      <div className="hero-overlay" aria-hidden="true" />
+      {/* Dark Overlay */}
+      <div className="hero-dark-overlay"></div>
 
-      {/* ── Left content panel ── */}
-      <div className="hero-left" key={animKey}>
+      {/* Content */}
+      <div className="hero-overlay">
 
-        <p className="hero-left__greeting">
-          {getGreeting()}, {userName}! 👋
-        </p>
+        <span className="hero-badge">
+          ✈ {t("nextAdventure")}
+        </span>
 
-        <h1 className="hero-left__heading">
-          <span className="hero-left__heading-white">Discover. Explore.</span>
-          <span className="hero-left__heading-green">Experience More.</span>
+        <h1>
+          {t("discover")}
         </h1>
 
-        <p className="hero-left__sub">
-          AI-powered travel companion for discovering destinations,
-          hidden gems, local experiences, and unforgettable journeys.
+        <p>
+          {t("recommendations")}
         </p>
 
-        <div className="hero-left__actions">
-          <button className="hero-btn hero-btn--primary">
-            <span className="hero-btn__plane">✈</span>
-            Explore Places
+        <div className="hero-buttons">
+
+          <button className="explore-btn">
+            {t("explorePlaces")} →
           </button>
-          <button className="hero-btn hero-btn--ghost">
-            <span className="hero-btn__play-ring">
-              <span className="hero-btn__play-icon">▶</span>
-            </span>
-            Watch Video
-          </button>
+
+          
+
         </div>
 
       </div>
 
-      {/* ── Destination card — bottom-right ── */}
-      <div
-        className="hero-card"
-        key={`card-${animKey}`}
-        aria-live="polite"
-      >
-        <span className="hero-card__pin">📍</span>
-        <div className="hero-card__body">
-          <span className="hero-card__place">{current.placeName}</span>
-          <span className="hero-card__region">{current.region}</span>
-        </div>
-        <span className="hero-card__arrow">›</span>
-      </div>
-
-      {/* ── Arrows ── */}
+      {/* Left Arrow */}
       <button
-        className="hero-nav hero-nav--prev"
+        className="arrow left"
         onClick={prevSlide}
-        aria-label="Previous slide"
-      >❮</button>
-      <button
-        className="hero-nav hero-nav--next"
-        onClick={nextSlide}
-        aria-label="Next slide"
-      >❯</button>
+      >
+        ❮
+      </button>
 
-      {/* ── Dots ── */}
-      <div className="hero-dots" role="tablist">
-        {slides.map((_, i) => (
-          <button
+      {/* Right Arrow */}
+      <button
+        className="arrow right"
+        onClick={nextSlide}
+      >
+        ❯
+      </button>
+
+      {/* Dots */}
+      <div className="dots">
+
+        {images.map((_, i) => (
+          <span
             key={i}
-            role="tab"
-            aria-selected={index === i}
-            aria-label={`Slide ${i + 1}`}
-            className={`hero-dots__dot${index === i ? " hero-dots__dot--active" : ""}`}
-            onClick={() => goTo(i)}
+            className={
+              index === i
+                ? "dot active"
+                : "dot"
+            }
+            onClick={() =>
+              setIndex(i)
+            }
           />
         ))}
+
       </div>
 
     </div>
