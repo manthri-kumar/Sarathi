@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./Hero.css";
-import { useTranslation } from "react-i18next";
 
 import img1 from "../../assets/Hero/img1.png";
 import img2 from "../../assets/Hero/img2.png";
@@ -33,7 +32,6 @@ const TOTAL = slides.length;
 const Hero = () => {
   const [index, setIndex] = useState(0);
   const [animKey, setAnimKey] = useState(0); // forces re-trigger of CSS animations on slide change
-  const { t } = useTranslation();
 
   // ─── Greeting by hour ──────────────────────────────────────────────────
   const getGreeting = () => {
@@ -179,7 +177,5 @@ const Hero = () => {
     </div>
   );
 };
-
-
 
 export default Hero;
