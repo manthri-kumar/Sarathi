@@ -74,6 +74,7 @@ const extractSections = (text) => {
   }
 
   const lines = text.split("\n");
+
   const sections = {
     history: "",
     rituals: "",
@@ -81,17 +82,27 @@ const extractSections = (text) => {
     architecture: "",
     deity: "",
     significance: "",
-    raw: text.substring(0, 2000), // First 2000 chars as fallback
+    raw: text.substring(0, 3000),
   };
 
+  // -----------------------------
+  // Existing heading-based logic
+  // -----------------------------
   for (const [sectionName, headers] of Object.entries(SECTION_HEADERS)) {
     let startIdx = -1;
     let endIdx = -1;
 
-    // Find section start (case-insensitive)
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].toLowerCase().trim();
-      if (headers.some((h) => line.startsWith(h) || line === h)) {
+
+      if (
+        headers.some(
+          (h) =>
+            line === h ||
+            line.startsWith(h) ||
+            line.includes(` ${h} `)
+        )
+      ) {
         startIdx = i;
         break;
       }
@@ -99,7 +110,6 @@ const extractSections = (text) => {
 
     if (startIdx === -1) continue;
 
-    // Find section end (next header or EOF)
     for (let i = startIdx + 1; i < lines.length; i++) {
       if (lines[i].trim().match(/^=+\s*.+\s*=+$/)) {
         endIdx = i;
@@ -109,19 +119,94 @@ const extractSections = (text) => {
 
     if (endIdx === -1) endIdx = lines.length;
 
-    // Extract section text
-    let sectionText = lines
+    const sectionText = lines
       .slice(startIdx + 1, endIdx)
       .join("\n")
-      .replace(/^=+/, "")
-      .replace(/=+$/, "")
-      .replace(/\[\[([^\]]+)\]\]/g, "$1") // Remove wiki links
-      .replace(/\{\{.*?\}\}/g, "") // Remove templates
-      .replace(/\n\n+/g, "\n\n") // Normalize spacing
+      .replace(/\[\[([^\]]+)\]\]/g, "$1")
+      .replace(/\{\{.*?\}\}/g, "")
       .trim();
 
     if (sectionText.length > 50) {
       sections[sectionName] = sectionText;
+    }
+  }
+
+  // ---------------------------------------------------
+  // FALLBACK EXTRACTION
+  // Many temple articles have no section headings
+  // ---------------------------------------------------
+
+  const lowerText = text.toLowerCase();
+
+  // HISTORY
+  if (!sections.history) {
+    if (
+      lowerText.includes("built") ||
+      lowerText.includes("constructed") ||
+      lowerText.includes("founded") ||
+      lowerText.includes("established") ||
+      lowerText.includes("century") ||
+      lowerText.includes("dynasty")
+    ) {
+      sections.history = text.substring(
+        0,
+        Math.min(2500, text.length)
+      );
+    }
+  }
+
+  // ARCHITECTURE
+  if (!sections.architecture) {
+    const archMatch = text.match(
+      /(.{0,300}(architecture|architectural|dravidian|kalinga|nagara|vesara).{0,700})/i
+    );
+
+    if (archMatch) {
+      sections.architecture = archMatch[0].trim();
+    }
+  }
+
+  // DEITY
+  if (!sections.deity) {
+    const deityMatch = text.match(
+      /dedicated to[^.]{0,300}\./i
+    );
+
+    if (deityMatch) {
+      sections.deity = deityMatch[0].trim();
+    }
+  }
+
+  // SIGNIFICANCE
+  if (!sections.significance) {
+    const sigMatch = text.match(
+      /(important|significant|famous|sacred|pilgrimage|holy).{0,600}/i
+    );
+
+    if (sigMatch) {
+      sections.significance = sigMatch[0].trim();
+    }
+  }
+
+  // FESTIVALS
+  if (!sections.festivals) {
+    const festivalMatch = text.match(
+      /(festival|celebration|utsavam|brahmotsavam|jayanti|akshaya tritiya).{0,800}/i
+    );
+
+    if (festivalMatch) {
+      sections.festivals = festivalMatch[0].trim();
+    }
+  }
+
+  // RITUALS
+  if (!sections.rituals) {
+    const ritualMatch = text.match(
+      /(worship|ritual|puja|darshan|abhishekam|archana).{0,800}/i
+    );
+
+    if (ritualMatch) {
+      sections.rituals = ritualMatch[0].trim();
     }
   }
 
