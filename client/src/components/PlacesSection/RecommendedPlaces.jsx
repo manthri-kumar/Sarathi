@@ -77,8 +77,12 @@ const RecommendedPlaces = ({ userLocation }) => {
       } catch (err) {
         if (err.name === "AbortError") return;
         console.error("[REC] Fetch failed:", err.message);
-        setError("Could not load recommendations. Please try again.");
-      } finally {
+setError(
+  t(
+    "recommendationLoadError",
+    "Could not load recommendations. Please try again."
+  )
+);      } finally {
         setLoading(false);
       }
     };
@@ -114,15 +118,17 @@ const RecommendedPlaces = ({ userLocation }) => {
 
       {/* Header — identical structure to PlacesSection */}
       <div className="destinations-header">
-        <div>
-          <h2>Recommended For You</h2>
-          <p className="rp-subtitle">
-            Places within 150 km of your current location
-          </p>
-        </div>
+       <h2>
+  {t("recommendedForYou")}
+</h2>
+
+<p className="rp-subtitle">
+  {t("placesWithin150Km")}
+</p>
         {places.length > 0 && (
-          <button className="view-destinations-btn">View All →</button>
-        )}
+<button className="view-destinations-btn">
+  {t("viewAll")} →
+</button>        )}
       </div>
 
       {/* Error state */}
@@ -160,7 +166,7 @@ const RecommendedPlaces = ({ userLocation }) => {
                       {/* Distance chip — unique to this section */}
                       {place.distance != null && (
                         <div className="rp-distance-chip">
-                          📍 {place.distance} km from you
+📍 {place.distance} {t("kmFromYou")}
                         </div>
                       )}
 
@@ -183,7 +189,7 @@ const RecommendedPlaces = ({ userLocation }) => {
                             className="explore-btn"
                             onClick={() => handleNavigate(place)}
                           >
-                            Explore →
+                            {t("explore")} →
                           </button>
                         </div>
                       </div>

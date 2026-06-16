@@ -13,5 +13,14 @@
   "placesCovered": "कवर किए गए स्थान",
   "estimatedCost": "अनुमानित लागत",
   "todayPlan": "आज की योजना",
-  "navigate": "नेविगेट करें"
+  "navigate": "नेविगेट करें",
+
+  
+  "recommendedForYou": "आपके लिए अनुशंसित स्थान",
+  "placesWithin150Km": "आपके वर्तमान स्थान से 150 किमी के भीतर के स्थान",
+  "viewAll": "सभी देखें",
+  "explore": "देखें",
+  "kmFromYou": "किमी दूर",
+  "recommendationLoadError": "अनुशंसित स्थान लोड नहीं किए जा सके।"
+
 }

@@ -13,5 +13,12 @@
   "placesCovered": "Places Covered",
   "estimatedCost": "Estimated Cost",
   "todayPlan": "Today's Plan",
-  "navigate": "Navigate"
+  "navigate": "Navigate",
+  
+  "recommendedForYou": "Recommended For You",
+  "placesWithin150Km": "Places within 150 km of your current location",
+  "viewAll": "View All",
+  "explore": "Explore",
+  "kmFromYou": "km from you",
+  "recommendationLoadError": "Could not load recommendations. Please try again."
 }
