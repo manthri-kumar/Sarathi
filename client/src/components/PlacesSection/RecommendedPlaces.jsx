@@ -1,20 +1,37 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+
+import "./PlacesSection.css";
 import "./RecommendedPlaces.css";
+
 import img1 from "../../assets/Hero/img1.png";
 
 const API_BASE =
   process.env.REACT_APP_API_URL ||
   "https://sarathi-backend-7u0y.onrender.com";
 
+/* Helpers */
 const parseCoord = (value) => {
   const n = Number(value);
   return isFinite(n) && n !== 0 ? n : null;
 };
 
+const BADGE_INDEX_CLASS = [
+  "trending",
+  "popular",
+  "toprated",
+  "bestforyou",
+];
+
+/* Skeleton */
 const SkeletonCard = () => (
-  <div className="rp-carousel-card rp-skeleton" aria-hidden="true">
-    <div className="rp-skeleton-shimmer" />
+  <div
+    className="destination-card rp-skeleton-card"
+    aria-hidden="true"
+  >
+    <div className="destination-image rp-skeleton-img-wrap">
+      <div className="rp-skeleton-shimmer" />
+    </div>
   </div>
 );
 
@@ -24,55 +41,91 @@ const RecommendedPlaces = ({ userLocation }) => {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Carousel View Management States
-  const [showAll, setShowAll] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [savedStatus, setSavedStatus] = useState({});
-  
-  const carouselTrackRef = useRef(null);
 
-  const lat = parseCoord(userLocation?.lat ?? localStorage.getItem("lat"));
-  const lng = parseCoord(userLocation?.lng ?? localStorage.getItem("lng"));
+  // NEW
+  const [showAll, setShowAll] = useState(false);
+
+  const lat = parseCoord(
+    userLocation?.lat ??
+      localStorage.getItem("lat")
+  );
+
+  const lng = parseCoord(
+    userLocation?.lng ??
+      localStorage.getItem("lng")
+  );
 
   useEffect(() => {
     if (!lat || !lng) return;
 
-    const controller = new AbortController();
+    const controller =
+      new AbortController();
 
-    const fetchRecommendations = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchRecommendations =
+      async () => {
+        setLoading(true);
+        setError(null);
 
-      try {
-        const res = await fetch(
-          `${API_BASE}/api/recommendations?lat=${lat}&lng=${lng}`,
-          { signal: controller.signal }
-        );
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/recommendations?lat=${lat}&lng=${lng}`,
+            {
+              signal: controller.signal,
+            }
+          );
 
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || `HTTP ${res.status}`);
+          if (!res.ok) {
+            const body =
+              await res
+                .json()
+                .catch(() => ({}));
+
+            throw new Error(
+              body.error ||
+                `HTTP ${res.status}`
+            );
+          }
+
+          const data = await res.json();
+
+          setPlaces(
+            Array.isArray(
+              data.recommendations
+            )
+              ? data.recommendations
+              : []
+          );
+        } catch (err) {
+          if (
+            err.name === "AbortError"
+          )
+            return;
+
+          console.error(
+            "[REC] Fetch failed:",
+            err.message
+          );
+
+          setError(
+            "recommendationLoadError"
+          );
+        } finally {
+          setLoading(false);
         }
-
-        const data = await res.json();
-        setPlaces(Array.isArray(data.recommendations) ? data.recommendations : []);
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        console.error("[REC] Fetch failed:", err.message);
-        setError("recommendationLoadError");
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
     fetchRecommendations();
 
-    return () => controller.abort();
+    return () =>
+      controller.abort();
   }, [lat, lng]);
 
-  const handleNavigate = (place) => {
-    if (!place?.lat || !place?.lng) return;
+  const handleNavigate = (
+    place
+  ) => {
+    if (!place?.lat || !place?.lng)
+      return;
+
     window.open(
       `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`,
       "_blank",
@@ -80,170 +133,221 @@ const RecommendedPlaces = ({ userLocation }) => {
     );
   };
 
-  const formatReviews = (reviews) => {
-    if (!reviews) return "1.2k";
-    if (reviews >= 1000000) return `${(reviews / 1000000).toFixed(1)}M`;
-    if (reviews >= 1000) return `${(reviews / 1000).toFixed(1)}k`;
+  const formatReviews = (
+    reviews
+  ) => {
+    if (!reviews) return "1k";
+
+    if (reviews >= 1000000)
+      return `${(
+        reviews / 1000000
+      ).toFixed(1)}M`;
+
+    if (reviews >= 1000)
+      return `${(
+        reviews / 1000
+      ).toFixed(1)}k`;
+
     return String(reviews);
   };
 
-  // Carousel Sliding Parameters
-  const cardsToShow = 4;
-  const maxIndex = Math.max(0, places.length - cardsToShow);
+  // Only show first 4 initially
+  const visiblePlaces = showAll
+    ? places
+    : places.slice(0, 4);
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => Math.max(0, prev - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => Math.min(maxIndex, prev + 1));
-  };
-
-  const toggleSave = (e, id) => {
-    e.stopPropagation();
-    setSavedStatus((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  if (!loading && !error && places.length === 0) {
+  if (
+    !loading &&
+    !error &&
+    places.length === 0
+  ) {
     return null;
   }
 
-  // Calculate sliding layout translation matrix values
-  const transformOffset = showAll ? 0 : currentIndex * (100 / cardsToShow);
-
-  // Pagination Dots Calculator
-  const totalDots = places.length > cardsToShow ? maxIndex + 1 : 0;
-
   return (
-    <section className="rp-container">
-      {/* ── SECTION HEADER ── */}
-      <div className="rp-header">
-        <h2 className="rp-section-title">{t("recommendedForYou")}</h2>
+    <section className="destinations-showcase">
+      {/* Header */}
+      <div className="destinations-header">
+        <div>
+          <h2>
+            {t(
+              "recommendedForYou"
+            )}
+          </h2>
 
-        <div className="rp-header-controls">
-          {places.length > cardsToShow && (
-            <button
-              className="rp-view-all-btn"
-              onClick={() => {
-                setShowAll(!showAll);
-                setCurrentIndex(0);
-              }}
-            >
-              {showAll ? t("showLess") : t("viewAll")}
-            </button>
-          )}
-
-          {/* Glassmorphism Controls Chevron Buttons */}
-          {!showAll && places.length > cardsToShow && (
-            <div className="rp-carousel-arrows">
-              <button 
-                className="rp-arrow-btn prev" 
-                onClick={handlePrev} 
-                disabled={currentIndex === 0}
-                aria-label="Previous places"
-              >
-                ‹
-              </button>
-              <button 
-                className="rp-arrow-btn next" 
-                onClick={handleNext} 
-                disabled={currentIndex >= maxIndex}
-                aria-label="Next places"
-              >
-                ›
-              </button>
-            </div>
-          )}
+          <p className="rp-subtitle">
+            {t(
+              "placesWithin150Km"
+            )}
+          </p>
         </div>
+
+        {places.length > 4 && (
+          <button
+            className="view-destinations-btn"
+            onClick={() =>
+              setShowAll(
+                !showAll
+              )
+            }
+          >
+            {showAll
+              ? t("showLess")
+              : t("viewAll")}{" "}
+            →
+          </button>
+        )}
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="rp-status-msg rp-error" role="alert">
+        <div
+          className="rp-status-msg rp-error"
+          role="alert"
+        >
           ⚠️ {t(error)}
         </div>
       )}
 
-      {/* ── CAROUSEL INTERACTION TRACK CONTAINER ── */}
+      {/* Cards */}
       {!error && (
-        <div className={`rp-view-window ${showAll ? "grid-mode" : "carousel-mode"}`}>
-          <div 
-            className="rp-carousel-track"
-            ref={carouselTrackRef}
-            style={!showAll ? { transform: `translateX(-${transformOffset}%)` } : {}}
-          >
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-              : places.map((place, index) => {
-                  const image = place.photo || img1;
-                  const rating = place.rating || 4.5;
-                  const reviews = formatReviews(place.reviews);
-                  const isSaved = !!savedStatus[place.id || index];
+        <div className="destinations-grid">
+          {loading
+            ? Array.from({
+                length: 4,
+              }).map((_, i) => (
+                <SkeletonCard
+                  key={i}
+                />
+              ))
+            : visiblePlaces.map(
+                (
+                  place,
+                  index
+                ) => {
+                  const image =
+                    place.photo ||
+                    img1;
+
+                  const location =
+                    place.location ||
+                    place.vicinity ||
+                    "India";
+
+                  const rating =
+                    place.rating ||
+                    4.5;
+
+                  const reviews =
+                    formatReviews(
+                      place.reviews
+                    );
+
+                  const badge =
+                    place.category ||
+                    "Popular";
+
+                  const badgeClass =
+                    BADGE_INDEX_CLASS[
+                      index %
+                        BADGE_INDEX_CLASS.length
+                    ];
 
                   return (
                     <div
-                      key={place.id || index}
-                      className="rp-carousel-card"
-                      style={{ backgroundImage: `url(${image})` }}
-                      onClick={() => handleNavigate(place)}
+                      key={
+                        place.id ||
+                        index
+                      }
+                      className="destination-card"
                     >
-                      {/* Gradient Ambient Overlay mask */}
-                      <div className="rp-card-overlay" />
+                      <div className="destination-image">
+                        <img
+                          src={image}
+                          alt={
+                            place.name
+                          }
+                          onError={(
+                            e
+                          ) => {
+                            e.target.src =
+                              img1;
+                          }}
+                        />
 
-                      {/* Top Action Row (Favorites Button Only) */}
-                      <div className="rp-card-top">
-                        <button
-                          className={`rp-heart-action ${isSaved ? "saved" : ""}`}
-                          onClick={(e) => toggleSave(e, place.id || index)}
-                          aria-label="Favorite place"
-                        >
-                          <svg 
-                            viewBox="0 0 24 24" 
-                            width="16" 
-                            height="16" 
-                            fill={isSaved ? "#ffffff" : "none"} 
-                            stroke="#ffffff" 
-                            strokeWidth="2.5"
-                          >
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                          </svg>
-                        </button>
-                      </div>
+                        <div className="image-fade" />
 
-                      {/* Bottom Typography Layout Details Stack */}
-                      <div className="rp-card-bottom">
-                        <h3 className="rp-place-name">{place.name}</h3>
-                        
-                        {place.distance != null && (
-                          <p className="rp-distance-text">
-                            {place.distance} km from you
-                          </p>
+                        {place.distance !=
+                          null && (
+                          <div className="rp-distance-chip">
+                            📍{" "}
+                            {
+                              place.distance
+                            }{" "}
+                            {t(
+                              "kmFromYou"
+                            )}
+                          </div>
                         )}
-                        
-                        <div className="rp-rating-row">
-                          <span className="rp-star">★</span>
-                          <span className="rp-rating-val">
-                            {typeof rating === "number" ? rating.toFixed(1) : rating}
-                          </span>
-                          <span className="rp-reviews-count">({reviews} reviews)</span>
+
+                        <span
+                          className={`destination-badge ${badgeClass}`}
+                        >
+                          {badge}
+                        </span>
+
+                        <div className="destination-content">
+                          <h3>
+                            {
+                              place.name
+                            }
+                          </h3>
+
+                          <p>
+                            {
+                              location
+                            }
+                          </p>
+
+                          <div className="destination-footer">
+                            <div className="destination-rating">
+                              ⭐{" "}
+                              {typeof rating ===
+                              "number"
+                                ? rating.toFixed(
+                                    1
+                                  )
+                                : rating}
+
+                              <span>
+                                (
+                                {
+                                  reviews
+                                }
+                                )
+                              </span>
+                            </div>
+
+                            <button
+                              className="explore-btn"
+                              onClick={() =>
+                                handleNavigate(
+                                  place
+                                )
+                              }
+                            >
+                              {t(
+                                "explore"
+                              )}{" "}
+                              →
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   );
-                })}
-          </div>
-        </div>
-      )}
-
-      {/* ── CENTRAL PAGINATION DOTS ── */}
-      {!showAll && !loading && !error && totalDots > 0 && (
-        <div className="rp-pagination">
-          {Array.from({ length: totalDots }).map((_, i) => (
-            <span
-              key={i}
-              className={`rp-dot ${currentIndex === i ? "active" : ""}`}
-              onClick={() => setCurrentIndex(i)}
-            />
-          ))}
+                }
+              )}
         </div>
       )}
     </section>
