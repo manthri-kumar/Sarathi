@@ -22,7 +22,10 @@ app.use("/api/trips",        require("./routes/triproutes"));
 app.use("/api/saved",        require("./routes/savedRoutes"));
 app.use("/api/trip-planner", require("./routes/tripPlanner"));
 app.use("/api/day-planner",  require("./routes/dayPlannerRoutes"));
-
+app.use(
+  "/api/recommendations",
+  require("./routes/recommendationRoutes")
+);
 app.get("/test-direct", (_req, res) => res.json({ success: true, message: "direct route works" }));
 app.get("/",            (_req, res) => res.send("Sarathi API Running 🚀"));
 
