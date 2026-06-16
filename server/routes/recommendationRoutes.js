@@ -19,8 +19,6 @@ const { getRecommendationsHandler } = require("../controllers/recommendationCont
  *
  * Response 500:
  *   { error: string }
- * 
- * 
  */
 router.get("/", getRecommendationsHandler);
 
