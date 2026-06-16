@@ -1,7 +1,6 @@
 const axios = require("axios");
 
-const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
-
+const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_KEY;
 const getRecommendations = async (req, res) => {
   try {
     const { lat, lng } = req.query;
