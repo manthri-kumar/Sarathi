@@ -718,15 +718,5 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   max-width: 280px;
   margin: 0 auto;
 }
-.empty-state-view,
-.empty-state-view-fallback {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
 
-  min-height: 350px;
-
-  text-align: center;
-}
 }
