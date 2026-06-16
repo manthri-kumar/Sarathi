@@ -599,29 +599,39 @@ body {
 
 /* Phone Layout Overhaul Engine (768px and downward) */
 @media (max-width: 768px) {
+
+  /* Main Layout */
   .main-viewport {
+    width: 100%;
+    margin-left: 0;
     padding: 16px;
+    box-sizing: border-box;
   }
-  
+
   .primary-title {
     font-size: 26px;
   }
 
-  /* Completely hide the desktop panel as per native mobile mock references */
+  /* Hide desktop planner */
   .planner-panel {
     display: none !important;
   }
 
   .suggested-panel {
-    max-height: none; /* Expand fluidly downstream */
+    max-height: none;
     padding: 16px;
   }
 
+  /* Mobile accordion */
   .mobile-chevron {
-    display: block; /* Reveal dropdown tracking hooks */
+    display: block;
   }
 
-  /* Form layouts within item block overrides */
+  .mobile-chevron.rotated {
+    transform: rotate(180deg);
+    color: var(--accent-green);
+  }
+
   .form-header-mobile {
     display: flex;
     justify-content: space-between;
@@ -663,74 +673,101 @@ body {
     color: var(--text-secondary);
   }
 
-.search-wrapper-card {
-  width: 100%;
+  /* Search Bar */
+  .search-wrapper-card {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 24px;
+    background: #08142d;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    box-sizing: border-box;
+  }
 
-  display: flex;
-  align-items: center;
+  .search-wrapper-card input {
+    width: 100%;
+    min-width: 0;
+  }
 
-  gap: 12px;
+  .premium-search-btn {
+    flex-shrink: 0;
+    padding: 10px 18px;
+  }
 
-  padding: 12px;
+  /* Empty States */
+  .empty-state-view,
+  .empty-state-view-fallback {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
 
-  margin-bottom: 24px;
+    min-height: 280px;
 
-  background: #08142d;
+    padding: 40px 20px;
+  }
 
-  border: 1px solid rgba(255,255,255,0.06);
+  .empty-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
 
-  border-radius: 14px;
+  .empty-icon-cloud {
+    font-size: 36px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  .empty-state-view-fallback {
+    border: 2px dashed rgba(255,255,255,0.04);
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.01);
+  }
+
+  .empty-state-view-fallback p {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+  }
+
+  .empty-state-view-fallback span {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  /* Final View Buttons */
+  .final-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .final-actions-row button {
+    width: 100%;
+  }
+
+  /* Workspace */
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .panel-card-container {
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
 }
 
-/* Webkit Native Field Custom Overrides */
+/* Calendar Icons */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.5);
-}
-
-.empty-state-view-fallback {
-  text-align: center;
-  padding: 60px 20px;
-  border: 2px dashed rgba(255, 255, 255, 0.04);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.01);
-  margin: 10px 0;
-}
-
-.empty-icon-cloud {
-  font-size: 36px;
-  margin-bottom: 12px;
-  opacity: 0.4;
-}
-
-.empty-state-view-fallback p {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-}
-
-.empty-state-view-fallback span {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  display: block;
-  max-width: 280px;
-  margin: 0 auto;
-}
-
-@media (max-width: 768px) {
-
-  .main-viewport {
-    width: 100%;
-    margin-left: 0;
-    padding: 16px;
-  }
-
-  .workspace-grid {
-    grid-template-columns: 1fr;
-  }
-
-}
-
 }
