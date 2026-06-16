@@ -5,6 +5,7 @@ import Cards from "../components/Cards/Cards";
 import ChatPanel from "../components/ChatPanel/ChatPanel";
 import Hero from "../components/Hero/Hero";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
+import RecommendedPlaces from "../components/PlacesSection/RecommendedPlaces";
 import { useTranslation } from "react-i18next";
 
 import "../styles/layout.css";
@@ -15,6 +16,12 @@ const Dashboard = () => {
 
   const [userName, setUserName] = useState("");
   const [city, setCity] = useState("");
+
+
+  const [userLocation, setUserLocation] = useState({
+  lat: null,
+  lng: null,
+});
 
   const touchStartX = useRef(0);
 
@@ -73,6 +80,11 @@ useEffect(() => {
         latitude,
         longitude
       } = pos.coords;
+
+      setUserLocation({
+  lat: latitude,
+  lng: longitude,
+});
 
       localStorage.setItem(
         "lat",
@@ -298,11 +310,15 @@ useEffect(() => {
 
         <Hero />
 
-        <PlacesSection
-          title={t(
-            "popularPlaces"
-          )}
-        />
+{/* Recommended For You */}
+<RecommendedPlaces
+  userLocation={userLocation}
+/>
+
+{/* Most Popular Places */}
+<PlacesSection
+  title={t("popularPlaces")}
+/>
 
       </div>
 
