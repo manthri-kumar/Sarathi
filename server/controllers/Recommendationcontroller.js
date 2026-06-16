@@ -32,4 +32,6 @@ const getRecommendationsHandler = async (req, res) => {
   }
 };
 
+
+
 module.exports = { getRecommendationsHandler };
