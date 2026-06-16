@@ -178,7 +178,7 @@ body {
 
   padding: 24px;
 
-  min-height: 650px;
+  min-height: 600px;
 
   width: 100%;
 
@@ -717,6 +717,20 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   display: block;
   max-width: 280px;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+
+  .main-viewport {
+    width: 100%;
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
 }
 
 }
