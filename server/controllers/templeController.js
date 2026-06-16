@@ -1,22 +1,15 @@
-/**
- * templeController.js
- *
- * All temple-related Express controller functions for Sarathi.
- * templeChat now delegates all Gemini calls to geminiService.js
- * which handles queueing, caching, backoff, and model fallback.
- */
-
 "use strict";
 
-const axios            = require("axios");
-const { generateReply } = require("../services/geminiService");
+const axios    = require("axios");
+const askGroq  = require("../services/groqService");
+const { askGemini }             = require("../services/templeDataService");
 const { getEnrichedTempleData } = require("../services/templeDataService");
 const { searchTempleVideos }    = require("../services/youtubeService");
 
 const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_KEY;
 const PLACES_BASE       = "https://maps.googleapis.com/maps/api/place";
 
-/* ── startup diagnostic ──────────────────────────────────────────────────── */
+/* ── startup diagnostic ──────────────────────────────────────── */
 (async () => {
   try {
     const test = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
@@ -28,13 +21,13 @@ const PLACES_BASE       = "https://maps.googleapis.com/maps/api/place";
       },
     });
     console.log("[DIAG] Places API status:", test.data.status);
-    console.log("[DIAG] Result count:", test.data.results?.length ?? 0);
+    console.log("[DIAG] Result count:",      test.data.results?.length ?? 0);
   } catch (e) {
     console.error("[DIAG] Axios error:", e.message);
   }
 })();
 
-/* ── shape helper ────────────────────────────────────────────────────────── */
+/* ── shape helper ────────────────────────────────────────────── */
 const shapePlace = (place) => ({
   id:           place.place_id,
   name:         place.name,
@@ -50,23 +43,16 @@ const shapePlace = (place) => ({
   types:   place.types || [],
 });
 
-/* ── GET NEARBY TEMPLES ──────────────────────────────────────────────────── */
+/* ── GET NEARBY TEMPLES ──────────────────────────────────────── */
 const getNearbyTemples = async (req, res) => {
   const { lat, lng, radius = 10000 } = req.query;
-  if (!lat || !lng)              return res.status(400).json({ error: "lat and lng required" });
-  if (!GOOGLE_PLACES_KEY)        return res.status(500).json({ error: "API key not configured" });
+  if (!lat || !lng)       return res.status(400).json({ error: "lat and lng required" });
+  if (!GOOGLE_PLACES_KEY) return res.status(500).json({ error: "API key not configured" });
 
   try {
     const response = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: {
-        location: `${lat},${lng}`,
-        radius:   Number(radius),
-        keyword:  "temple",
-        type:     "hindu_temple",
-        key:      GOOGLE_PLACES_KEY,
-      },
+      params: { location: `${lat},${lng}`, radius: Number(radius), keyword: "temple", type: "hindu_temple", key: GOOGLE_PLACES_KEY },
     });
-
     const { status, error_message, results = [], next_page_token } = response.data;
     console.log("[TEMPLE] status:", status, "| count:", results.length);
 
@@ -82,7 +68,7 @@ const getNearbyTemples = async (req, res) => {
   }
 };
 
-/* ── SEARCH TEMPLES ──────────────────────────────────────────────────────── */
+/* ── SEARCH TEMPLES ──────────────────────────────────────────── */
 const searchTemples = async (req, res) => {
   const { query, lat, lng } = req.query;
   if (!query) return res.status(400).json({ error: "query required" });
@@ -103,7 +89,7 @@ const searchTemples = async (req, res) => {
   }
 };
 
-/* ── GET TEMPLE DETAILS ──────────────────────────────────────────────────── */
+/* ── GET TEMPLE DETAILS ──────────────────────────────────────── */
 const getTempleDetails = async (req, res) => {
   const { placeId } = req.params;
   if (!placeId) return res.status(400).json({ error: "placeId required" });
@@ -116,7 +102,6 @@ const getTempleDetails = async (req, res) => {
         key:      GOOGLE_PLACES_KEY,
       },
     });
-
     const { status, error_message, result: place } = response.data;
     console.log("[DETAILS] status:", status);
 
@@ -158,7 +143,7 @@ const getTempleDetails = async (req, res) => {
   }
 };
 
-/* ── GET ENRICHED DATA (Gemini via templeDataService) ────────────────────── */
+/* ── GET ENRICHED DATA ───────────────────────────────────────── */
 const getEnrichedTemple = async (req, res) => {
   const { name, address } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
@@ -174,7 +159,7 @@ const getEnrichedTemple = async (req, res) => {
   }
 };
 
-/* ── GET VIDEOS ──────────────────────────────────────────────────────────── */
+/* ── GET VIDEOS ──────────────────────────────────────────────── */
 const getTempleVideos = async (req, res) => {
   const { name } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
@@ -188,7 +173,7 @@ const getTempleVideos = async (req, res) => {
   }
 };
 
-/* ── GET NEARBY SERVICES ─────────────────────────────────────────────────── */
+/* ── GET NEARBY SERVICES ─────────────────────────────────────── */
 const getNearbyServicePlaces = async (req, res) => {
   const { lat, lng } = req.query;
   if (!lat || !lng) return res.status(400).json({ error: "lat and lng required" });
@@ -214,127 +199,123 @@ const getNearbyServicePlaces = async (req, res) => {
   };
 
   const [hotels, restaurants, parking] = await Promise.all([
-    fetchType("lodging",     "hotel"),
-    fetchType("restaurant",  "restaurant"),
-    fetchType("parking",     "parking"),
+    fetchType("lodging",    "hotel"),
+    fetchType("restaurant", "restaurant"),
+    fetchType("parking",    "parking"),
   ]);
 
   return res.json({ hotels, restaurants, parking });
 };
 
-/* ── TEMPLE CHAT ─────────────────────────────────────────────────────────── */
+/* ── TEMPLE CHAT ─────────────────────────────────────────────── */
 const templeChat = async (req, res) => {
-  console.log("[CHAT] Incoming request body keys:", Object.keys(req.body));
+  console.log("[CHAT] Incoming:", JSON.stringify({
+    templeName: req.body?.templeName,
+    messageLen: req.body?.message?.length,
+  }));
 
   const { message, templeName, address, rating, openNow, deity, enriched } = req.body;
 
-  /* ── Input validation ── */
   if (!message?.trim())    return res.status(400).json({ error: "message is required" });
   if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
 
-  if (!process.env.GEMINI_API_KEY) {
-    console.error("[CHAT] GEMINI_API_KEY not set in environment");
-    return res.status(500).json({ error: "AI service is not configured. Please contact support." });
-  }
-
-  /* ── Build context block ── */
-  const contextLines = [
-    `Temple Name: ${templeName}`,
-    address  ? `Location: ${address}`         : null,
-    rating   ? `Google Rating: ${rating}/5`   : null,
+  /* ── Build context block from whatever data is available ── */
+  const ctx = [
+    `Temple: ${templeName}`,
+    address  ? `Location: ${address}`       : null,
+    rating   ? `Rating: ${rating}/5`        : null,
     openNow !== null && openNow !== undefined
-             ? `Currently: ${openNow ? "Open" : "Closed"}` : null,
-    deity    ? `Presiding Deity: ${deity}`    : null,
+             ? `Status: ${openNow ? "Currently Open" : "Currently Closed"}` : null,
+    deity    ? `Presiding Deity: ${deity}`  : null,
   ].filter(Boolean);
 
   if (enriched && typeof enriched === "object") {
-    try {
-      const ov = enriched.overview;
-      if (ov?.deity)         contextLines.push(`Deity (enriched): ${ov.deity}`);
-      if (ov?.established)   contextLines.push(`Established: ${ov.established}`);
-      if (ov?.architecture)  contextLines.push(`Architecture: ${ov.architecture}`);
-      if (ov?.significance)  contextLines.push(`Significance: ${ov.significance}`);
-      if (ov?.description)   contextLines.push(`Overview: ${ov.description}`);
+    const ov = enriched.overview || {};
+    if (ov.deity)                 ctx.push(`Deity: ${ov.deity}`);
+    if (ov.dresscode)             ctx.push(`Dress Code: ${ov.dresscode}`);
+    if (ov.bestTimeToVisit)       ctx.push(`Best Time: ${ov.bestTimeToVisit}`);
+    if (ov.spiritualSignificance) ctx.push(`Significance: ${ov.spiritualSignificance}`);
 
-      if (enriched.history?.article) {
-        contextLines.push(`History: ${enriched.history.article.substring(0, 600)}`);
-      }
-      if (Array.isArray(enriched.rituals?.daily) && enriched.rituals.daily.length) {
-        const rList = enriched.rituals.daily.map((r) => `${r.name} at ${r.time}`).join(", ");
-        contextLines.push(`Daily Rituals: ${rList}`);
-      }
-      if (Array.isArray(enriched.festivals) && enriched.festivals.length) {
-        contextLines.push(`Festivals: ${enriched.festivals.map((f) => f.name).join(", ")}`);
-      }
-      const travel = enriched.travelInfo || enriched.travel;
-      if (travel) {
-        if (travel.nearestAirport) contextLines.push(`Nearest Airport: ${travel.nearestAirport}`);
-        if (travel.nearestRailway) contextLines.push(`Nearest Railway: ${travel.nearestRailway}`);
-        if (travel.localTransport) contextLines.push(`Local Transport: ${travel.localTransport}`);
-        if (travel.bestTime)       contextLines.push(`Best Time to Visit: ${travel.bestTime}`);
-      }
-      const darshan = enriched.darshanTimings || enriched.darshan;
-      if (darshan) {
-        contextLines.push(`Darshan Info: ${JSON.stringify(darshan).substring(0, 300)}`);
-      }
-    } catch (parseErr) {
-      console.warn("[CHAT] Could not parse enriched data:", parseErr.message);
+    const hist = enriched.history || {};
+    if (hist.fullHistory) ctx.push(`History: ${hist.fullHistory.substring(0, 500)}`);
+
+    if (Array.isArray(enriched.rituals) && enriched.rituals.length) {
+      ctx.push(`Rituals: ${enriched.rituals.map((r) => `${r.name} at ${r.timing}`).join("; ")}`);
     }
+    if (Array.isArray(enriched.festivals) && enriched.festivals.length) {
+      ctx.push(`Festivals: ${enriched.festivals.map((f) => `${f.name} (${f.month})`).join(", ")}`);
+    }
+
+    const darshan = enriched.darshan || {};
+    if (Array.isArray(darshan.timings) && darshan.timings.length) {
+      ctx.push(`Darshan Timings: ${darshan.timings.map((d) => `${d.type}: ${d.time} (${d.fee})`).join("; ")}`);
+    }
+    if (darshan.tips?.length) {
+      ctx.push(`Visitor Tips: ${darshan.tips.join(". ")}`);
+    }
+
+    const travel = enriched.travel || {};
+    if (travel.nearestAirport?.name)  ctx.push(`Nearest Airport: ${travel.nearestAirport.name} (${travel.nearestAirport.distance})`);
+    if (travel.nearestRailway?.name)  ctx.push(`Nearest Railway: ${travel.nearestRailway.name} (${travel.nearestRailway.distance})`);
+    if (travel.nearestBusStand?.name) ctx.push(`Nearest Bus Stand: ${travel.nearestBusStand.name}`);
+    if (travel.localTransport)        ctx.push(`Local Transport: ${travel.localTransport}`);
   }
 
-  /* ── Build prompt ── */
-  const prompt = `You are a knowledgeable and respectful spiritual guide assistant for Hindu temples.
+  /* ── Prompt ── */
+  const prompt = `You are a knowledgeable and respectful spiritual guide for Hindu temples.
 
-You have been given the following real data about the temple the user is asking about:
+Here is what we know about this temple:
+${ctx.join("\n")}
 
---- TEMPLE DATA ---
-${contextLines.join("\n")}
---- END DATA ---
+Instructions:
+- Answer based ONLY on the data above.
+- If specific data is missing, say so and give a helpful general answer about Hindu temples.
+- Never invent specific timings, names, or dates not in the data above.
+- Keep response under 180 words.
+- Write in plain conversational English. No markdown, no asterisks, no bullet symbols with *.
+- Be warm, respectful, and culturally sensitive.
 
-INSTRUCTIONS:
-- Answer the user's question using ONLY the data provided above.
-- If specific data is missing from the context above, say "Specific information about [topic] is not available from our current data sources for this temple" and provide a helpful general explanation about Hindu temples instead.
-- Never invent specific timings, dates, names, or facts not present in the data above.
-- Keep your answer under 200 words.
-- Write in plain conversational English. No markdown, no asterisks, no bullet symbols.
-- Be warm, informative, and respectful of the spiritual nature of the topic.
-
-User Question: ${message}
-
+User: ${message}
 Answer:`;
 
-  /* ── Cache key: temple name + normalised question ── */
-  const cacheKey = `${templeName.toLowerCase().trim()}::${message.toLowerCase().trim()}`;
+  /* ── Try Groq first, fall back to Gemini ── */
+  let reply = null;
+  let provider = null;
 
+  // --- Groq ---
   try {
-    console.log(`[CHAT] Requesting reply for temple="${templeName}" question="${message.substring(0, 60)}"`);
+    console.log("[CHAT] Using Groq");
+    reply    = await askGroq(prompt);
+    provider = "groq";
+    console.log("[CHAT] Groq succeeded, reply length:", reply.length);
+  } catch (groqErr) {
+    console.error("[CHAT] Groq failed:", groqErr.message);
+    console.log("[CHAT] Falling back to Gemini");
 
-    const reply = await generateReply(prompt, cacheKey);
-    return res.json({ reply });
+    // --- Gemini fallback ---
+    try {
+      reply    = await askGemini(prompt);
+      provider = "gemini";
+      console.log("[CHAT] Gemini succeeded, reply length:", reply.length);
+    } catch (geminiErr) {
+      console.error("[CHAT] Gemini also failed:", geminiErr.message);
 
-  } catch (err) {
-    console.error("[CHAT] generateReply threw:", err.message);
-
-    if (err.message === "GEMINI_API_KEY_NOT_SET") {
-      return res.status(500).json({ error: "AI service is not configured. Please contact support." });
-    }
-    if (err.message === "AUTH_FAILED") {
-      return res.status(500).json({ error: "AI service authentication failed. Please contact support." });
-    }
-    if (err.message === "SAFETY_BLOCKED") {
-      return res.status(200).json({
-        reply: "I'm unable to answer that specific question. Please try asking about the temple's history, rituals, darshan timings, or how to reach it.",
+      // Both failed
+      return res.status(503).json({
+        error: "The AI service is temporarily unavailable. Please try again in a moment.",
       });
     }
-    if (err.message.startsWith("BAD_REQUEST")) {
-      return res.status(500).json({ error: "The AI request was malformed. Please try rephrasing your question." });
-    }
-    if (err.message === "ALL_MODELS_EXHAUSTED") {
-      return res.status(503).json({ error: "The AI service is temporarily at capacity. Please try again in a moment." });
-    }
-
-    return res.status(503).json({ error: "Something went wrong with the AI service. Please try again." });
   }
+
+  // Clean any stray markdown from the response
+  const cleanReply = reply
+    .replace(/\*\*/g, "")
+    .replace(/\*/g,   "")
+    .replace(/#{1,6}\s/g, "")
+    .trim();
+
+  console.log(`[CHAT] Responding via ${provider}:`, cleanReply.substring(0, 80));
+  return res.json({ reply: cleanReply });
 };
 
 module.exports = {
