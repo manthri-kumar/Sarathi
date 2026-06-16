@@ -24,40 +24,22 @@ const getRecommendations = async (req, res) => {
 
     const response = await axios.get(url);
 
-    const places = response.data.results || [];
+   const places = response.data.results || [];
 
-    const recommendations = places.slice(0, 12).map((place) => ({
-      id: place.place_id,
-      name: place.name,
-      location: place.vicinity || "India",
+console.log("Places received:", places.length);
 
-      photo:
-        place.photos?.[0]
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
-          : null,
+const recommendations = places.slice(0, 12).map((place) => ({
+  id: place.place_id,
+  name: place.name,
+  location: place.vicinity || "India",
+  rating: place.rating || 4.5,
+}));
 
-      rating: place.rating || 4.5,
+console.log("Recommendations mapped:", recommendations.length);
 
-      reviews: place.user_ratings_total || 0,
-
-      lat: place.geometry?.location?.lat,
-      lng: place.geometry?.location?.lng,
-
-      distance: Math.round(
-        calculateDistance(
-          Number(lat),
-          Number(lng),
-          place.geometry?.location?.lat,
-          place.geometry?.location?.lng
-        )
-      ),
-
-      category: "Popular",
-    }));
-
-    return res.json({
-      recommendations,
-    });
+return res.json({
+  recommendations,
+});
   } catch (error) {
     console.error(
       "[RECOMMENDATIONS ERROR]",
