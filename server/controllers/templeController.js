@@ -5,8 +5,7 @@ const { aggregateKnowledge } = require("../services/templeKnowledgeAggregator");
 const { buildTemplePrompt } = require("../services/templePromptBuilder");
 const askGroq = require("../services/groqService");
 const { getTempleWikiData } = require("../services/wikipediaService");
-
-const { askGemini, getEnrichedTempleData } = require("../services/templeDataService");
+const { askGemini } = require("../services/templeDataService");
 const { searchTempleVideos } = require("../services/youtubeService");
 
 const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_KEY;
@@ -28,7 +27,14 @@ const shapePlace = (place) => ({
   types: place.types || [],
 });
 
-/* ── GET NEARBY TEMPLES ──────────────────────────── */
+/* ────────────────────────────────────────────────── */
+/* GOOGLE PLACES — Primary temple source             */
+/* ────────────────────────────────────────────────── */
+
+/**
+ * GET /api/temples/nearby
+ * Fetch temples near coordinates
+ */
 const getNearbyTemples = async (req, res) => {
   const { lat, lng, radius = 10000 } = req.query;
   if (!lat || !lng) return res.status(400).json({ error: "lat and lng required" });
@@ -59,7 +65,10 @@ const getNearbyTemples = async (req, res) => {
   }
 };
 
-/* ── SEARCH TEMPLES ──────────────────────────────── */
+/**
+ * GET /api/temples/search
+ * Search for temples by query
+ */
 const searchTemples = async (req, res) => {
   const { query, lat, lng } = req.query;
   if (!query) return res.status(400).json({ error: "query required" });
@@ -83,7 +92,10 @@ const searchTemples = async (req, res) => {
   }
 };
 
-/* ── GET TEMPLE DETAILS ──────────────────────────── */
+/**
+ * GET /api/temples/details/:placeId
+ * Fetch detailed information about a temple
+ */
 const getTempleDetails = async (req, res) => {
   const { placeId } = req.params;
   if (!placeId) return res.status(400).json({ error: "placeId required" });
@@ -141,30 +153,68 @@ const getTempleDetails = async (req, res) => {
   }
 };
 
-/* ── GET ENRICHED DATA ───────────────────────────── */
-const getEnrichedTemple = async (req, res) => {
+/* ────────────────────────────────────────────────── */
+/* TEMPLE KNOWLEDGE — Single aggregated source      */
+/* ────────────────────────────────────────────────── */
+
+/**
+ * GET /api/temples/knowledge
+ * MAIN ENDPOINT: Aggregated temple knowledge from:
+ * - Wikipedia (primary)
+ * - Official temple websites
+ * - YouTube videos
+ * - Google Places
+ *
+ * Returns: { history, rituals, festivals, architecture, deity, significance, sources }
+ */
+const getTempleKnowledge = async (req, res) => {
   const { name, address } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
 
   try {
-    console.log(`[ENRICH] Generating for: ${name}`);
+    console.log(`[KNOWLEDGE] Aggregating for: ${name}`);
 
-    const wikiData = await getTempleWikiData(name).catch(() => null);
-    const wikiContext = wikiData?.extract
-      ? `\n\nVerified Wikipedia article:\n${wikiData.extract.substring(0, 2000)}`
-      : "";
+    // Aggregate from all sources
+    const knowledge = await aggregateKnowledge(name, { address });
 
-    const data = await getEnrichedTempleData(name, address || "India", wikiContext);
-    if (!data) return res.status(500).json({ error: "Enrichment returned no data" });
+    // Format for frontend with fallback messages
+    const formatted = {
+      history: knowledge.history || "Information not available for this temple.",
+      rituals: knowledge.rituals || "Information not available for this temple.",
+      festivals: knowledge.festivals || "Information not available for this temple.",
+      architecture: knowledge.architecture || "Information not available for this temple.",
+      deity: knowledge.deity || "Information not available for this temple.",
+      significance: knowledge.significance || "Information not available for this temple.",
+      sources: knowledge.sources || {},
+    };
 
-    return res.json(data);
+    console.log("[KNOWLEDGE] Success — returning aggregated data");
+    return res.json(formatted);
   } catch (err) {
-    console.error("[ENRICH] Error:", err.message);
-    return res.status(500).json({ error: "Enrichment failed" });
+    console.error("[KNOWLEDGE] Error:", err.message);
+    
+    // Fallback response if aggregation fails
+    return res.status(500).json({
+      history: "Information not available for this temple.",
+      rituals: "Information not available for this temple.",
+      festivals: "Information not available for this temple.",
+      architecture: "Information not available for this temple.",
+      deity: "Information not available for this temple.",
+      significance: "Information not available for this temple.",
+      sources: {},
+      error: err.message,
+    });
   }
 };
 
-/* ── GET VIDEOS ──────────────────────────────────── */
+/* ────────────────────────────────────────────────── */
+/* SUPPORTING ENDPOINTS                             */
+/* ────────────────────────────────────────────────── */
+
+/**
+ * GET /api/temples/videos
+ * Search for temple-related videos on YouTube
+ */
 const getTempleVideos = async (req, res) => {
   const { name } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
@@ -178,7 +228,10 @@ const getTempleVideos = async (req, res) => {
   }
 };
 
-/* ── GET NEARBY SERVICES ─────────────────────────── */
+/**
+ * GET /api/temples/nearby-services
+ * Fetch nearby hotels, restaurants, parking
+ */
 const getNearbyServicePlaces = async (req, res) => {
   const { lat, lng } = req.query;
   if (!lat || !lng) return res.status(400).json({ error: "lat and lng required" });
@@ -222,45 +275,51 @@ const getNearbyServicePlaces = async (req, res) => {
   return res.json({ hotels, restaurants, parking });
 };
 
-/* ── TEMPLE CHAT ─────────────────────────────────── */
+/* ────────────────────────────────────────────────── */
+/* TEMPLE CHAT — AI-powered responses               */
+/* ────────────────────────────────────────────────── */
+
+/**
+ * POST /api/temples/chat
+ * Temple chat endpoint using Groq with Wikipedia context
+ */
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", {
     templeName: req.body?.templeName,
     messageLen: req.body?.message?.length,
   });
 
-  const { message, templeName, address, rating, openNow, enriched } = req.body;
+  const { message, templeName, address, rating, openNow } = req.body;
 
   if (!message?.trim()) return res.status(400).json({ error: "message required" });
   if (!templeName?.trim()) return res.status(400).json({ error: "templeName required" });
 
   try {
-    // Fetch Wikipedia
-    console.log(`[CHAT] Fetching Wikipedia for: ${templeName}`);
+    // Fetch Wikipedia context (improves AI accuracy)
+    console.log(`[CHAT] Fetching Wikipedia context for: ${templeName}`);
     const wikiData = await getTempleWikiData(templeName).catch((err) => {
-      console.log(`[CHAT] Wikipedia error: ${err.message}`);
+      console.log(`[CHAT] Wikipedia fetch skipped: ${err.message}`);
       return null;
     });
 
-    // Build prompt
+    // Build clean prompt
     const prompt = buildTemplePrompt({
       templeName,
       address,
       wikiData,
       openNow,
       rating,
-      enriched,
       message,
     });
 
-    console.log(`[CHAT] Sending to Groq — prompt length: ${prompt.length}`);
+    console.log(`[CHAT] Sending to Groq — context length: ${prompt.length}`);
 
-    // Groq → Gemini fallback
+    // Try Groq first, fallback to Gemini
     let reply = null;
     let provider = null;
 
     try {
-      console.log("[CHAT] Trying Groq");
+      console.log("[CHAT] Using Groq");
       reply = await askGroq(prompt);
       provider = "groq";
       console.log("[CHAT] Groq succeeded");
@@ -280,7 +339,7 @@ const templeChat = async (req, res) => {
       }
     }
 
-    // Clean reply
+    // Clean markdown artifacts from reply
     const cleanReply = reply
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
@@ -296,41 +355,13 @@ const templeChat = async (req, res) => {
   }
 };
 
-/* ── GET TEMPLE KNOWLEDGE ────────────────────────── */
-const getTempleKnowledge = async (req, res) => {
-  const { name, address } = req.query;
-  if (!name) return res.status(400).json({ error: "name required" });
-
-  try {
-    console.log(`[KNOWLEDGE] Request for: ${name}`);
-
-    const knowledge = await aggregateKnowledge(name, { address });
-
-    // Fallback messages for empty sections
-    const formatted = {
-      history: knowledge.history || "Information not available for this temple.",
-      rituals: knowledge.rituals || "Information not available for this temple.",
-      festivals: knowledge.festivals || "Information not available for this temple.",
-      architecture: knowledge.architecture || "Information not available for this temple.",
-      deity: knowledge.deity || "Information not available for this temple.",
-      significance: knowledge.significance || "Information not available for this temple.",
-      sources: knowledge.sources,
-    };
-
-    return res.json(formatted);
-  } catch (err) {
-    console.error("[KNOWLEDGE] Error:", err.message);
-    return res.status(500).json({ error: "Knowledge aggregation failed" });
-  }
-};
-
+/* ── Exports ──────────────────────────────────── */
 module.exports = {
   getNearbyTemples,
   searchTemples,
   getTempleDetails,
-  getEnrichedTemple,
+  getTempleKnowledge,
   getTempleVideos,
   getNearbyServicePlaces,
   templeChat,
-  getTempleKnowledge,
 };

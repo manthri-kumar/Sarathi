@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import Sidebar from "../Sidebar.jsx";
-import OverviewTab from "../components/temple/tabs/OverviewTab";
-import HistoryTab from "../components/temple/tabs/HistoryTab";
-import RitualsTab from "../components/temple/tabs/RitualsTab";
-import FestivalsTab from "../components/temple/tabs/FestivalsTab";
-import VideosTab from "../components/temple/tabs/VideosTab";
-import TravelGuideTab from "../components/temple/tabs/TravelGuideTab";
-import ChatPanel from "../components/ChatPanel/ChatPanel";
+import Sidebar from "../Sidebar/Sidebar";
+import OverviewTab from "./tabs/OverviewTab";
+import HistoryTab from "./tabs/HistoryTab";
+import RitualsTab from "./tabs/RitualsTab";
+import FestivalsTab from "./tabs/FestivalsTab";
+import VideosTab from "./tabs/VideosTab";
+import TravelGuideTab from "./tabs/TravelGuideTab";
+import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
+
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -85,7 +86,6 @@ function TempleDetailsPageInner() {
   const [activeTab, setActiveTab] = useState("overview");
   const [googleData, setGoogleData] = useState(null);
   const [knowledge, setKnowledge] = useState(null);
-  const [enriched, setEnriched] = useState(null);
   const [videos, setVideos] = useState([]);
   const [nearbyServices, setNearbyServices] = useState(null);
 
@@ -97,7 +97,7 @@ function TempleDetailsPageInner() {
   const [error, setError] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
-  /* ── 1. Fetch Google Places details ────────────── */
+  /* ── Step 1: Fetch Google Places details ────────────── */
   useEffect(() => {
     if (!placeId) return;
     setLoadingGoogle(true);
@@ -106,21 +106,21 @@ function TempleDetailsPageInner() {
     axios
       .get(`${API_BASE}/api/temples/details/${placeId}`)
       .then((res) => {
-        console.log("[TEMPLE] Google data:", res.data.temple);
+        console.log("[TEMPLE] Google data loaded:", res.data.temple.name);
         setGoogleData(res.data.temple);
       })
       .catch((e) => {
-        console.error("[TEMPLE] Google fetch failed:", e.message);
+        console.error("[TEMPLE] Google fetch error:", e.message);
         setError("Could not load temple details: " + e.message);
       })
       .finally(() => setLoadingGoogle(false));
   }, [placeId]);
 
-  /* ── 2. Fetch aggregated knowledge ──────────────── */
+  /* ── Step 2: Fetch aggregated knowledge (ONLY SOURCE) ──── */
   useEffect(() => {
     if (!googleData?.name) return;
 
-    console.log("[KNOWLEDGE] Fetching for:", googleData.name);
+    console.log("[KNOWLEDGE] Fetching aggregated knowledge for:", googleData.name);
     setLoadingKnowledge(true);
 
     axios
@@ -129,15 +129,15 @@ function TempleDetailsPageInner() {
           name: googleData.name,
           address: googleData.address || "",
         },
-        timeout: 60000,
+        timeout: 60000, // Multi-source aggregation can take time
       })
       .then((res) => {
-        console.log("[KNOWLEDGE] Success:", res.data);
+        console.log("[KNOWLEDGE] Success - received sections from multiple sources");
         setKnowledge(res.data);
       })
       .catch((e) => {
-        console.error("[KNOWLEDGE] Failed:", e.message);
-        // Fallback: set empty knowledge
+        console.error("[KNOWLEDGE] Aggregation failed:", e.message);
+        // Fallback: return empty sections with helpful message
         setKnowledge({
           history: "Information not available for this temple.",
           rituals: "Information not available for this temple.",
@@ -151,31 +151,7 @@ function TempleDetailsPageInner() {
       .finally(() => setLoadingKnowledge(false));
   }, [googleData?.name, googleData?.address]);
 
-  /* ── 3. Fetch enriched data (for overview tab) ──── */
-  useEffect(() => {
-    if (!googleData?.name) return;
-
-    console.log("[ENRICH] Fetching enriched for:", googleData.name);
-
-    axios
-      .get(`${API_BASE}/api/temples/enriched`, {
-        params: {
-          name: googleData.name,
-          address: googleData.address || "",
-        },
-        timeout: 60000,
-      })
-      .then((res) => {
-        console.log("[ENRICH] Success");
-        setEnriched(res.data);
-      })
-      .catch((e) => {
-        console.error("[ENRICH] Failed:", e.message);
-        setEnriched(null);
-      });
-  }, [googleData?.name, googleData?.address]);
-
-  /* ── 4. Videos — lazy ──────────────────────────── */
+  /* ── Step 3: Videos — lazy loading ─────────────────── */
   const fetchVideos = useCallback(async () => {
     if (!googleData?.name || videos.length > 0) return;
     console.log("[VIDEOS] Fetching for:", googleData.name);
@@ -184,17 +160,17 @@ function TempleDetailsPageInner() {
       const res = await axios.get(`${API_BASE}/api/temples/videos`, {
         params: { name: googleData.name },
       });
-      console.log("[VIDEOS] Got:", res.data.videos?.length, "videos");
+      console.log("[VIDEOS] Got:", res.data.videos?.length ?? 0, "videos");
       setVideos(res.data.videos || []);
     } catch (e) {
-      console.error("[VIDEOS] Failed:", e.message);
+      console.error("[VIDEOS] Fetch error:", e.message);
       setVideos([]);
     } finally {
       setLoadingVideos(false);
     }
   }, [googleData?.name, videos.length]);
 
-  /* ── 5. Nearby services — lazy ─────────────────── */
+  /* ── Step 4: Nearby services — lazy loading ────────── */
   const fetchNearbyServices = useCallback(async () => {
     if (!googleData?.lat || nearbyServices) return;
     console.log("[SERVICES] Fetching near:", googleData.lat, googleData.lng);
@@ -203,10 +179,10 @@ function TempleDetailsPageInner() {
       const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
         params: { lat: googleData.lat, lng: googleData.lng },
       });
-      console.log("[SERVICES]", res.data);
+      console.log("[SERVICES] Success");
       setNearbyServices(res.data);
     } catch (e) {
-      console.error("[SERVICES] Failed:", e.message);
+      console.error("[SERVICES] Fetch error:", e.message);
       setNearbyServices({ hotels: [], restaurants: [], parking: [] });
     } finally {
       setLoadingServices(false);
@@ -219,7 +195,7 @@ function TempleDetailsPageInner() {
     if (tabId === "travel") fetchNearbyServices();
   };
 
-  /* ── Guards ───────────────────────────────────── */
+  /* ── Guards ───────────────────────────────────────── */
   if (loadingGoogle) {
     return (
       <div className="tdp-layout">
@@ -282,9 +258,9 @@ function TempleDetailsPageInner() {
                   ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
                 </span>
               )}
-              {knowledge?.deity && (
+              {knowledge?.deity && knowledge.deity !== "Information not available for this temple." && (
                 <span className="tdp-hero-badge">
-                  🙏 {knowledge.deity.split("\n")[0]}
+                  🙏 {knowledge.deity.split("\n")[0].substring(0, 30)}
                 </span>
               )}
               {googleData.openNow !== null && (
@@ -321,9 +297,8 @@ function TempleDetailsPageInner() {
           {activeTab === "overview" && (
             <OverviewTab
               google={googleData}
-              enriched={enriched}
-              loading={!enriched && !knowledge}
               knowledge={knowledge}
+              loading={loadingKnowledge}
             />
           )}
           {activeTab === "history" && (
@@ -383,6 +358,8 @@ function TempleDetailsPageInner() {
             templeContext={{
               name: googleData.name,
               address: googleData.address || "",
+              rating: googleData.rating,
+              openNow: googleData.openNow,
             }}
           />
         )}
