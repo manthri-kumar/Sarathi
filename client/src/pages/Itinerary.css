@@ -48,6 +48,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding-bottom:120px;
 
   width: calc(100% - 230px);
   margin-left: 230px;
@@ -598,25 +599,87 @@ body {
 }
 
 /* Phone Layout Overhaul Engine (768px and downward) */
-@media (max-width: 768px) {
+@media (max-width:768px){
 
-  /* Main Layout */
-  .main-viewport {
-    width: 100%;
-    margin-left: 0;
-    padding: 16px;
-    box-sizing: border-box;
+  .premium-place-card{
+    padding:16px;
   }
 
-  .primary-title {
-    font-size: 26px;
+  .card-main-row{
+    flex-direction:column;
+    align-items:flex-start;
   }
 
+  .place-thumb{
+    width:100%;
+    height:180px;
+    border-radius:14px;
+  }
+
+  .place-details-box{
+    width:100%;
+  }
+
+  .place-details-box h3{
+    font-size:18px;
+  }
+
+  .action-pill-btn{
+    width:100%;
+    margin-top:12px;
+  }
+
+  .mobile-chevron{
+    position:absolute;
+    right:0;
+    top:0;
+  }
+}
   /* Hide desktop planner */
-  .planner-panel {
-    display: none !important;
-  }
+ .planner-panel {
+  display: none;
+}
 
+.mobile-finalize-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+
+  z-index: 999;
+
+  background: rgba(11, 19, 41, 0.95);
+  backdrop-filter: blur(20px);
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  border-radius: 16px;
+
+  padding: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  box-shadow:
+    0 20px 50px rgba(0,0,0,.4);
+}
+
+.mobile-plan-count {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mobile-finalize-btn {
+  background: #22c55e;
+  border: none;
+  color: #000;
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+}
   .suggested-panel {
     max-height: none;
     padding: 16px;
@@ -763,8 +826,8 @@ body {
     width: 100%;
     padding: 16px;
     box-sizing: border-box;
+
   }
-}
 
 /* Calendar Icons */
 input[type="date"]::-webkit-calendar-picker-indicator,
