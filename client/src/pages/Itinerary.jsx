@@ -218,22 +218,6 @@ const Itinerary = () => {
                             </div>
                           </div>
 
-                          {/* MOBILE FINALIZE BAR */}
-{Object.keys(plan).length > 0 && !showFinal && (
-  <div className="mobile-finalize-bar">
-    <div className="mobile-plan-count">
-      {Object.keys(plan).length} Places Added
-    </div>
-
-    <button
-      className="mobile-finalize-btn"
-      onClick={finalizeTrip}
-    >
-      Finalize Trip →
-    </button>
-  </div>
-)}
-
                           {/* MOBILE INTEGRATED PLANNER OVERLAY ACCORDION FORM */}
                           {isAdded && (
                             <div className={`mobile-inline-form ${expandedPlace === place.id ? "is-expanded" : ""}`}>

@@ -48,20 +48,16 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-bottom:120px;
-
-  width: calc(100% - 230px);
-  margin-left: 230px;
-
   padding: 24px;
-  box-sizing: border-box;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .itinerary-container {
-  width: 100%;
-  max-width: 100%;
   margin-top: 20px;
 }
+
 /* ===== HERO HEADERS ===== */
 .header-meta {
   margin-bottom: 24px;
@@ -160,32 +156,21 @@ body {
 /* ===== GRID SYSTEM (DESKTOP) ===== */
 .workspace-grid {
   display: grid;
-
-  grid-template-columns:
-    minmax(500px, 1.2fr)
-    minmax(420px, 0.8fr);
-
-  gap: 24px;
-
-  width: 100%;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 30px;
+  align-items: start;
 }
 
 /* ===== COMPONENT WORKSPACE PANELS ===== */
 .panel-card-container {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-
-  border-radius: 18px;
-
+  border-radius: var(--radius-lg);
   padding: 24px;
-
-  min-height: 600px;
-
-  width: 100%;
-
-  overflow: hidden;
-
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-height: 780px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 .panel-header {
@@ -599,102 +584,30 @@ body {
 }
 
 /* Phone Layout Overhaul Engine (768px and downward) */
-@media (max-width:768px){
-
-  .premium-place-card{
-    padding:16px;
+@media (max-width: 768px) {
+  .main-viewport {
+    padding: 16px;
+  }
+  
+  .primary-title {
+    font-size: 26px;
   }
 
-  .card-main-row{
-    flex-direction:column;
-    align-items:flex-start;
+  /* Completely hide the desktop panel as per native mobile mock references */
+  .planner-panel {
+    display: none !important;
   }
 
-  .place-thumb{
-    width:100%;
-    height:180px;
-    border-radius:14px;
-  }
-
-  .place-details-box{
-    width:100%;
-  }
-
-  .place-details-box h3{
-    font-size:18px;
-  }
-
-  .action-pill-btn{
-    width:100%;
-    margin-top:12px;
-  }
-
-  .mobile-chevron{
-    position:absolute;
-    right:0;
-    top:0;
-  }
-}
-  /* Hide desktop planner */
- .planner-panel {
-  display: none;
-}
-
-.mobile-finalize-bar {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
-
-  z-index: 999;
-
-  background: rgba(11, 19, 41, 0.95);
-  backdrop-filter: blur(20px);
-
-  border: 1px solid rgba(255,255,255,0.08);
-
-  border-radius: 16px;
-
-  padding: 12px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  box-shadow:
-    0 20px 50px rgba(0,0,0,.4);
-}
-
-.mobile-plan-count {
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.mobile-finalize-btn {
-  background: #22c55e;
-  border: none;
-  color: #000;
-  font-weight: 700;
-  padding: 12px 18px;
-  border-radius: 12px;
-  cursor: pointer;
-}
   .suggested-panel {
-    max-height: none;
+    max-height: none; /* Expand fluidly downstream */
     padding: 16px;
   }
 
-  /* Mobile accordion */
   .mobile-chevron {
-    display: block;
+    display: block; /* Reveal dropdown tracking hooks */
   }
 
-  .mobile-chevron.rotated {
-    transform: rotate(180deg);
-    color: var(--accent-green);
-  }
-
+  /* Form layouts within item block overrides */
   .form-header-mobile {
     display: flex;
     justify-content: space-between;
@@ -736,101 +649,58 @@ body {
     color: var(--text-secondary);
   }
 
-  /* Search Bar */
   .search-wrapper-card {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    margin-bottom: 24px;
-    background: #08142d;
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 14px;
-    box-sizing: border-box;
+    flex-direction: row;
+    padding: 8px 12px;
   }
-
-  .search-wrapper-card input {
-    width: 100%;
-    min-width: 0;
-  }
-
+  
   .premium-search-btn {
-    flex-shrink: 0;
-    padding: 10px 18px;
+    padding: 10px 20px;
   }
 
-  /* Empty States */
-  .empty-state-view,
-  .empty-state-view-fallback {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-
-    min-height: 280px;
-
-    padding: 40px 20px;
-  }
-
-  .empty-icon {
-    font-size: 40px;
-    margin-bottom: 12px;
-  }
-
-  .empty-icon-cloud {
-    font-size: 36px;
-    margin-bottom: 12px;
-    opacity: 0.4;
-  }
-
-  .empty-state-view-fallback {
-    border: 2px dashed rgba(255,255,255,0.04);
-    border-radius: var(--radius-md);
-    background: rgba(255,255,255,0.01);
-  }
-
-  .empty-state-view-fallback p {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 4px 0;
-  }
-
-  .empty-state-view-fallback span {
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.4;
-    max-width: 280px;
-    margin: 0 auto;
-  }
-
-  /* Final View Buttons */
   .final-actions-row {
     flex-direction: column;
     gap: 10px;
   }
-
+  
   .final-actions-row button {
     width: 100%;
   }
+}
 
-  /* Workspace */
-  .workspace-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .panel-card-container {
-    width: 100%;
-    padding: 16px;
-    box-sizing: border-box;
-
-  }
-
-/* Calendar Icons */
+/* Webkit Native Field Custom Overrides */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.5);
+}
+
+.empty-state-view-fallback {
+  text-align: center;
+  padding: 60px 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.01);
+  margin: 10px 0;
+}
+
+.empty-icon-cloud {
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.empty-state-view-fallback p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.empty-state-view-fallback span {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: block;
+  max-width: 280px;
+  margin: 0 auto;
 }
