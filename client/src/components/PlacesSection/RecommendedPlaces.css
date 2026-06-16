@@ -1,10 +1,15 @@
+/* ========================================================
+   RecommendedPlaces.css — Premium Travel Dashboard Theme
+   ======================================================== */
+
 /* ── Container Layout ── */
 .rp-container {
   max-width: 1440px;
-  margin: 32px auto;
+  margin: 24px auto;
   padding: 0 24px;
   position: relative;
   box-sizing: border-box;
+  background-color: #041221;
 }
 
 /* ── Section Header Elements ── */
@@ -12,11 +17,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .rp-section-title {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #ffffff;
   margin: 0;
@@ -27,58 +32,64 @@
 .rp-header-controls {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
+  flex-direction: row-reverse; /* Places arrows to the right of View All like Screenshot 2 */
 }
 
-/* ── View All Action Typography ── */
+/* ── View All Action Button ── */
 .rp-view-all-btn {
   background: transparent;
   border: none;
-  color: #10b981; /* Precise clean digital emerald tone matching reference */
-  font-size: 0.88rem;
+  color: #10b981; /* Premium Emerald Accent from Screenshot 2 */
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   padding: 4px 0;
   transition: opacity 0.2s ease;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .rp-view-all-btn:hover {
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
-/* ── Premium Small Navigation Chevrons ── */
+/* ── Premium Small Navigation Arrows ── */
 .rp-carousel-arrows {
   display: flex;
   gap: 6px;
 }
 
 .rp-arrow-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
   font-weight: 300;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  backdrop-filter: blur(8px);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1;
 }
 
 .rp-arrow-btn.prev {
-  padding-right: 2px; /* Visual center adjustments */
+  padding-right: 1px;
+  padding-bottom: 3px;
 }
 
 .rp-arrow-btn.next {
-  padding-left: 2px;
+  padding-left: 1px;
+  padding-bottom: 3px;
 }
 
 .rp-arrow-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
   color: #ffffff;
 }
 
@@ -87,7 +98,7 @@
   cursor: not-allowed;
 }
 
-/* ── VIEWPORT MODE SLIDER INTERFACES ── */
+/* ── SLIDER VIEWPORT MODES ── */
 .rp-view-window {
   width: 100%;
 }
@@ -103,20 +114,21 @@
   will-change: transform;
 }
 
-/* Toggle Grid Mode Array Map */
+/* Responsive Grid Mode Toggle Setup */
 .rp-view-window.grid-mode .rp-carousel-track {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
   gap: 20px;
   transform: none !important;
 }
 
-/* ── EXACT DESIGN MATCH CARD SPECIFICATIONS ── */
+/* ── DENSE COMPACT COMPONENT SPECIFICATIONS ── */
 .rp-carousel-card {
-  flex: 0 0 calc(25% - 15px); /* Precise 4 column alignment mathematics */
+  flex: 0 0 calc(25% - 15px); /* Precise split alignment calculation logic */
   margin-right: 20px;
-  height: 175px; /* Matches exact proportions from reference */
-  border-radius: 18px;
+  width: 210px; /* Locked between 190px - 220px baseline boundaries */
+  height: 225px; /* Locked absolute vertical proportion */
+  border-radius: 16px;
   background-size: cover;
   background-position: center;
   position: relative;
@@ -127,7 +139,7 @@
   justify-content: space-between;
   padding: 16px;
   box-sizing: border-box;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
 }
 
 .rp-view-window.grid-mode .rp-carousel-card {
@@ -137,25 +149,24 @@
 }
 
 .rp-carousel-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* Dark Gradient Ambient Layer Mask Overlay */
+/* Dark Rich Gradient Ambient Mask Overlay Layer */
 .rp-card-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(10, 15, 12, 0.95) 0%,
-    rgba(10, 15, 12, 0.5) 45%,
-    rgba(10, 15, 12, 0.1) 75%,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.2) 55%,
     transparent 100%
   );
   z-index: 1;
 }
 
-/* Top Action Heart Container Alignments */
+/* Top Actions (Glass heart wrapper alignment) ── */
 .rp-card-top {
   position: relative;
   z-index: 2;
@@ -165,10 +176,10 @@
 }
 
 .rp-heart-action {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -176,27 +187,20 @@
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: all 0.2s ease;
-}
-
-.rp-heart-action svg {
-  transition: transform 0.2s ease, fill 0.2s ease;
+  padding: 0;
 }
 
 .rp-heart-action:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.rp-heart-action:hover svg {
-  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .rp-heart-action.saved svg {
-  fill: #ff4a5a;
-  stroke: #ff4a5a;
+  fill: #ffffff;
+  stroke: #ffffff;
 }
 
-/* Bottom Information Details Layout Typography */
+/* Bottom Card Contents Group ── */
 .rp-card-bottom {
   position: relative;
   z-index: 2;
@@ -204,10 +208,10 @@
 }
 
 .rp-place-name {
-  font-size: 1.05rem;
+  font-size: 16px;
   font-weight: 600;
   color: #ffffff;
-  margin: 0 0 4px 0;
+  margin: 0 0 3px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -215,23 +219,25 @@
 }
 
 .rp-distance-text {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.45);
-  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 6px 0;
   font-weight: 400;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .rp-rating-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 500;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .rp-star {
-  color: #fbbf24; /* Solid luxury gold star value */
-  font-size: 0.82rem;
+  color: #fbbf24;
+  font-size: 0.8rem;
   line-height: 1;
 }
 
@@ -241,33 +247,33 @@
 }
 
 .rp-reviews-count {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.4);
 }
 
-/* ── CENTERED SLIDER DOT INDICATORS ── */
+/* ── CENTERED CAROUSEL INDICATOR DOT PILLS ── */
 .rp-pagination {
   display: flex;
   justify-content: center;
   gap: 5px;
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
 .rp-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .rp-dot.active {
-  width: 15px;
+  width: 14px;
   border-radius: 3px;
-  background: #10b981; /* Precise reference dashboard active dot emerald */
+  background: #10b981; /* Active green pill match */
 }
 
-/* Status Alert Strings */
+/* Error banner strings style layout outputs */
 .rp-status-msg {
   color: rgba(255, 255, 255, 0.4);
   font-size: 0.85rem;
@@ -275,7 +281,7 @@
 }
 .rp-status-msg.rp-error { color: #ef4444; }
 
-/* ── SKELETON PLACEHOLDER LOADING ANIMS ── */
+/* ── SHIMMER CARD SKELETONS ── */
 .rp-skeleton {
   background-color: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.04);
@@ -287,16 +293,16 @@
   inset: 0;
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
   background-size: 200% 100%;
-  animation: rpShimmerRun 1.6s infinite;
+  animation: rpShimmerMotion 1.5s infinite;
 }
 
-@keyframes rpShimmerRun {
+@keyframes rpShimmerMotion {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-/* ── RESPONSIVE VIEWPORT QUERIES ── */
-@media (max-width: 1200px) {
+/* ── RESPONSIVE COMPACT BREAKPOINTS ── */
+@media (max-width: 1120px) {
   .rp-carousel-card {
     flex: 0 0 calc(33.333% - 14px);
   }
@@ -305,7 +311,7 @@
 @media (max-width: 768px) {
   .rp-carousel-card {
     flex: 0 0 calc(50% - 10px);
-    height: 160px;
+    height: 210px;
   }
 }
 
