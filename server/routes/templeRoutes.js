@@ -8,6 +8,9 @@
 const express = require("express");
 const router  = express.Router();
 
+
+const askGroq = require("../services/groqService");
+
 const {
   getNearbyTemples,
   searchTemples,
@@ -24,6 +27,28 @@ router.get("/details/:placeId", getTempleDetails);
 router.get("/enriched",         getEnrichedTemple);
 router.get("/videos",           getTempleVideos);
 router.get("/nearby-services",  getNearbyServicePlaces);
+
+
+router.get("/test-groq", async (req, res) => {
+  try {
+    const answer = await askGroq(
+      "What is Tirupati Temple famous for?"
+    );
+
+    res.json({
+      success: true,
+      answer
+    });
+
+  } catch (err) {
+    console.error("Groq Test Error:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 router.post("/chat", (req, res, next) => {
   console.log("[ROUTE] POST /api/temples/chat hit ✓");
