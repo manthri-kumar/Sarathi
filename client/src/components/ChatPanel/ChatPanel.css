@@ -97,7 +97,7 @@
   flex-direction: column;
   gap: 12px;
   scroll-behavior: smooth;
-  min-height: 0; /* critical for flex child scrolling */
+  min-height: 0;
 }
 
 .chat-body::-webkit-scrollbar { width: 3px; }
@@ -111,13 +111,8 @@
   gap: 8px;
 }
 
-.chat-row.user {
-  flex-direction: row-reverse;
-}
-
-.chat-row.bot {
-  flex-direction: row;
-}
+.chat-row.user { flex-direction: row-reverse; }
+.chat-row.bot  { flex-direction: row; }
 
 /* ── Avatar ───────────────────────────────────────── */
 .chat-avatar {
@@ -206,13 +201,12 @@
   30%            { transform: translateY(-7px); opacity: 1; }
 }
 
-/* ── Suggestion Pills ─────────────────────────────── */
+/* ── Suggestion Pills (base styles, used inside collapse) ── */
 .chat-suggestions {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 8px 12px 4px;
-  border-top: 1px solid rgba(34, 197, 94, 0.08);
+  padding: 6px 12px 10px;
 }
 
 .chat-sug-pill {
@@ -243,7 +237,7 @@
   border-top: 1px solid rgba(34, 197, 94, 0.1);
 }
 
-/* ── Quick Actions ────────────────────────────────── */
+/* ── Quick Actions (general / non-temple mode) ────── */
 .quick-actions {
   display: flex;
   gap: 6px;
@@ -473,6 +467,108 @@
 .budget-actions button:last-child  { background: rgba(255,255,255,0.06); color: #e8f5e9; border: 1px solid rgba(255,255,255,0.1); }
 .budget-actions button:hover { opacity: 0.85; }
 
+/* ═══════════════════════════════════════════════════
+   PERSISTENT COLLAPSIBLE QUICK ACTIONS
+   (Temple mode only — never unmounted from DOM)
+═══════════════════════════════════════════════════ */
+
+/* ── Outer wrapper, sits above the input row ─────── */
+.chat-quick-actions-wrap {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(34, 197, 94, 0.1);
+  /* No overflow:hidden here — we need the toggle row always visible */
+}
+
+/* ── Toggle row — always rendered, always visible ── */
+.chat-quick-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent; /* avoids layout shift */
+  cursor: pointer;
+  color: #4caf50;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chat-quick-toggle:hover {
+  background: rgba(34, 197, 94, 0.05);
+}
+
+/* Show a subtle separator under the toggle only when collapsed */
+.chat-quick-actions-wrap:has(.chat-suggestions-collapse.collapsed) .chat-quick-toggle {
+  border-bottom-color: rgba(34, 197, 94, 0.08);
+}
+
+.chat-quick-toggle-label {
+  opacity: 0.85;
+  user-select: none;
+}
+
+/* ── Animated arrow ──────────────────────────────── */
+/* Default state (collapsed): arrow points DOWN  ▼  */
+/* Open state:                arrow points UP    ▲  */
+.chat-quick-toggle-arrow {
+  font-size: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(180deg); /* ▲ rotated 180° = ▼ when collapsed */
+  color: #6aad7a;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.chat-quick-toggle-arrow.open {
+  transform: rotate(0deg); /* back to ▲ when expanded */
+}
+
+/* ── Animated collapse / expand container ────────── */
+.chat-suggestions-collapse {
+  overflow: hidden;
+
+  /* Animate height via max-height trick */
+  transition:
+    max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity    0.25s ease,
+    transform  0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  transform-origin: top center;
+}
+
+/* EXPANDED — fully visible */
+.chat-suggestions-collapse.expanded {
+  max-height: 260px; /* tall enough for 5 pills at ~42px each + padding */
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+/* COLLAPSED — zero height, invisible, non-interactive */
+.chat-suggestions-collapse.collapsed {
+  max-height: 0;
+  opacity: 0;
+  transform: scaleY(0.95);
+  pointer-events: none; /* prevent clicks on hidden pills */
+}
+
+/* ── Pills container inside collapse ─────────────── */
+/* Override the base .chat-suggestions padding to fit our wrapper */
+.chat-suggestions-collapse .chat-suggestions {
+  padding: 6px 12px 10px;
+  border-top: none;
+}
+
 /* ── Responsive ───────────────────────────────────── */
 @media (max-width: 768px) {
   .chat-panel {
@@ -486,6 +582,15 @@
     max-height: 100dvh !important;
     border-radius: 0 !important;
     z-index: 9999;
+  }
+
+  .chat-suggestions-collapse.expanded {
+    max-height: 300px; /* more breathing room on mobile */
+  }
+
+  .chat-quick-toggle {
+    padding: 9px 14px;
+    font-size: 0.8rem;
   }
 }
 

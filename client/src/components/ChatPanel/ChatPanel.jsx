@@ -16,15 +16,17 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         }
       : { text: "Hi 👋 I'm Sarathi AI. Ask me anything!", sender: "bot" };
 
-  const [messages, setMessages] = useState([getInitialMessage()]);
-  const [input,    setInput]    = useState("");
-  const [typing,   setTyping]   = useState(false);
+  const [messages,        setMessages]        = useState([getInitialMessage()]);
+  const [input,           setInput]           = useState("");
+  const [typing,          setTyping]          = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true); // ← NEW
   const chatEndRef = useRef(null);
 
   // Reset when switching temple
   useEffect(() => {
     setMessages([getInitialMessage()]);
     setInput("");
+    setShowQuickActions(true); // reset to expanded for new temple
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templeContext?.name]);
 
@@ -47,7 +49,13 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     const msg = (text || input).trim();
     if (!msg || typing) return;
 
-    setMessages((prev) => [...prev, { text: msg, sender: "user" }]);
+    // Auto-collapse quick actions on the user's first message
+    setMessages((prev) => {
+      if (prev.filter((m) => m.sender === "user").length === 0) {
+        setShowQuickActions(false);
+      }
+      return [...prev, { text: msg, sender: "user" }];
+    });
     setInput("");
     setTyping(true);
 
@@ -61,7 +69,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             message:    msg,
             templeName: templeContext.name,
             address:    templeContext.address || "",
-            // pass any extra context fields if available
             rating:     templeContext.rating   || null,
             openNow:    templeContext.openNow  ?? null,
             deity:      templeContext.deity    || null,
@@ -88,13 +95,14 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       try {
         data = await res.json();
       } catch {
-        throw new Error(`Server returned a non-JSON response (HTTP ${res.status}). The backend may be starting up — please try again in a moment.`);
+        throw new Error(
+          `Server returned a non-JSON response (HTTP ${res.status}). The backend may be starting up — please try again in a moment.`
+        );
       }
 
       if (!res.ok) {
         throw new Error(
-          data?.error ||
-          `Server error (HTTP ${res.status}). Please try again.`
+          data?.error || `Server error (HTTP ${res.status}). Please try again.`
         );
       }
 
@@ -119,7 +127,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       console.error("[CHAT] ✗ Error:", err.message);
       setTyping(false);
 
-      // Provide a specific, helpful error message
       let userFacingError = err.message;
       if (
         err.message.includes("Failed to fetch") ||
@@ -138,11 +145,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
       setMessages((prev) => [
         ...prev,
-        {
-          text:    userFacingError,
-          sender:  "bot",
-          isError: true,
-        },
+        { text: userFacingError, sender: "bot", isError: true },
       ]);
     }
   };
@@ -161,8 +164,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     "Who is the presiding deity?",
     "How to reach this temple?",
   ];
-
-  const showSuggestions = isTempleMode && messages.length <= 1;
 
   return (
     <div className="chat-panel">
@@ -196,14 +197,12 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         {messages.map((msg, i) => (
           <div key={i} className={`chat-row ${msg.sender}`}>
 
-            {/* Bot avatar */}
             {msg.sender === "bot" && (
               <div className="chat-avatar">
                 {isTempleMode ? "🛕" : "✦"}
               </div>
             )}
 
-            {/* Text bubble */}
             {(!msg.type || msg.type === undefined) && msg.text && (
               <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
                 {msg.text.split("\n").map((line, j) => (
@@ -216,7 +215,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                   <button
                     className="chat-retry-btn"
                     onClick={() => {
-                      const lastUser = [...messages].reverse().find(m => m.sender === "user");
+                      const lastUser = [...messages].reverse().find(
+                        (m) => m.sender === "user"
+                      );
                       if (lastUser) sendMessage(lastUser.text);
                     }}
                   >
@@ -226,7 +227,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
-            {/* PLACES cards */}
             {msg.type === "places" && (
               <div className="chat-cards">
                 {msg.data?.map((p, idx) => (
@@ -244,7 +244,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
-            {/* ITINERARY */}
             {msg.type === "itinerary" && (
               <div className="itinerary-box">
                 {msg.budget && (
@@ -289,7 +288,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
-            {/* BUDGET EXCEEDED */}
             {msg.type === "budgetExceeded" && (
               <div className="budget-warning-card">
                 <h3>⚠️ Budget Exceeded</h3>
@@ -324,7 +322,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           </div>
         ))}
 
-        {/* Typing indicator */}
         {typing && (
           <div className="chat-row bot">
             <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>
@@ -339,16 +336,54 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
       {/* ── FOOTER ── */}
       <div className="chat-footer">
-        {showSuggestions && (
-          <div className="chat-suggestions">
-            {templeSuggestions.map((s, i) => (
-              <button key={i} className="chat-sug-pill" onClick={() => sendMessage(s)}>
-                {s}
-              </button>
-            ))}
+
+        {/* ── Temple mode: persistent collapsible quick actions ── */}
+        {isTempleMode && (
+          <div className="chat-quick-actions-wrap">
+
+            {/* Toggle row — always visible, even when collapsed */}
+            <button
+              className="chat-quick-toggle"
+              onClick={() => setShowQuickActions((prev) => !prev)}
+              aria-expanded={showQuickActions}
+              aria-label="Toggle quick questions"
+            >
+              <span className="chat-quick-toggle-label">
+                💬 Quick Questions
+              </span>
+              <span
+                className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}
+              >
+                ▲
+              </span>
+            </button>
+
+            {/* Animated collapse container — never unmounted */}
+            <div
+              className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
+              aria-hidden={!showQuickActions}
+            >
+              <div className="chat-suggestions">
+                {templeSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    className="chat-sug-pill"
+                    onClick={() => {
+                      setShowQuickActions(false);
+                      sendMessage(s);
+                    }}
+                    tabIndex={showQuickActions ? 0 : -1}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
           </div>
         )}
 
+        {/* ── General mode: quick action buttons (unchanged) ── */}
         {!isTempleMode && (
           <div className="quick-actions">
             <button onClick={() => sendMessage("plan trip")}>✈️ Trip</button>

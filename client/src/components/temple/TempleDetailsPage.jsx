@@ -11,62 +11,29 @@ import TravelGuideTab from "./tabs/TravelGuideTab";
 import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
 
-
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: "🛕" },
-  { id: "history", label: "History", icon: "📜" },
-  { id: "rituals", label: "Rituals", icon: "🪔" },
-  { id: "festivals", label: "Festivals", icon: "🎊" },
-  { id: "videos", label: "Videos", icon: "▶️" },
-  { id: "travel", label: "Travel Guide", icon: "🗺️" },
+  { id: "overview",  label: "Overview",     icon: "🛕" },
+  { id: "history",   label: "History",      icon: "📜" },
+  { id: "rituals",   label: "Rituals",      icon: "🪔" },
+  { id: "festivals", label: "Festivals",    icon: "🎊" },
+  { id: "videos",    label: "Videos",       icon: "▶️"  },
+  { id: "travel",    label: "Travel Guide", icon: "🗺️" },
 ];
 
 /* ─── Error Boundary ──────────────────────────────── */
 class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
   render() {
-    if (this.state.hasError) {
-      return (
-        <div
-          style={{
-            color: "#ff6b6b",
-            padding: "40px",
-            background: "#050f0a",
-            minHeight: "100vh",
-            fontFamily: "monospace",
-          }}
-        >
-          <h2>⚠️ Crashed: {this.state.error?.toString()}</h2>
-          <pre style={{ marginTop: 16, whiteSpace: "pre-wrap", fontSize: 12 }}>
-            {this.state.error?.stack}
-          </pre>
-          <button
-            onClick={() => window.history.back()}
-            style={{
-              marginTop: 20,
-              padding: "10px 20px",
-              background: "#22c55e",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              color: "#fff",
-            }}
-          >
-            ← Go Back
-          </button>
-        </div>
-      );
-    }
+    if (this.state.hasError) return (
+      <div style={{ color:"#ff6b6b", padding:"40px", background:"#050f0a", minHeight:"100vh", fontFamily:"monospace" }}>
+        <h2>⚠️ Crashed: {this.state.error?.toString()}</h2>
+        <pre style={{ marginTop:16, whiteSpace:"pre-wrap", fontSize:12 }}>{this.state.error?.stack}</pre>
+        <button onClick={() => window.history.back()} style={{ marginTop:20, padding:"10px 20px", background:"#22c55e", border:"none", borderRadius:8, cursor:"pointer", color:"#fff" }}>← Go Back</button>
+      </div>
+    );
     return this.props.children;
   }
 }
@@ -81,77 +48,71 @@ export default function TempleDetailsPage() {
 
 function TempleDetailsPageInner() {
   const { placeId } = useParams();
-  const navigate = useNavigate();
+  const navigate    = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("overview");
-  const [googleData, setGoogleData] = useState(null);
-  const [knowledge, setKnowledge] = useState(null);
-  const [videos, setVideos] = useState([]);
-  const [nearbyServices, setNearbyServices] = useState(null);
+  const [activeTab,        setActiveTab]        = useState("overview");
+  const [googleData,       setGoogleData]       = useState(null);
+  const [enriched,         setEnriched]         = useState(null);
+  const [enrichError,      setEnrichError]      = useState(false);
+  const [videos,           setVideos]           = useState([]);
+  const [nearbyServices,   setNearbyServices]   = useState(null);
+  const [loadingGoogle,    setLoadingGoogle]    = useState(true);
+  const [loadingEnriched,  setLoadingEnriched]  = useState(false);
+  const [loadingVideos,    setLoadingVideos]    = useState(false);
+  const [loadingServices,  setLoadingServices]  = useState(false);
+  const [showChat,         setShowChat]         = useState(false);
+  const [error,            setError]            = useState(null);
 
-  const [loadingGoogle, setLoadingGoogle] = useState(true);
-  const [loadingKnowledge, setLoadingKnowledge] = useState(false);
-  const [loadingVideos, setLoadingVideos] = useState(false);
-  const [loadingServices, setLoadingServices] = useState(false);
-
-  const [error, setError] = useState(null);
-  const [showChat, setShowChat] = useState(false);
-
-  /* ── Step 1: Fetch Google Places details ────────────── */
+  /* ── 1. Google Places details ─────────────────── */
   useEffect(() => {
     if (!placeId) return;
     setLoadingGoogle(true);
     setError(null);
 
-    axios
-      .get(`${API_BASE}/api/temples/details/${placeId}`)
-      .then((res) => {
-        console.log("[TEMPLE] Google data loaded:", res.data.temple.name);
+    axios.get(`${API_BASE}/api/temples/details/${placeId}`)
+      .then(res => {
+        console.log("[TEMPLE] Google data:", res.data.temple);
         setGoogleData(res.data.temple);
       })
-      .catch((e) => {
-        console.error("[TEMPLE] Google fetch error:", e.message);
+      .catch(e => {
+        console.error("[TEMPLE] Google fetch failed:", e.message);
         setError("Could not load temple details: " + e.message);
       })
       .finally(() => setLoadingGoogle(false));
   }, [placeId]);
 
-  /* ── Step 2: Fetch aggregated knowledge (ONLY SOURCE) ──── */
+  /* ── 2. Gemini enriched — runs once googleData is ready ── */
   useEffect(() => {
     if (!googleData?.name) return;
 
-    console.log("[KNOWLEDGE] Fetching aggregated knowledge for:", googleData.name);
-    setLoadingKnowledge(true);
+    console.log("[ENRICH] Starting fetch for:", googleData.name);
+    setLoadingEnriched(true);
+    setEnrichError(false);
 
-    axios
-      .get(`${API_BASE}/api/temples/knowledge`, {
-        params: {
-          name: googleData.name,
-          address: googleData.address || "",
-        },
-        timeout: 60000, // Multi-source aggregation can take time
+    axios.get(`${API_BASE}/api/temples/enriched`, {
+      params: { name: googleData.name, address: googleData.address || "" },
+      timeout: 60000, // Gemini can be slow — 60s timeout
+    })
+      .then(res => {
+        console.log("[ENRICH] Full response:", JSON.stringify(res.data, null, 2));
+        if (res.data && typeof res.data === "object") {
+          setEnriched(res.data);
+        } else {
+          console.warn("[ENRICH] Unexpected response format:", res.data);
+          setEnrichError(true);
+        }
       })
-      .then((res) => {
-        console.log("[KNOWLEDGE] Success - received sections from multiple sources");
-        setKnowledge(res.data);
+      .catch(e => {
+        console.error("[ENRICH] Failed:", e.message, e.response?.data);
+        setEnrichError(true);
       })
-      .catch((e) => {
-        console.error("[KNOWLEDGE] Aggregation failed:", e.message);
-        // Fallback: return empty sections with helpful message
-        setKnowledge({
-          history: "Information not available for this temple.",
-          rituals: "Information not available for this temple.",
-          festivals: "Information not available for this temple.",
-          architecture: "Information not available for this temple.",
-          deity: "Information not available for this temple.",
-          significance: "Information not available for this temple.",
-          sources: {},
-        });
-      })
-      .finally(() => setLoadingKnowledge(false));
-  }, [googleData?.name, googleData?.address]);
+      .finally(() => {
+        console.log("[ENRICH] Done loading");
+        setLoadingEnriched(false);
+      });
+ }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
 
-  /* ── Step 3: Videos — lazy loading ─────────────────── */
+  /* ── 3. Videos — lazy ─────────────────────────── */
   const fetchVideos = useCallback(async () => {
     if (!googleData?.name || videos.length > 0) return;
     console.log("[VIDEOS] Fetching for:", googleData.name);
@@ -160,17 +121,17 @@ function TempleDetailsPageInner() {
       const res = await axios.get(`${API_BASE}/api/temples/videos`, {
         params: { name: googleData.name },
       });
-      console.log("[VIDEOS] Got:", res.data.videos?.length ?? 0, "videos");
+      console.log("[VIDEOS] Got:", res.data.videos?.length, "videos");
       setVideos(res.data.videos || []);
     } catch (e) {
-      console.error("[VIDEOS] Fetch error:", e.message);
+      console.error("[VIDEOS] Failed:", e.message);
       setVideos([]);
     } finally {
       setLoadingVideos(false);
     }
   }, [googleData?.name, videos.length]);
 
-  /* ── Step 4: Nearby services — lazy loading ────────── */
+  /* ── 4. Nearby services — lazy ────────────────── */
   const fetchNearbyServices = useCallback(async () => {
     if (!googleData?.lat || nearbyServices) return;
     console.log("[SERVICES] Fetching near:", googleData.lat, googleData.lng);
@@ -179,10 +140,10 @@ function TempleDetailsPageInner() {
       const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
         params: { lat: googleData.lat, lng: googleData.lng },
       });
-      console.log("[SERVICES] Success");
+      console.log("[SERVICES]", res.data);
       setNearbyServices(res.data);
     } catch (e) {
-      console.error("[SERVICES] Fetch error:", e.message);
+      console.error("[SERVICES] Failed:", e.message);
       setNearbyServices({ hotels: [], restaurants: [], parking: [] });
     } finally {
       setLoadingServices(false);
@@ -195,39 +156,31 @@ function TempleDetailsPageInner() {
     if (tabId === "travel") fetchNearbyServices();
   };
 
-  /* ── Guards ───────────────────────────────────────── */
-  if (loadingGoogle) {
-    return (
-      <div className="tdp-layout">
-        <Sidebar />
-        <div className="tdp-main">
-          <LoadingSkeleton />
-        </div>
-      </div>
-    );
-  }
+  /* ── Guards ───────────────────────────────────── */
+  if (loadingGoogle) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main"><LoadingSkeleton /></div>
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="tdp-layout">
-        <Sidebar />
-        <div className="tdp-main">
-          <ErrorState message={error} onBack={() => navigate("/temples")} />
-        </div>
+  if (error) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main">
+        <ErrorState message={error} onBack={() => navigate("/temples")} />
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!googleData) {
-    return (
-      <div className="tdp-layout">
-        <Sidebar />
-        <div className="tdp-main">
-          <ErrorState message="Temple not found." onBack={() => navigate("/temples")} />
-        </div>
+  if (!googleData) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main">
+        <ErrorState message="Temple not found." onBack={() => navigate("/temples")} />
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="tdp-layout">
@@ -236,7 +189,8 @@ function TempleDetailsPageInner() {
 
       {/* ── Main Content ── */}
       <div className="tdp-main">
-        {/* Hero Section */}
+
+        {/* Hero */}
         <div
           className="tdp-hero"
           style={{
@@ -258,17 +212,11 @@ function TempleDetailsPageInner() {
                   ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
                 </span>
               )}
-              {knowledge?.deity && knowledge.deity !== "Information not available for this temple." && (
-                <span className="tdp-hero-badge">
-                  🙏 {knowledge.deity.split("\n")[0].substring(0, 30)}
-                </span>
+              {enriched?.overview?.deity && (
+                <span className="tdp-hero-badge">🙏 {enriched.overview.deity}</span>
               )}
               {googleData.openNow !== null && (
-                <span
-                  className={`tdp-hero-badge ${
-                    googleData.openNow ? "open" : "closed"
-                  }`}
-                >
+                <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
                   {googleData.openNow ? "🟢 Open Now" : "🔴 Closed"}
                 </span>
               )}
@@ -276,10 +224,10 @@ function TempleDetailsPageInner() {
           </div>
         </div>
 
-        {/* Tabs Navigation */}
+        {/* Tabs */}
         <div className="tdp-tabs-wrap">
           <div className="tdp-tabs">
-            {TABS.map((tab) => (
+            {TABS.map(tab => (
               <button
                 key={tab.id}
                 className={`tdp-tab ${activeTab === tab.id ? "active" : ""}`}
@@ -292,36 +240,37 @@ function TempleDetailsPageInner() {
           </div>
         </div>
 
-        {/* Tab Content */}
+        {/* Content */}
         <div className="tdp-content">
           {activeTab === "overview" && (
             <OverviewTab
               google={googleData}
-              knowledge={knowledge}
-              loading={loadingKnowledge}
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
             />
           )}
           {activeTab === "history" && (
             <HistoryTab
-              content={knowledge?.history}
-              sources={knowledge?.sources?.history}
-              loading={loadingKnowledge}
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
               templeName={googleData.name}
             />
           )}
           {activeTab === "rituals" && (
             <RitualsTab
-              content={knowledge?.rituals}
-              sources={knowledge?.sources?.rituals}
-              loading={loadingKnowledge}
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
               templeName={googleData.name}
             />
           )}
           {activeTab === "festivals" && (
             <FestivalsTab
-              content={knowledge?.festivals}
-              sources={knowledge?.sources?.festivals}
-              loading={loadingKnowledge}
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
               templeName={googleData.name}
             />
           )}
@@ -335,34 +284,32 @@ function TempleDetailsPageInner() {
           {activeTab === "travel" && (
             <TravelGuideTab
               google={googleData}
-              knowledge={knowledge}
+              enriched={enriched}
               services={nearbyServices}
               loading={loadingServices}
             />
           )}
         </div>
 
-        {/* Chat FAB */}
+        {/* FAB */}
         <button
           className="tdp-chat-fab"
           onClick={() => setShowChat(true)}
           title="Ask Temple Assistant"
         >
-          💬
+
         </button>
 
-        {/* Chat Panel */}
-        {showChat && (
-          <ChatPanel
-            closeChat={() => setShowChat(false)}
-            templeContext={{
-              name: googleData.name,
-              address: googleData.address || "",
-              rating: googleData.rating,
-              openNow: googleData.openNow,
-            }}
-          />
-        )}
+        {/* Chat */}
+        {/* Replace the existing wrapper div with: */}
+{showChat && (
+  <ChatPanel
+    closeChat={() => setShowChat(false)}
+    templeContext={{ name: googleData.name, address: googleData.address || "" }}
+  />
+
+  
+)}
       </div>
     </div>
   );
@@ -374,9 +321,7 @@ function LoadingSkeleton() {
       <div className="tdp-skeleton-hero" />
       <div className="tdp-skeleton-tabs" />
       <div className="tdp-skeleton-body">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="tdp-skeleton-card" />
-        ))}
+        {[1,2,3].map(i => <div key={i} className="tdp-skeleton-card" />)}
       </div>
     </div>
   );
