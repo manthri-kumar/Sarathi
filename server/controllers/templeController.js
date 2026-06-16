@@ -1,16 +1,33 @@
 "use strict";
 
+/**
+ * Sarathi Temple Controller
+ * ─────────────────────────
+ * Handles all /api/temples/* routes.
+ *
+ * Temple Chat pipeline (updated):
+ *   User message
+ *     → getTempleWikiData()       [full Wikipedia article, cached 24h]
+ *     → extractSections()         [parse article into named sections]
+ *     → getSectionForQuestion()   [pick sections relevant to this question]
+ *     → buildTemplePrompt()       [assemble clean, targeted Groq prompt]
+ *     → askGroq() / askGemini()  [get AI answer]
+ *     → cleanReply                [strip markdown artifacts]
+ *     → res.json({ reply })
+ */
+
 const axios    = require("axios");
 const askGroq  = require("../services/groqService");
-const { askGemini }             = require("../services/templeDataService");
-const { getEnrichedTempleData } = require("../services/templeDataService");
-const { searchTempleVideos }    = require("../services/youtubeService");
-const getTempleWikiInfo         = require("../services/wikipediaService");  // ← NEW
+const { askGemini, getEnrichedTempleData } = require("../services/templeDataService");
+const { searchTempleVideos }               = require("../services/youtubeService");
+const { getTempleWikiData }                = require("../services/wikipediaService");
+const { extractSections, getSectionForQuestion } = require("../services/sectionExtractor");
+const { buildTemplePrompt }                = require("../services/templePromptBuilder");
 
 const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_KEY;
 const PLACES_BASE       = "https://maps.googleapis.com/maps/api/place";
 
-/* ── startup diagnostic ──────────────────────────────────────── */
+/* ── Startup diagnostic ──────────────────────────────────────── */
 (async () => {
   try {
     const test = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
@@ -24,11 +41,11 @@ const PLACES_BASE       = "https://maps.googleapis.com/maps/api/place";
     console.log("[DIAG] Places API status:", test.data.status);
     console.log("[DIAG] Result count:",      test.data.results?.length ?? 0);
   } catch (e) {
-    console.error("[DIAG] Axios error:", e.message);
+    console.error("[DIAG] Places API error:", e.message);
   }
 })();
 
-/* ── shape helper ────────────────────────────────────────────── */
+/* ── Shape helper ────────────────────────────────────────────── */
 const shapePlace = (place) => ({
   id:           place.place_id,
   name:         place.name,
@@ -52,8 +69,15 @@ const getNearbyTemples = async (req, res) => {
 
   try {
     const response = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: { location: `${lat},${lng}`, radius: Number(radius), keyword: "temple", type: "hindu_temple", key: GOOGLE_PLACES_KEY },
+      params: {
+        location: `${lat},${lng}`,
+        radius:   Number(radius),
+        keyword:  "temple",
+        type:     "hindu_temple",
+        key:      GOOGLE_PLACES_KEY,
+      },
     });
+
     const { status, error_message, results = [], next_page_token } = response.data;
     console.log("[TEMPLE] status:", status, "| count:", results.length);
 
@@ -62,7 +86,10 @@ const getNearbyTemples = async (req, res) => {
     if (status === "ZERO_RESULTS")     return res.json({ temples: [], nextPageToken: null });
     if (status !== "OK")               return res.status(500).json({ error: `Places API: ${status}` });
 
-    return res.json({ temples: results.map(shapePlace), nextPageToken: next_page_token || null });
+    return res.json({
+      temples:       results.map(shapePlace),
+      nextPageToken: next_page_token || null,
+    });
   } catch (err) {
     console.error("[TEMPLE] Error:", err.message);
     return res.status(500).json({ error: "Failed to fetch temples" });
@@ -76,7 +103,10 @@ const searchTemples = async (req, res) => {
 
   try {
     const params = { query: `${query} temple`, key: GOOGLE_PLACES_KEY };
-    if (lat && lng) { params.location = `${lat},${lng}`; params.radius = 50000; }
+    if (lat && lng) {
+      params.location = `${lat},${lng}`;
+      params.radius   = 50000;
+    }
 
     const response = await axios.get(`${PLACES_BASE}/textsearch/json`, { params });
     const { status, error_message, results = [] } = response.data;
@@ -103,6 +133,7 @@ const getTempleDetails = async (req, res) => {
         key:      GOOGLE_PLACES_KEY,
       },
     });
+
     const { status, error_message, result: place } = response.data;
     console.log("[DETAILS] status:", status);
 
@@ -118,10 +149,10 @@ const getTempleDetails = async (req, res) => {
         id:           placeId,
         name:         place.name,
         address:      place.formatted_address,
-        phone:        place.formatted_phone_number  || null,
-        website:      place.website                 || null,
-        rating:       place.rating                  || null,
-        totalRatings: place.user_ratings_total      || 0,
+        phone:        place.formatted_phone_number || null,
+        website:      place.website                || null,
+        rating:       place.rating                 || null,
+        totalRatings: place.user_ratings_total     || 0,
         lat:          place.geometry?.location?.lat ?? null,
         lng:          place.geometry?.location?.lng ?? null,
         openingHours: place.opening_hours?.weekday_text || [],
@@ -150,16 +181,17 @@ const getEnrichedTemple = async (req, res) => {
   if (!name) return res.status(400).json({ error: "name required" });
 
   try {
-    console.log(`[ENRICH] Generating data for: ${name}`);
+    console.log(`[ENRICH] Generating enriched data for: ${name}`);
 
-    // Fetch Wikipedia data to ground the enrichment prompt
-    const wikiData = await getTempleWikiInfo(name);
+    // Ground the enrichment prompt with Wikipedia data
+    const wikiData   = await getTempleWikiData(name).catch(() => null);
     const wikiContext = wikiData?.extract
-      ? `\n\nVerified Wikipedia Information:\n${wikiData.extract}`
+      ? `\n\nVerified Wikipedia article extract — use this to populate fields accurately:\n${wikiData.extract.substring(0, 3000)}`
       : "";
 
     const data = await getEnrichedTempleData(name, address || "India", wikiContext);
     if (!data) return res.status(500).json({ error: "Enrichment returned no data" });
+
     return res.json(data);
   } catch (err) {
     console.error("[ENRICH] Error:", err.message);
@@ -203,7 +235,9 @@ const getNearbyServicePlaces = async (req, res) => {
           : null,
         mapsUrl: `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
       }));
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   };
 
   const [hotels, restaurants, parking] = await Promise.all([
@@ -215,134 +249,71 @@ const getNearbyServicePlaces = async (req, res) => {
   return res.json({ hotels, restaurants, parking });
 };
 
-/* ── BUILD CHAT PROMPT ───────────────────────────────────────── */
-/**
- * Builds the Groq prompt by layering:
- * 1. Wikipedia verified facts (highest priority)
- * 2. Google Places / enriched data
- * 3. User question
- *
- * Order matters: Wikipedia goes first so Groq uses it preferentially.
- */
-const buildChatPrompt = ({ templeName, address, rating, openNow, deity, enriched, wikiData, message }) => {
-  const lines = [];
-
-  // ── Wikipedia block ──────────────────────────────────────────
-  if (wikiData?.extract) {
-    lines.push("=== WIKIPEDIA VERIFIED INFORMATION ===");
-    lines.push(`Temple Name (Wikipedia): ${wikiData.title}`);
-    if (wikiData.description) lines.push(`Description: ${wikiData.description}`);
-    lines.push(`\nExtract:\n${wikiData.extract}`);
-    if (wikiData.url) lines.push(`\nSource: ${wikiData.url}`);
-    lines.push("=== END WIKIPEDIA ===\n");
-  }
-
-  // ── Google Places / basic block ──────────────────────────────
-  lines.push("=== GOOGLE PLACES INFORMATION ===");
-  lines.push(`Temple: ${templeName}`);
-  if (address)  lines.push(`Location: ${address}`);
-  if (rating)   lines.push(`Rating: ${rating}/5`);
-  if (openNow !== null && openNow !== undefined)
-    lines.push(`Status: ${openNow ? "Currently Open" : "Currently Closed"}`);
-  if (deity)    lines.push(`Presiding Deity: ${deity}`);
-
-  // ── Enriched AI data block ───────────────────────────────────
-  if (enriched && typeof enriched === "object") {
-    const ov = enriched.overview || {};
-    if (ov.deity)                 lines.push(`Deity: ${ov.deity}`);
-    if (ov.dresscode)             lines.push(`Dress Code: ${ov.dresscode}`);
-    if (ov.bestTimeToVisit)       lines.push(`Best Time to Visit: ${ov.bestTimeToVisit}`);
-    if (ov.spiritualSignificance) lines.push(`Spiritual Significance: ${ov.spiritualSignificance}`);
-
-    const hist = enriched.history || {};
-    if (hist.yearBuilt)       lines.push(`Year Built: ${hist.yearBuilt}`);
-    if (hist.founder)         lines.push(`Founder: ${hist.founder}`);
-    if (hist.dynasty)         lines.push(`Dynasty: ${hist.dynasty}`);
-    if (hist.architecturalStyle) lines.push(`Architecture: ${hist.architecturalStyle}`);
-    if (hist.fullHistory)     lines.push(`History: ${hist.fullHistory.substring(0, 600)}`);
-
-    if (Array.isArray(enriched.rituals) && enriched.rituals.length) {
-      lines.push(`Rituals: ${enriched.rituals.map((r) => `${r.name} at ${r.timing}`).join("; ")}`);
-    }
-    if (Array.isArray(enriched.festivals) && enriched.festivals.length) {
-      lines.push(`Festivals: ${enriched.festivals.map((f) => `${f.name} (${f.month})`).join(", ")}`);
-    }
-
-    const darshan = enriched.darshan || {};
-    if (Array.isArray(darshan.timings) && darshan.timings.length) {
-      lines.push(`Darshan Timings: ${darshan.timings.map((d) => `${d.type}: ${d.time} (${d.fee})`).join("; ")}`);
-    }
-    if (darshan.tips?.length) {
-      lines.push(`Visitor Tips: ${darshan.tips.join(". ")}`);
-    }
-
-    const travel = enriched.travel || {};
-    if (travel.nearestAirport?.name)  lines.push(`Nearest Airport: ${travel.nearestAirport.name} (${travel.nearestAirport.distance})`);
-    if (travel.nearestRailway?.name)  lines.push(`Nearest Railway: ${travel.nearestRailway.name} (${travel.nearestRailway.distance})`);
-    if (travel.nearestBusStand?.name) lines.push(`Nearest Bus Stand: ${travel.nearestBusStand.name}`);
-    if (travel.localTransport)        lines.push(`Local Transport: ${travel.localTransport}`);
-  }
-  lines.push("=== END GOOGLE PLACES ===\n");
-
-  // ── Final prompt ─────────────────────────────────────────────
-  return `You are Sarathi AI, an expert temple guide for Hindu temples in India.
-
-${lines.join("\n")}
-
-INSTRUCTIONS:
-- Answer the user's question using the WIKIPEDIA VERIFIED INFORMATION first and foremost.
-- If Wikipedia has the answer (festivals, deity, history, architecture, rituals), state it clearly and confidently.
-- Use Google Places data to add context about timings, visitor tips, and practical information.
-- NEVER invent or hallucinate facts. Only use what is in the data above.
-- If a specific detail is genuinely missing from all sources, say so briefly then give helpful general context.
-- Keep your answer under 200 words.
-- Write in plain, warm, conversational English. No markdown, no bullet symbols, no asterisks.
-- Speak like a knowledgeable and respectful temple guide.
-
-User Question: ${message}
-Answer:`;
-};
-
-/* ── TEMPLE CHAT ─────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+ * TEMPLE CHAT — Main AI pipeline
+ * ══════════════════════════════════════════════════════════════*/
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", JSON.stringify({
     templeName: req.body?.templeName,
     messageLen: req.body?.message?.length,
   }));
 
-  const { message, templeName, address, rating, openNow, deity, enriched } = req.body;
-
-  if (!message?.trim())    return res.status(400).json({ error: "message is required" });
-  if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
-
-  // ── Fetch Wikipedia in parallel (non-blocking — failure is OK) ──
-  console.log("[CHAT] Fetching Wikipedia data...");
-  const wikiData = await getTempleWikiInfo(templeName).catch((err) => {
-    console.error("[WIKI] Non-fatal error:", err.message);
-    return null;
-  });
-
-  if (wikiData?.extract) {
-    console.log(`[CHAT] Wikipedia added to prompt — extract length: ${wikiData.extract.length}`);
-  } else {
-    console.log("[CHAT] Wikipedia not available — continuing without it");
-  }
-
-  // ── Build the enriched prompt ────────────────────────────────
-  const prompt = buildChatPrompt({
+  const {
+    message,
     templeName,
     address,
     rating,
     openNow,
-    deity,
     enriched,
+  } = req.body;
+
+  if (!message?.trim())    return res.status(400).json({ error: "message is required" });
+  if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
+
+  /* ── Step 1: Fetch full Wikipedia article (cached) ─────────── */
+  console.log(`[CHAT] Fetching Wikipedia for: ${templeName}`);
+  const wikiData = await getTempleWikiData(templeName).catch((err) => {
+    console.error("[CHAT] Wikipedia fetch error (non-fatal):", err.message);
+    return null;
+  });
+
+  /* ── Step 2: Extract article sections ───────────────────────── */
+  let sections     = null;
+  let relevantKeys = [];
+
+  if (wikiData?.extract) {
+    console.log(`[CHAT] Extracting sections from article (${wikiData.extract.length} chars)`);
+    sections = extractSections(wikiData.extract);
+
+    const availableKeys = Object.entries(sections)
+      .filter(([k, v]) => v && typeof v === "string" && v.trim().length > 20 && k !== "raw" && k !== "other")
+      .map(([k]) => k);
+
+    console.log(`[CHAT] Available sections: [${availableKeys.join(", ")}]`);
+
+    /* ── Step 3: Route question to relevant sections ─────────── */
+    relevantKeys = getSectionForQuestion(sections, message);
+    console.log(`[CHAT] Question routed to sections: [${relevantKeys.join(", ")}]`);
+  } else {
+    console.log("[CHAT] No Wikipedia data — proceeding with Google Places context only");
+  }
+
+  /* ── Step 4: Build the targeted prompt ─────────────────────── */
+  const prompt = buildTemplePrompt({
+    templeName,
+    address,
     wikiData,
+    sections,
+    relevantKeys,
+    openNow,
+    rating,
+    enriched,
     message,
   });
 
-  console.log(`[CHAT] Sending context to Groq — prompt length: ${prompt.length}`);
+  console.log(`[CHAT] Sending context to Groq — prompt length: ${prompt.length} chars`);
 
-  // ── Try Groq first, fall back to Gemini ─────────────────────
+  /* ── Step 5: Groq → Gemini fallback ────────────────────────── */
   let reply    = null;
   let provider = null;
 
@@ -350,7 +321,7 @@ const templeChat = async (req, res) => {
     console.log("[CHAT] Using Groq");
     reply    = await askGroq(prompt);
     provider = "groq";
-    console.log("[CHAT] Groq succeeded, reply length:", reply.length);
+    console.log("[CHAT] Groq succeeded — reply length:", reply.length);
   } catch (groqErr) {
     console.error("[CHAT] Groq failed:", groqErr.message);
     console.log("[CHAT] Falling back to Gemini");
@@ -358,7 +329,7 @@ const templeChat = async (req, res) => {
     try {
       reply    = await askGemini(prompt);
       provider = "gemini";
-      console.log("[CHAT] Gemini succeeded, reply length:", reply.length);
+      console.log("[CHAT] Gemini succeeded — reply length:", reply.length);
     } catch (geminiErr) {
       console.error("[CHAT] Gemini also failed:", geminiErr.message);
       return res.status(503).json({
@@ -367,17 +338,19 @@ const templeChat = async (req, res) => {
     }
   }
 
-  // Clean any stray markdown from the response
+  /* ── Step 6: Clean the reply ─────────────────────────────────── */
   const cleanReply = reply
     .replace(/\*\*/g, "")
-    .replace(/\*/g,   "")
+    .replace(/\*/g, "")
     .replace(/#{1,6}\s/g, "")
+    .replace(/^ANSWER:\s*/i, "")
     .trim();
 
-  console.log(`[CHAT] Responding via ${provider}:`, cleanReply.substring(0, 80));
+  console.log(`[CHAT] Responding via ${provider}:`, cleanReply.substring(0, 100));
   return res.json({ reply: cleanReply });
 };
 
+/* ── Exports ─────────────────────────────────────────────────── */
 module.exports = {
   getNearbyTemples,
   searchTemples,

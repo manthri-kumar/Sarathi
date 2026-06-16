@@ -3,20 +3,11 @@ const axios = require("axios");
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
 /**
- * Core Gemini caller — tries models in order, throws on all failure
- *
- * UPDATED June 2026:
- * gemini-1.5-flash / gemini-1.5-pro / gemini-2.0-flash are all shut down.
- * Current working models as of June 2026:
- *   gemini-2.5-flash        (fast, free tier)
- *   gemini-2.5-flash-lite   (lighter, free tier fallback)
- *   gemini-2.5-pro          (powerful, may need billing)
- *   gemini-3.5-flash        (newest fast model)
+ * Core Gemini caller — tries models in order, throws on all failure.
+ * UPDATED June 2026: gemini-1.5/2.0 models shut down.
  */
 const askGemini = async (prompt) => {
-  if (!GEMINI_KEY) {
-    throw new Error("GEMINI_API_KEY environment variable is not set");
-  }
+  if (!GEMINI_KEY) throw new Error("GEMINI_API_KEY environment variable is not set");
 
   const models = [
     "gemini-2.5-flash",
@@ -35,12 +26,7 @@ const askGemini = async (prompt) => {
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2048,
-            topP: 0.8,
-            topK: 40,
-          },
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048, topP: 0.8, topK: 40 },
           safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_NONE" },
@@ -48,36 +34,24 @@ const askGemini = async (prompt) => {
             { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
           ],
         },
-        {
-          params: { key: GEMINI_KEY },
-          timeout: 45000,
-          headers: { "Content-Type": "application/json" },
-        }
+        { params: { key: GEMINI_KEY }, timeout: 45000, headers: { "Content-Type": "application/json" } }
       );
 
       const candidate = response.data?.candidates?.[0];
       if (!candidate) throw new Error("No candidates in Gemini response");
-
-      if (candidate.finishReason === "SAFETY")
-        throw new Error("Gemini blocked response due to safety filters");
+      if (candidate.finishReason === "SAFETY") throw new Error("Gemini blocked: safety filters");
 
       const text = candidate.content?.parts?.[0]?.text;
-      if (!text || text.trim() === "") throw new Error("Empty text in Gemini response");
+      if (!text?.trim()) throw new Error("Empty text in Gemini response");
 
-      console.log(`[GEMINI] Success with ${model}, response length: ${text.length}`);
+      console.log(`[GEMINI] Success with ${model}, length: ${text.length}`);
       return text.trim();
     } catch (err) {
       const status = err.response?.status;
       const errMsg = err.response?.data?.error?.message || err.message;
-
-      console.error(`[GEMINI] Model ${model} failed — status: ${status}, error: ${errMsg}`);
-
-      if (status === 400 || status === 403)
-        throw new Error(`Gemini auth/request error (${status}): ${errMsg}`);
-
-      if (status === 429)
-        throw new Error(`Gemini quota exceeded: ${errMsg}`);
-
+      console.error(`[GEMINI] ${model} failed — status: ${status}, error: ${errMsg}`);
+      if (status === 400 || status === 403) throw new Error(`Gemini auth/request error (${status}): ${errMsg}`);
+      if (status === 429)                  throw new Error(`Gemini quota exceeded: ${errMsg}`);
       lastError = new Error(`${model}: ${errMsg}`);
     }
   }
@@ -86,26 +60,27 @@ const askGemini = async (prompt) => {
 };
 
 /**
- * Fetch enriched temple data — returns null on failure (non-critical)
+ * getEnrichedTempleData(templeName, address, wikiContext?)
  *
- * @param {string} templeName   - Temple name from Google Places
- * @param {string} address      - Temple address
- * @param {string} wikiContext  - Optional Wikipedia extract to ground the AI (NEW)
+ * @param {string} templeName
+ * @param {string} address
+ * @param {string} [wikiContext] — Optional Wikipedia extract injected to ground AI facts.
+ *                                 Pass "" or omit when not available.
  */
 const getEnrichedTempleData = async (templeName, address, wikiContext = "") => {
   const wikiSection = wikiContext
-    ? `\n\nIMPORTANT — Use the following verified Wikipedia information to fill in fields accurately. Do not contradict it:\n${wikiContext}\n`
+    ? `\n\nIMPORTANT: Use the following verified Wikipedia information to populate fields accurately. Never contradict it:\n${wikiContext}\n`
     : "";
 
   const prompt = `You are a factual Hindu temple information API.
 Provide accurate information about the temple: "${templeName}" located at "${address}".
 ${wikiSection}
 STRICT RULES:
-- Only include facts you are certain about
-- Use null for any field you are uncertain about
-- Do NOT invent dates, names, or historical facts
-- Do NOT include markdown, code fences, or explanation
-- Start your response with { and end with }
+- Only include facts you are certain about.
+- Use null for any field you are uncertain about.
+- Do NOT invent dates, names, or historical facts.
+- Do NOT include markdown, code fences, or explanation.
+- Start your response with { and end with }.
 
 Return ONLY this JSON structure:
 {
@@ -161,18 +136,16 @@ Return ONLY this JSON structure:
 }`;
 
   try {
-    const raw = await askGemini(prompt);
-
+    const raw      = await askGemini(prompt);
     const jsonStart = raw.indexOf("{");
     const jsonEnd   = raw.lastIndexOf("}");
 
     if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
-      console.error("[ENRICH] No valid JSON found in response. Raw:", raw.substring(0, 300));
+      console.error("[ENRICH] No valid JSON found. Raw:", raw.substring(0, 300));
       return null;
     }
 
-    const jsonStr = raw.substring(jsonStart, jsonEnd + 1);
-    const parsed  = JSON.parse(jsonStr);
+    const parsed = JSON.parse(raw.substring(jsonStart, jsonEnd + 1));
     console.log("[ENRICH] Successfully parsed data for:", templeName);
     return parsed;
   } catch (err) {

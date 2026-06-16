@@ -1,35 +1,84 @@
 "use strict";
 
-const axios = require("axios");
-
 /**
  * Sarathi Wikipedia Service
- * Fetches verified temple information from Wikipedia
- * to ground the Groq AI responses in real data.
+ * ─────────────────────────
+ * Fetches FULL Wikipedia articles (not just summaries) for temples.
+ * Uses the MediaWiki extracts API to get complete plaintext articles.
+ * Caches results in memory for 24 hours to avoid redundant API calls.
+ *
+ * Exports:
+ *   getTempleWikiData(templeName) → { title, extract, url } | null
  */
 
-const WIKI_SEARCH_URL = "https://en.wikipedia.org/w/api.php";
-const WIKI_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary";
+const axios = require("axios");
+
+/* ── In-memory cache ─────────────────────────────────────────── */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const wikiCache    = new Map(); // key: normalised temple name → { data, expiry }
+
+const getCached = (key) => {
+  const entry = wikiCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) { wikiCache.delete(key); return null; }
+  return entry.data;
+};
+
+const setCache = (key, data) => {
+  wikiCache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+};
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+const WIKI_API = "https://en.wikipedia.org/w/api.php";
 
 /**
- * Step 1: Use OpenSearch to find the correct Wikipedia page title
- * for a given temple name. Tries multiple search strategies.
+ * Build search query variants from the raw Google Places name.
+ * Wikipedia titles never match Places names exactly, so we try
+ * progressively simpler forms until we get a hit.
  */
-const findWikiPageTitle = async (templeName) => {
-  // Strategy 1: Search with full temple name
-  // Strategy 2: Strip common prefixes like "Sri", "Shri", "Temple" suffix
-  // Strategy 3: Use just the distinctive part of the name
-  const searchVariants = buildSearchVariants(templeName);
+const buildSearchVariants = (templeName) => {
+  const variants = new Set();
+  variants.add(templeName);
 
-  for (const query of searchVariants) {
+  // Strip leading honorifics
+  const stripped = templeName
+    .replace(/^(Sri\s+Sri\s+Sri\s+|Sri\s+Sri\s+|Shri\s+|Sri\s+|Sree\s+)/i, "")
+    .replace(/\s+(vari\s+devasthanam|devasthanam|mandir|swamy\s+temple|swami\s+temple|temple)$/i, "")
+    .trim();
+
+  variants.add(stripped);
+  variants.add(`${stripped} temple`);
+  variants.add(`${stripped} Hindu temple`);
+
+  // Just the core name (first 2-3 meaningful words)
+  const stopWords = new Set([
+    "sri", "shri", "sree", "swamy", "swami", "temple", "mandir",
+    "devasthanam", "vari", "the", "of", "and", "goddess", "lord",
+  ]);
+  const meaningful = stripped
+    .split(/\s+/)
+    .filter((w) => !stopWords.has(w.toLowerCase()) && w.length > 2)
+    .slice(0, 3);
+
+  if (meaningful.length) {
+    variants.add(meaningful.join(" "));
+    variants.add(`${meaningful.join(" ")} temple`);
+  }
+
+  return [...variants];
+};
+
+/**
+ * Step 1 — OpenSearch: find the best matching Wikipedia page title.
+ */
+const findPageTitle = async (templeName) => {
+  for (const query of buildSearchVariants(templeName)) {
     try {
-      console.log(`[WIKI] OpenSearch query: "${query}"`);
-
-      const res = await axios.get(WIKI_SEARCH_URL, {
+      const res = await axios.get(WIKI_API, {
         params: {
           action: "opensearch",
           search: query,
-          limit: 5,
+          limit:  5,
           namespace: 0,
           format: "json",
           origin: "*",
@@ -40,128 +89,143 @@ const findWikiPageTitle = async (templeName) => {
       const titles = res.data?.[1] || [];
       const urls   = res.data?.[3] || [];
 
-      if (titles.length === 0) {
-        console.log(`[WIKI] No results for query: "${query}"`);
-        continue;
-      }
+      if (!titles.length) continue;
 
-      // Prefer a result that contains "temple" in the title or URL
-      const templeResult = titles.findIndex(
-        (t) =>
-          t.toLowerCase().includes("temple") ||
-          t.toLowerCase().includes("devasthanam") ||
-          t.toLowerCase().includes("mandir") ||
-          urls[titles.indexOf(t)]?.toLowerCase().includes("temple")
+      console.log(`[WIKI] OpenSearch "${query}" → [${titles.slice(0, 3).join(", ")}]`);
+
+      // Prefer temple/devasthanam results
+      const idx = titles.findIndex((t, i) =>
+        t.toLowerCase().includes("temple") ||
+        t.toLowerCase().includes("devasthanam") ||
+        t.toLowerCase().includes("mandir") ||
+        urls[i]?.toLowerCase().includes("temple")
       );
 
-      const chosenTitle = templeResult >= 0 ? titles[templeResult] : titles[0];
-      console.log(`[WIKI] Page found: "${chosenTitle}"`);
-      return chosenTitle;
+      const chosen = idx >= 0 ? titles[idx] : titles[0];
+      console.log(`[WIKI] Chosen title: "${chosen}"`);
+      return chosen;
     } catch (err) {
       console.warn(`[WIKI] OpenSearch failed for "${query}": ${err.message}`);
     }
   }
-
-  console.log("[WIKI] No Wikipedia page found after all search variants");
   return null;
 };
 
 /**
- * Build multiple search query variants from the temple name.
- * Wikipedia page titles rarely match the Google Places name exactly.
+ * Step 2 — Fetch the FULL article text via MediaWiki extracts API.
+ * explaintext=1 returns clean plaintext (no wikimarkup).
+ * exsectionformat=plain keeps section headings as plain text.
  */
-const buildSearchVariants = (templeName) => {
-  const variants = [templeName];
+const fetchFullArticle = async (pageTitle) => {
+  console.log(`[WIKI] Fetching full article: "${pageTitle}"`);
 
-  // Remove honorifics and clean the name
-  const cleaned = templeName
-    .replace(/^(Sri\s+|Shri\s+|Sree\s+|Sri\s+Sri\s+Sri\s+|Sri\s+Sri\s+)/i, "")
-    .replace(/\s+(Temple|Devasthanam|Mandir|Swamy\s+Temple|Swami\s+Temple)$/i, "")
-    .replace(/\s+vari\s+devasthanam$/i, "")
-    .trim();
+  const res = await axios.get(WIKI_API, {
+    params: {
+      action:         "query",
+      prop:           "extracts|info",
+      exlimit:        1,
+      explaintext:    1,           // clean plaintext
+      exsectionformat: "plain",    // == Section headings as plain text
+      titles:         pageTitle,
+      inprop:         "url",
+      format:         "json",
+      origin:         "*",
+    },
+    timeout: 15000,
+  });
 
-  if (cleaned !== templeName) {
-    variants.push(cleaned);
-    variants.push(`${cleaned} temple`);
-  }
+  const pages = res.data?.query?.pages || {};
+  const page  = Object.values(pages)[0];
 
-  // Extract the most distinctive word group (skip generic words)
-  const stopWords = new Set([
-    "sri", "shri", "sree", "swamy", "swami", "temple",
-    "mandir", "devasthanam", "vari", "the", "of", "and",
-  ]);
-  const meaningful = cleaned
-    .split(/\s+/)
-    .filter((w) => !stopWords.has(w.toLowerCase()) && w.length > 2);
-
-  if (meaningful.length > 0 && meaningful.length < cleaned.split(/\s+/).length) {
-    variants.push(meaningful.join(" "));
-    variants.push(`${meaningful.join(" ")} temple`);
-  }
-
-  // Deduplicate while preserving order
-  return [...new Set(variants)];
-};
-
-/**
- * Step 2: Fetch the Wikipedia summary for a given page title.
- */
-const fetchWikiSummary = async (pageTitle) => {
-  const url = `${WIKI_SUMMARY_URL}/${encodeURIComponent(pageTitle)}`;
-  console.log(`[WIKI] Fetching summary: ${url}`);
-
-  const res = await axios.get(url, { timeout: 8000 });
-
-  const data = res.data;
-
-  // Reject disambiguation or redirect pages
-  if (data.type === "disambiguation") {
-    console.log(`[WIKI] Page is a disambiguation page, skipping`);
+  if (!page || page.missing !== undefined || !page.extract) {
+    console.log(`[WIKI] No extract found for "${pageTitle}"`);
     return null;
   }
 
+  console.log(`[WIKI] Full article fetched — length: ${page.extract.length} chars`);
+
   return {
-    title:       data.title       || pageTitle,
-    description: data.description || null,
-    extract:     data.extract     || null,
-    image:
-      data.thumbnail?.source ||
-      data.originalimage?.source ||
-      null,
-    url:
-      data.content_urls?.desktop?.page || null,
-    coordinates: data.coordinates || null,
+    title:   page.title,
+    extract: page.extract,
+    url:     page.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
   };
 };
 
 /**
- * Main export: getTempleWikiInfo
- * Orchestrates search → fetch → return.
- * Returns null on any failure so callers can fall back gracefully.
+ * Step 3 (fallback) — Use the REST summary API if the full article is empty.
  */
-const getTempleWikiInfo = async (templeName) => {
-  if (!templeName?.trim()) return null;
-
+const fetchSummaryFallback = async (pageTitle) => {
+  console.log(`[WIKI] Summary fallback for: "${pageTitle}"`);
   try {
-    console.log(`[WIKI] Starting lookup for: "${templeName}"`);
-
-    const pageTitle = await findWikiPageTitle(templeName);
-    if (!pageTitle) return null;
-
-    const summary = await fetchWikiSummary(pageTitle);
-    if (!summary || !summary.extract) {
-      console.log("[WIKI] Summary empty or missing extract");
-      return null;
-    }
-
-    console.log(
-      `[WIKI] Summary loaded for "${summary.title}" — extract length: ${summary.extract.length}`
+    const res = await axios.get(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`,
+      { timeout: 8000 }
     );
-    return summary;
+    const d = res.data;
+    if (!d?.extract) return null;
+    return {
+      title:   d.title,
+      extract: d.extract,
+      url:     d.content_urls?.desktop?.page || null,
+    };
   } catch (err) {
-    console.error(`[WIKI] Lookup failed for "${templeName}": ${err.message}`);
+    console.warn(`[WIKI] Summary fallback failed: ${err.message}`);
     return null;
   }
 };
 
-module.exports = getTempleWikiInfo;
+/* ── Main export ─────────────────────────────────────────────── */
+/**
+ * getTempleWikiData(templeName)
+ * Returns { title, extract, url } or null.
+ * extract is the FULL article text (up to ~50 000 chars for major temples).
+ */
+const getTempleWikiData = async (templeName) => {
+  if (!templeName?.trim()) return null;
+
+  const cacheKey = templeName.trim().toLowerCase();
+  const cached   = getCached(cacheKey);
+  if (cached) {
+    console.log(`[WIKI] Cache hit for "${templeName}"`);
+    return cached;
+  }
+
+  try {
+    console.log(`[WIKI] Starting lookup for: "${templeName}"`);
+
+    const pageTitle = await findPageTitle(templeName);
+    if (!pageTitle) {
+      console.log("[WIKI] No page title found");
+      return null;
+    }
+
+    let data = await fetchFullArticle(pageTitle);
+
+    // Fallback: if full article gave nothing, use REST summary
+    if (!data || data.extract.trim().length < 100) {
+      console.log("[WIKI] Full article too short — trying summary fallback");
+      data = await fetchSummaryFallback(pageTitle);
+    }
+
+    if (!data) {
+      console.log("[WIKI] Both full article and summary failed");
+      return null;
+    }
+
+    console.log(`[WIKI] Success — "${data.title}", extract: ${data.extract.length} chars`);
+    setCache(cacheKey, data);
+    return data;
+  } catch (err) {
+    console.error(`[WIKI] Fatal error for "${templeName}": ${err.message}`);
+    return null;
+  }
+};
+
+/* ── Cache management helpers (optional debug use) ───────────── */
+const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache cleared"); };
+const getWikiCacheStats = () => ({
+  size:    wikiCache.size,
+  entries: [...wikiCache.keys()],
+});
+
+module.exports = { getTempleWikiData, clearWikiCache, getWikiCacheStats };
