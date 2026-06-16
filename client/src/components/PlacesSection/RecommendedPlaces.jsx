@@ -77,12 +77,11 @@ const RecommendedPlaces = ({ userLocation }) => {
       } catch (err) {
         if (err.name === "AbortError") return;
         console.error("[REC] Fetch failed:", err.message);
-setError(
-  t(
-    "recommendationLoadError",
-    "Could not load recommendations. Please try again."
-  )
-);      } finally {
+
+        setError("recommendationLoadError");
+
+
+      } finally {
         setLoading(false);
       }
     };
@@ -131,12 +130,11 @@ setError(
 </button>        )}
       </div>
 
-      {/* Error state */}
-      {error && (
-        <div className="rp-status-msg rp-error" role="alert">
-          ⚠️ {error}
-        </div>
-      )}
+    {error && (
+  <div className="rp-status-msg rp-error" role="alert">
+    ⚠️ {t(error)}
+  </div>
+)}
 
       {/* Cards grid — EXACT same markup & class names as PlacesSection */}
       {!error && (
