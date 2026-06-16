@@ -5,6 +5,7 @@ const askGroq  = require("../services/groqService");
 const { askGemini }             = require("../services/templeDataService");
 const { getEnrichedTempleData } = require("../services/templeDataService");
 const { searchTempleVideos }    = require("../services/youtubeService");
+const getTempleWikiInfo         = require("../services/wikipediaService");  // ← NEW
 
 const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_KEY;
 const PLACES_BASE       = "https://maps.googleapis.com/maps/api/place";
@@ -150,7 +151,14 @@ const getEnrichedTemple = async (req, res) => {
 
   try {
     console.log(`[ENRICH] Generating data for: ${name}`);
-    const data = await getEnrichedTempleData(name, address || "India");
+
+    // Fetch Wikipedia data to ground the enrichment prompt
+    const wikiData = await getTempleWikiInfo(name);
+    const wikiContext = wikiData?.extract
+      ? `\n\nVerified Wikipedia Information:\n${wikiData.extract}`
+      : "";
+
+    const data = await getEnrichedTempleData(name, address || "India", wikiContext);
     if (!data) return res.status(500).json({ error: "Enrichment returned no data" });
     return res.json(data);
   } catch (err) {
@@ -207,6 +215,94 @@ const getNearbyServicePlaces = async (req, res) => {
   return res.json({ hotels, restaurants, parking });
 };
 
+/* ── BUILD CHAT PROMPT ───────────────────────────────────────── */
+/**
+ * Builds the Groq prompt by layering:
+ * 1. Wikipedia verified facts (highest priority)
+ * 2. Google Places / enriched data
+ * 3. User question
+ *
+ * Order matters: Wikipedia goes first so Groq uses it preferentially.
+ */
+const buildChatPrompt = ({ templeName, address, rating, openNow, deity, enriched, wikiData, message }) => {
+  const lines = [];
+
+  // ── Wikipedia block ──────────────────────────────────────────
+  if (wikiData?.extract) {
+    lines.push("=== WIKIPEDIA VERIFIED INFORMATION ===");
+    lines.push(`Temple Name (Wikipedia): ${wikiData.title}`);
+    if (wikiData.description) lines.push(`Description: ${wikiData.description}`);
+    lines.push(`\nExtract:\n${wikiData.extract}`);
+    if (wikiData.url) lines.push(`\nSource: ${wikiData.url}`);
+    lines.push("=== END WIKIPEDIA ===\n");
+  }
+
+  // ── Google Places / basic block ──────────────────────────────
+  lines.push("=== GOOGLE PLACES INFORMATION ===");
+  lines.push(`Temple: ${templeName}`);
+  if (address)  lines.push(`Location: ${address}`);
+  if (rating)   lines.push(`Rating: ${rating}/5`);
+  if (openNow !== null && openNow !== undefined)
+    lines.push(`Status: ${openNow ? "Currently Open" : "Currently Closed"}`);
+  if (deity)    lines.push(`Presiding Deity: ${deity}`);
+
+  // ── Enriched AI data block ───────────────────────────────────
+  if (enriched && typeof enriched === "object") {
+    const ov = enriched.overview || {};
+    if (ov.deity)                 lines.push(`Deity: ${ov.deity}`);
+    if (ov.dresscode)             lines.push(`Dress Code: ${ov.dresscode}`);
+    if (ov.bestTimeToVisit)       lines.push(`Best Time to Visit: ${ov.bestTimeToVisit}`);
+    if (ov.spiritualSignificance) lines.push(`Spiritual Significance: ${ov.spiritualSignificance}`);
+
+    const hist = enriched.history || {};
+    if (hist.yearBuilt)       lines.push(`Year Built: ${hist.yearBuilt}`);
+    if (hist.founder)         lines.push(`Founder: ${hist.founder}`);
+    if (hist.dynasty)         lines.push(`Dynasty: ${hist.dynasty}`);
+    if (hist.architecturalStyle) lines.push(`Architecture: ${hist.architecturalStyle}`);
+    if (hist.fullHistory)     lines.push(`History: ${hist.fullHistory.substring(0, 600)}`);
+
+    if (Array.isArray(enriched.rituals) && enriched.rituals.length) {
+      lines.push(`Rituals: ${enriched.rituals.map((r) => `${r.name} at ${r.timing}`).join("; ")}`);
+    }
+    if (Array.isArray(enriched.festivals) && enriched.festivals.length) {
+      lines.push(`Festivals: ${enriched.festivals.map((f) => `${f.name} (${f.month})`).join(", ")}`);
+    }
+
+    const darshan = enriched.darshan || {};
+    if (Array.isArray(darshan.timings) && darshan.timings.length) {
+      lines.push(`Darshan Timings: ${darshan.timings.map((d) => `${d.type}: ${d.time} (${d.fee})`).join("; ")}`);
+    }
+    if (darshan.tips?.length) {
+      lines.push(`Visitor Tips: ${darshan.tips.join(". ")}`);
+    }
+
+    const travel = enriched.travel || {};
+    if (travel.nearestAirport?.name)  lines.push(`Nearest Airport: ${travel.nearestAirport.name} (${travel.nearestAirport.distance})`);
+    if (travel.nearestRailway?.name)  lines.push(`Nearest Railway: ${travel.nearestRailway.name} (${travel.nearestRailway.distance})`);
+    if (travel.nearestBusStand?.name) lines.push(`Nearest Bus Stand: ${travel.nearestBusStand.name}`);
+    if (travel.localTransport)        lines.push(`Local Transport: ${travel.localTransport}`);
+  }
+  lines.push("=== END GOOGLE PLACES ===\n");
+
+  // ── Final prompt ─────────────────────────────────────────────
+  return `You are Sarathi AI, an expert temple guide for Hindu temples in India.
+
+${lines.join("\n")}
+
+INSTRUCTIONS:
+- Answer the user's question using the WIKIPEDIA VERIFIED INFORMATION first and foremost.
+- If Wikipedia has the answer (festivals, deity, history, architecture, rituals), state it clearly and confidently.
+- Use Google Places data to add context about timings, visitor tips, and practical information.
+- NEVER invent or hallucinate facts. Only use what is in the data above.
+- If a specific detail is genuinely missing from all sources, say so briefly then give helpful general context.
+- Keep your answer under 200 words.
+- Write in plain, warm, conversational English. No markdown, no bullet symbols, no asterisks.
+- Speak like a knowledgeable and respectful temple guide.
+
+User Question: ${message}
+Answer:`;
+};
+
 /* ── TEMPLE CHAT ─────────────────────────────────────────────── */
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", JSON.stringify({
@@ -219,70 +315,37 @@ const templeChat = async (req, res) => {
   if (!message?.trim())    return res.status(400).json({ error: "message is required" });
   if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
 
-  /* ── Build context block from whatever data is available ── */
-  const ctx = [
-    `Temple: ${templeName}`,
-    address  ? `Location: ${address}`       : null,
-    rating   ? `Rating: ${rating}/5`        : null,
-    openNow !== null && openNow !== undefined
-             ? `Status: ${openNow ? "Currently Open" : "Currently Closed"}` : null,
-    deity    ? `Presiding Deity: ${deity}`  : null,
-  ].filter(Boolean);
+  // ── Fetch Wikipedia in parallel (non-blocking — failure is OK) ──
+  console.log("[CHAT] Fetching Wikipedia data...");
+  const wikiData = await getTempleWikiInfo(templeName).catch((err) => {
+    console.error("[WIKI] Non-fatal error:", err.message);
+    return null;
+  });
 
-  if (enriched && typeof enriched === "object") {
-    const ov = enriched.overview || {};
-    if (ov.deity)                 ctx.push(`Deity: ${ov.deity}`);
-    if (ov.dresscode)             ctx.push(`Dress Code: ${ov.dresscode}`);
-    if (ov.bestTimeToVisit)       ctx.push(`Best Time: ${ov.bestTimeToVisit}`);
-    if (ov.spiritualSignificance) ctx.push(`Significance: ${ov.spiritualSignificance}`);
-
-    const hist = enriched.history || {};
-    if (hist.fullHistory) ctx.push(`History: ${hist.fullHistory.substring(0, 500)}`);
-
-    if (Array.isArray(enriched.rituals) && enriched.rituals.length) {
-      ctx.push(`Rituals: ${enriched.rituals.map((r) => `${r.name} at ${r.timing}`).join("; ")}`);
-    }
-    if (Array.isArray(enriched.festivals) && enriched.festivals.length) {
-      ctx.push(`Festivals: ${enriched.festivals.map((f) => `${f.name} (${f.month})`).join(", ")}`);
-    }
-
-    const darshan = enriched.darshan || {};
-    if (Array.isArray(darshan.timings) && darshan.timings.length) {
-      ctx.push(`Darshan Timings: ${darshan.timings.map((d) => `${d.type}: ${d.time} (${d.fee})`).join("; ")}`);
-    }
-    if (darshan.tips?.length) {
-      ctx.push(`Visitor Tips: ${darshan.tips.join(". ")}`);
-    }
-
-    const travel = enriched.travel || {};
-    if (travel.nearestAirport?.name)  ctx.push(`Nearest Airport: ${travel.nearestAirport.name} (${travel.nearestAirport.distance})`);
-    if (travel.nearestRailway?.name)  ctx.push(`Nearest Railway: ${travel.nearestRailway.name} (${travel.nearestRailway.distance})`);
-    if (travel.nearestBusStand?.name) ctx.push(`Nearest Bus Stand: ${travel.nearestBusStand.name}`);
-    if (travel.localTransport)        ctx.push(`Local Transport: ${travel.localTransport}`);
+  if (wikiData?.extract) {
+    console.log(`[CHAT] Wikipedia added to prompt — extract length: ${wikiData.extract.length}`);
+  } else {
+    console.log("[CHAT] Wikipedia not available — continuing without it");
   }
 
-  /* ── Prompt ── */
-  const prompt = `You are a knowledgeable and respectful spiritual guide for Hindu temples.
+  // ── Build the enriched prompt ────────────────────────────────
+  const prompt = buildChatPrompt({
+    templeName,
+    address,
+    rating,
+    openNow,
+    deity,
+    enriched,
+    wikiData,
+    message,
+  });
 
-Here is what we know about this temple:
-${ctx.join("\n")}
+  console.log(`[CHAT] Sending context to Groq — prompt length: ${prompt.length}`);
 
-Instructions:
-- Answer based ONLY on the data above.
-- If specific data is missing, say so and give a helpful general answer about Hindu temples.
-- Never invent specific timings, names, or dates not in the data above.
-- Keep response under 180 words.
-- Write in plain conversational English. No markdown, no asterisks, no bullet symbols with *.
-- Be warm, respectful, and culturally sensitive.
-
-User: ${message}
-Answer:`;
-
-  /* ── Try Groq first, fall back to Gemini ── */
-  let reply = null;
+  // ── Try Groq first, fall back to Gemini ─────────────────────
+  let reply    = null;
   let provider = null;
 
-  // --- Groq ---
   try {
     console.log("[CHAT] Using Groq");
     reply    = await askGroq(prompt);
@@ -292,15 +355,12 @@ Answer:`;
     console.error("[CHAT] Groq failed:", groqErr.message);
     console.log("[CHAT] Falling back to Gemini");
 
-    // --- Gemini fallback ---
     try {
       reply    = await askGemini(prompt);
       provider = "gemini";
       console.log("[CHAT] Gemini succeeded, reply length:", reply.length);
     } catch (geminiErr) {
       console.error("[CHAT] Gemini also failed:", geminiErr.message);
-
-      // Both failed
       return res.status(503).json({
         error: "The AI service is temporarily unavailable. Please try again in a moment.",
       });

@@ -18,8 +18,6 @@ const askGemini = async (prompt) => {
     throw new Error("GEMINI_API_KEY environment variable is not set");
   }
 
-  // Model list — tries each in order until one works
-  // All 1.5 and 2.0 models were shut down June 1, 2026
   const models = [
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
@@ -36,11 +34,7 @@ const askGemini = async (prompt) => {
       const response = await axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
+          contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.3,
             maxOutputTokens: 2048,
@@ -48,22 +42,10 @@ const askGemini = async (prompt) => {
             topK: 40,
           },
           safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_NONE",
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_NONE",
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_NONE",
-            },
+            { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
           ],
         },
         {
@@ -73,47 +55,30 @@ const askGemini = async (prompt) => {
         }
       );
 
-      // Validate response structure
       const candidate = response.data?.candidates?.[0];
-      if (!candidate) {
-        throw new Error("No candidates in Gemini response");
-      }
+      if (!candidate) throw new Error("No candidates in Gemini response");
 
-      // Check finish reason
-      const finishReason = candidate.finishReason;
-      if (finishReason === "SAFETY") {
+      if (candidate.finishReason === "SAFETY")
         throw new Error("Gemini blocked response due to safety filters");
-      }
 
       const text = candidate.content?.parts?.[0]?.text;
-      if (!text || text.trim() === "") {
-        throw new Error("Empty text in Gemini response");
-      }
+      if (!text || text.trim() === "") throw new Error("Empty text in Gemini response");
 
-      console.log(
-        `[GEMINI] Success with ${model}, response length: ${text.length}`
-      );
+      console.log(`[GEMINI] Success with ${model}, response length: ${text.length}`);
       return text.trim();
     } catch (err) {
       const status = err.response?.status;
       const errMsg = err.response?.data?.error?.message || err.message;
 
-      console.error(
-        `[GEMINI] Model ${model} failed — status: ${status}, error: ${errMsg}`
-      );
+      console.error(`[GEMINI] Model ${model} failed — status: ${status}, error: ${errMsg}`);
 
-      // Don't retry on auth errors — key is wrong
-      if (status === 400 || status === 403) {
+      if (status === 400 || status === 403)
         throw new Error(`Gemini auth/request error (${status}): ${errMsg}`);
-      }
 
-      // Don't retry on quota exceeded
-      if (status === 429) {
+      if (status === 429)
         throw new Error(`Gemini quota exceeded: ${errMsg}`);
-      }
 
       lastError = new Error(`${model}: ${errMsg}`);
-      // Continue to next model for 404 (model not found) and 5xx
     }
   }
 
@@ -122,11 +87,19 @@ const askGemini = async (prompt) => {
 
 /**
  * Fetch enriched temple data — returns null on failure (non-critical)
+ *
+ * @param {string} templeName   - Temple name from Google Places
+ * @param {string} address      - Temple address
+ * @param {string} wikiContext  - Optional Wikipedia extract to ground the AI (NEW)
  */
-const getEnrichedTempleData = async (templeName, address) => {
+const getEnrichedTempleData = async (templeName, address, wikiContext = "") => {
+  const wikiSection = wikiContext
+    ? `\n\nIMPORTANT — Use the following verified Wikipedia information to fill in fields accurately. Do not contradict it:\n${wikiContext}\n`
+    : "";
+
   const prompt = `You are a factual Hindu temple information API.
 Provide accurate information about the temple: "${templeName}" located at "${address}".
-
+${wikiSection}
 STRICT RULES:
 - Only include facts you are certain about
 - Use null for any field you are uncertain about
@@ -190,15 +163,11 @@ Return ONLY this JSON structure:
   try {
     const raw = await askGemini(prompt);
 
-    // Extract JSON from response
     const jsonStart = raw.indexOf("{");
     const jsonEnd   = raw.lastIndexOf("}");
 
     if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
-      console.error(
-        "[ENRICH] No valid JSON found in response. Raw:",
-        raw.substring(0, 300)
-      );
+      console.error("[ENRICH] No valid JSON found in response. Raw:", raw.substring(0, 300));
       return null;
     }
 
