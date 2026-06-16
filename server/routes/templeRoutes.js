@@ -30,6 +30,7 @@ router.get("/nearby-services",  getNearbyServicePlaces);
 
 
 router.get("/test-groq", async (req, res) => {
+  console.log("🔥 templeRoutes loaded");
   try {
     const answer = await askGroq(
       "What is Tirupati Temple famous for?"
@@ -49,7 +50,6 @@ router.get("/test-groq", async (req, res) => {
     });
   }
 });
-console.log("🔥 templeRoutes LOADED");
 
 router.post("/chat", (req, res, next) => {
   console.log("[ROUTE] POST /api/temples/chat hit ✓");
