@@ -49,6 +49,7 @@ router.get("/test-groq", async (req, res) => {
     });
   }
 });
+console.log("🔥 templeRoutes LOADED");
 
 router.post("/chat", (req, res, next) => {
   console.log("[ROUTE] POST /api/temples/chat hit ✓");

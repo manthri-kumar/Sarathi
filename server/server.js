@@ -25,6 +25,14 @@ app.use("/api/saved",        require("./routes/savedRoutes"));
 app.use("/api/trip-planner", require("./routes/tripPlanner"));
 app.use("/api/day-planner",  require("./routes/dayPlannerRoutes"));
 
+
+app.get("/test-direct", (req, res) => {
+  res.json({
+    success: true,
+    message: "direct route works"
+  });
+});
+
 app.get("/", (req, res) => res.send("Sarathi API Running 🚀"));
 
 const PORT = process.env.PORT || 5000;
