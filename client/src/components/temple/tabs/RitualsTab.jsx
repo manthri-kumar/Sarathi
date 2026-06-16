@@ -1,128 +1,87 @@
 import React from "react";
+import "./RitualsTab.css";
 
-export default function RitualsTab({ enriched, loading, enrichError, templeName }) {
-  console.log("[RitualsTab] loading:", loading, "rituals:", enriched?.rituals?.length);
+/**
+ * RitualsTab
+ * Displays temple rituals from official websites, YouTube, and Wikipedia
+ * Priority: Official Website → YouTube → Wikipedia
+ * NO AI-generated content - only factual API-derived information
+ */
 
-  if (loading) return (
-    <div className="tab-rituals">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">🪔 Daily Rituals</h2>
-        <div className="tdp-loading-inline">
-          <div className="tdp-spinner-sm" />
-          <p>Loading ritual details...</p>
+function RitualsTab({ content, sources = [], loading, templeName }) {
+  if (loading) {
+    return (
+      <div className="tab-content rituals-tab">
+        <div className="loading-state">
+          <div className="spinner" />
+          <p>Loading ritual information...</p>
         </div>
-        {[1,2,3].map(i=>(
-          <div key={i} className="tdp-skel-line" style={{ height:80, marginBottom:16, borderRadius:10 }} />
-        ))}
-      </section>
-    </div>
-  );
-
-  const rituals = enriched?.rituals;
-  const hasRituals = rituals && rituals.length > 0;
-
-  if (enrichError || !enriched || !hasRituals) return (
-    <div className="tab-rituals">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">🪔 Daily Rituals</h2>
-        <div className="tdp-fallback-card">
-          <h3>Rituals at {templeName}</h3>
-          <p>
-            Hindu temples typically conduct daily rituals (Nithya Pooja) which include:
-          </p>
-          <div className="tdp-ritual-fallback-grid">
-            {[
-              { name:"Suprabhata Seva",  timing:"5:00 AM",  desc:"Morning awakening ritual for the deity" },
-              { name:"Archana",          timing:"7:00 AM",  desc:"Offering of flowers with chanting of names" },
-              { name:"Abhishekam",       timing:"8:00 AM",  desc:"Sacred bath ritual with milk, water, and holy substances" },
-              { name:"Madhyahna Pooja",  timing:"12:00 PM", desc:"Noon worship with offerings" },
-              { name:"Harati",           timing:"6:00 PM",  desc:"Evening lamp offering ceremony" },
-              { name:"Ekanta Seva",      timing:"8:00 PM",  desc:"Night ritual before the deity rests" },
-            ].map((r,i) => (
-              <div key={i} className="tdp-ritual-fallback-item">
-                <span className="tdp-ritual-fallback-time">{r.timing}</span>
-                <div>
-                  <strong>{r.name}</strong>
-                  <p>{r.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          {enrichError && <p className="tdp-retry-note">⚠️ Temple-specific rituals could not be loaded.</p>}
-        </div>
-      </section>
-    </div>
-  );
-
-  // Group rituals by time of day
-  const morning   = rituals.filter(r => r.timing && (r.timing.includes("AM") || r.timing.includes("5:") || r.timing.includes("6:") || r.timing.includes("7:") || r.timing.includes("8:") || r.timing.includes("9:") || r.timing.includes("10:") || r.timing.includes("11:")));
-  const afternoon = rituals.filter(r => r.timing && (r.timing.includes("12:") || r.timing.includes("1:") || r.timing.includes("2:") || r.timing.includes("3:")));
-  const evening   = rituals.filter(r => r.timing && (r.timing.includes("4:") || r.timing.includes("5:PM") || r.timing.includes("6:") || r.timing.includes("7:") || r.timing.includes("8:") || r.timing.includes("PM")));
-  const other     = rituals.filter(r => !morning.includes(r) && !afternoon.includes(r) && !evening.includes(r));
-
-  const renderGroup = (label, icon, items) => items.length > 0 && (
-    <section className="tdp-section">
-      <h3 className="tdp-subsection-title">{icon} {label}</h3>
-      <div className="tdp-ritual-timeline">
-        {items.map((r, i) => (
-          <div key={i} className="tdp-ritual-item">
-            <div className="tdp-ritual-time-col">
-              <span className="tdp-ritual-time">{r.timing}</span>
-              <span className="tdp-ritual-duration">{r.duration}</span>
-            </div>
-            <div className="tdp-ritual-dot-col">
-              <div className="tdp-ritual-dot" />
-              {i < items.length - 1 && <div className="tdp-ritual-line" />}
-            </div>
-            <div className="tdp-ritual-content">
-              <h3 className="tdp-ritual-name">{r.name}</h3>
-              <p className="tdp-ritual-desc">{r.description}</p>
-              {r.significance && <p className="tdp-ritual-sig">✨ {r.significance}</p>}
-            </div>
-          </div>
-        ))}
       </div>
-    </section>
-  );
+    );
+  }
+
+  const displayContent =
+    content && content.trim()
+      ? content
+      : "Information not available for this temple.";
+  const hasSources = sources && sources.length > 0;
 
   return (
-    <div className="tab-rituals">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">🪔 Daily Rituals at {templeName}</h2>
-        <p className="tdp-para" style={{ marginBottom:24 }}>
-          The following rituals are performed daily at this sacred temple.
-        </p>
-      </section>
-      {renderGroup("Morning Rituals",   "🌅", morning.length   > 0 ? morning   : [])}
-      {renderGroup("Afternoon Rituals", "☀️",  afternoon.length > 0 ? afternoon : [])}
-      {renderGroup("Evening Rituals",   "🌆", evening.length   > 0 ? evening   : [])}
-      {other.length > 0 && renderGroup("Special Rituals", "✨", other)}
+    <div className="tab-content rituals-tab">
+      {/* Main Content */}
+      <div className="rituals-main">
+        <h2 className="rituals-title">🪔 Rituals & Worship at {templeName}</h2>
 
-      {/* If grouping failed, show all */}
-      {morning.length === 0 && afternoon.length === 0 && evening.length === 0 && (
-        <section className="tdp-section">
-          <h3 className="tdp-subsection-title">🪔 All Rituals</h3>
-          <div className="tdp-ritual-timeline">
-            {rituals.map((r, i) => (
-              <div key={i} className="tdp-ritual-item">
-                <div className="tdp-ritual-time-col">
-                  <span className="tdp-ritual-time">{r.timing || "—"}</span>
-                  <span className="tdp-ritual-duration">{r.duration || ""}</span>
-                </div>
-                <div className="tdp-ritual-dot-col">
-                  <div className="tdp-ritual-dot" />
-                  {i < rituals.length - 1 && <div className="tdp-ritual-line" />}
-                </div>
-                <div className="tdp-ritual-content">
-                  <h3 className="tdp-ritual-name">{r.name}</h3>
-                  <p className="tdp-ritual-desc">{r.description}</p>
-                  {r.significance && <p className="tdp-ritual-sig">✨ {r.significance}</p>}
-                </div>
-              </div>
-            ))}
+        <div className="rituals-text">
+          {displayContent.split("\n\n").map((paragraph, idx) => (
+            <p key={idx} className="rituals-paragraph">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+
+        {/* Source Attribution */}
+        {hasSources && (
+          <div className="rituals-sources">
+            <h4>Sources</h4>
+            <ul className="sources-list">
+              {sources.map((source, idx) => (
+                <li key={idx} className="source-item">
+                  <span className="source-icon">📖</span>
+                  <span className="source-text">{source}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="sources-disclaimer">
+              This information is sourced from official temple sources and verified documentation.
+            </p>
           </div>
-        </section>
-      )}
+        )}
+
+        {/* No Data State */}
+        {displayContent === "Information not available for this temple." && (
+          <div className="rituals-no-data">
+            <div className="no-data-icon">🕉️</div>
+            <p>Ritual information for this temple is not yet documented in our sources.</p>
+            <p className="no-data-hint">
+              Please visit the temple's official website or contact the temple directly.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Info Box */}
+      <div className="rituals-info-box">
+        <h4>About this content</h4>
+        <p>
+          Ritual information is sourced from official temple websites, YouTube
+          educational videos, and Wikipedia. This ensures authenticity and
+          cultural accuracy.
+        </p>
+        <p className="info-note">💡 Tip: Visit the temple in person to experience the rituals firsthand.</p>
+      </div>
     </div>
   );
 }
+
+export default RitualsTab;

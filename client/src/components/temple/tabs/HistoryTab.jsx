@@ -1,155 +1,85 @@
-import React, { useState } from "react";
+import React from "react";
+import "./HistoryTab.css";
 
-export default function HistoryTab({ enriched, loading, enrichError, templeName }) {
-  const [expanded, setExpanded] = useState(false);
+/**
+ * HistoryTab
+ * Displays temple history from Wikipedia and official sources
+ * NO AI-generated content - only factual API-derived information
+ */
 
-  console.log("[HistoryTab] loading:", loading, "enriched:", !!enriched, "error:", enrichError);
-
-  /* ── Loading state ── */
-  if (loading) return (
-    <div className="tab-history">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">📜 History</h2>
-        <div className="tdp-loading-inline">
-          <div className="tdp-spinner-sm" />
-          <p>Loading history from Gemini AI...</p>
+function HistoryTab({ content, sources = [], loading, templeName }) {
+  if (loading) {
+    return (
+      <div className="tab-content history-tab">
+        <div className="loading-state">
+          <div className="spinner" />
+          <p>Loading historical information...</p>
         </div>
-        {[1,2,3,4].map(i=>(
-          <div key={i} className="tdp-skel-line" style={{ height:16, width:`${95-i*8}%`, marginBottom:10 }} />
-        ))}
-      </section>
-    </div>
-  );
+      </div>
+    );
+  }
 
-  /* ── Error / no data state ── */
-  if (enrichError || !enriched) return (
-    <div className="tab-history">
-      <section className="tdp-section">
-        <div className="tdp-fallback-card">
-          <h2>📜 History of {templeName}</h2>
-          <p>
-            {templeName} is a sacred Hindu temple. Detailed historical information
-            could not be loaded at this time. This may be because the temple
-            is less documented or due to a temporary service issue.
-          </p>
-          <p style={{ marginTop:12, color:"#6aad7a" }}>
-            You can find more information about this temple on the official
-            temple website or by visiting the temple directly.
-          </p>
-          {enrichError && (
-            <div className="tdp-retry-note">
-              ⚠️ AI enrichment service is temporarily unavailable.
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-
-  const h    = enriched.history    || {};
-  const myth = enriched.mythology  || {};
-  const hasHistory = h.fullHistory || h.origin || h.importantEvents?.length > 0;
-  const hasMyth    = myth.legend   || myth.deityStory || myth.whyFamous;
+  const displayContent =
+    content && content.trim()
+      ? content
+      : "Information not available for this temple.";
+  const hasSources = sources && sources.length > 0;
 
   return (
-    <div className="tab-history">
+    <div className="tab-content history-tab">
+      {/* Main Content */}
+      <div className="history-main">
+        <h2 className="history-title">📜 History of {templeName}</h2>
 
-      {/* Key Facts */}
-      {(h.yearBuilt || h.founder || h.dynasty || h.architecturalStyle) && (
-        <section className="tdp-section">
-          <h2 className="tdp-section-title">🏛️ Temple Facts</h2>
-          <div className="tdp-facts-grid">
-            {h.yearBuilt          && <Fact label="Year Built"          value={h.yearBuilt} />}
-            {h.founder            && <Fact label="Founder"             value={h.founder} />}
-            {h.dynasty            && <Fact label="Dynasty"             value={h.dynasty} />}
-            {h.architecturalStyle && <Fact label="Architectural Style" value={h.architecturalStyle} />}
-          </div>
-        </section>
-      )}
-
-      {/* Origin */}
-      {h.origin && (
-        <section className="tdp-section">
-          <h2 className="tdp-section-title">🌱 Origin</h2>
-          <p className="tdp-para">{h.origin}</p>
-        </section>
-      )}
-
-      {/* Full History */}
-      {h.fullHistory && (
-        <section className="tdp-section">
-          <h2 className="tdp-section-title">📖 Full History</h2>
-          <div className={`tdp-history-text ${expanded ? "expanded" : "collapsed"}`}>
-            <p className="tdp-para">{h.fullHistory}</p>
-          </div>
-          <button className="tdp-read-more" onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Show Less ▲" : "Read More ▼"}
-          </button>
-          {h.source && (
-            <p className="tdp-source">
-              Source:{" "}
-              {h.sourceUrl
-                ? <a href={h.sourceUrl} target="_blank" rel="noreferrer">{h.source}</a>
-                : h.source}
+        <div className="history-text">
+          {displayContent.split("\n\n").map((paragraph, idx) => (
+            <p key={idx} className="history-paragraph">
+              {paragraph}
             </p>
-          )}
-        </section>
-      )}
+          ))}
+        </div>
 
-      {/* Timeline */}
-      {h.importantEvents?.length > 0 && (
-        <section className="tdp-section">
-          <h2 className="tdp-section-title">📅 Historical Timeline</h2>
-          <div className="tdp-timeline">
-            {h.importantEvents.map((ev, i) => (
-              <div key={i} className="tdp-timeline-item">
-                <div className="tdp-timeline-dot" />
-                <div className="tdp-timeline-content">
-                  <span className="tdp-timeline-year">{ev.year}</span>
-                  <p className="tdp-timeline-event">{ev.event}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Mythology */}
-      {hasMyth && (
-        <section className="tdp-section tdp-myth-section">
-          <h2 className="tdp-section-title">🔱 Mythology & Legends</h2>
-          {myth.whyFamous   && <div className="tdp-myth-card"><h4>⭐ Why Famous</h4><p className="tdp-para">{myth.whyFamous}</p></div>}
-          {myth.legend      && <div className="tdp-myth-card"><h4>📖 The Legend</h4><p className="tdp-para">{myth.legend}</p></div>}
-          {myth.deityStory  && <div className="tdp-myth-card"><h4>🙏 Deity Story</h4><p className="tdp-para">{myth.deityStory}</p></div>}
-          {myth.miracles?.length > 0 && (
-            <div className="tdp-myth-card">
-              <h4>✨ Beliefs & Miracles</h4>
-              <ul>{myth.miracles.map((m,i)=><li key={i}>{m}</li>)}</ul>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* No data fallback */}
-      {!hasHistory && !hasMyth && (
-        <section className="tdp-section">
-          <div className="tdp-fallback-card">
-            <h2>📜 History of {templeName}</h2>
-            <p>
-              Detailed historical records for {templeName} are not available
-              in our database yet. Please visit the official temple premises
-              or local government tourism websites for accurate historical details.
+        {/* Source Attribution */}
+        {hasSources && (
+          <div className="history-sources">
+            <h4>Sources</h4>
+            <ul className="sources-list">
+              {sources.map((source, idx) => (
+                <li key={idx} className="source-item">
+                  <span className="source-icon">🔗</span>
+                  <span className="source-text">{source}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="sources-disclaimer">
+              This information is sourced from verified public sources and is not AI-generated.
             </p>
           </div>
-        </section>
-      )}
+        )}
+
+        {/* No Data State */}
+        {displayContent === "Information not available for this temple." && (
+          <div className="history-no-data">
+            <div className="no-data-icon">📚</div>
+            <p>Historical information for this temple is not yet documented in our sources.</p>
+            <p className="no-data-hint">
+              You can find more information on Wikipedia or the temple's official website.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Info Box */}
+      <div className="history-info-box">
+        <h4>About this content</h4>
+        <p>
+          The historical information displayed here is sourced from Wikipedia,
+          official temple websites, and other verified sources. We do not use
+          AI-generated content for factual information.
+        </p>
+      </div>
     </div>
   );
 }
 
-const Fact = ({ label, value }) => (
-  <div className="tdp-fact">
-    <span className="tdp-fact-label">{label}</span>
-    <span className="tdp-fact-value">{value}</span>
-  </div>
-);
+export default HistoryTab;

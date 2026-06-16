@@ -1,85 +1,98 @@
 import React from "react";
+import "./FestivalsTab.css";
 
-const ICONS = ["🎊","🎉","🪔","🌺","🎆","🥁","🌸","✨","🔱","🙏"];
+/**
+ * FestivalsTab
+ * Displays temple festivals from Wikipedia, official websites, and YouTube
+ * Priority: Wikipedia → Official Website → YouTube
+ * NO AI-generated content - only factual API-derived information
+ */
 
-export default function FestivalsTab({ enriched, loading, enrichError, templeName }) {
-  console.log("[FestivalsTab] loading:", loading, "festivals:", enriched?.festivals?.length);
-
-  if (loading) return (
-    <div className="tab-festivals">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">🎊 Festivals</h2>
-        <div className="tdp-loading-inline">
-          <div className="tdp-spinner-sm" />
-          <p>Loading festival details...</p>
+function FestivalsTab({ content, sources = [], loading, templeName }) {
+  if (loading) {
+    return (
+      <div className="tab-content festivals-tab">
+        <div className="loading-state">
+          <div className="spinner" />
+          <p>Loading festival information...</p>
         </div>
-        <div className="tdp-festival-grid">
-          {[1,2,3].map(i=>(
-            <div key={i} className="tdp-skel-line" style={{ height:200, borderRadius:14 }} />
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+      </div>
+    );
+  }
 
-  const festivals = enriched?.festivals;
-  const hasFestivals = festivals && festivals.length > 0;
-
-  if (enrichError || !enriched || !hasFestivals) return (
-    <div className="tab-festivals">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">🎊 Festivals</h2>
-        <div className="tdp-fallback-card">
-          <h3>Major Festivals at {templeName}</h3>
-          <p>Festival details could not be loaded. Common festivals celebrated at Hindu temples include:</p>
-          <div className="tdp-festival-grid" style={{ marginTop:16 }}>
-            {[
-              { name:"Brahmotsavam",       month:"Varies",    desc:"Grand annual festival spanning 9 days with processions and rituals." },
-              { name:"Navaratri",          month:"Oct",       desc:"Nine nights of worship dedicated to Goddess Durga." },
-              { name:"Karthika Masam",     month:"Nov",       desc:"Month-long festival with special prayers and lamp lighting." },
-              { name:"Vaikuntha Ekadasi",  month:"Dec-Jan",   desc:"Most sacred Ekadasi day for Vaishnava devotees." },
-              { name:"Ugadi",              month:"Mar-Apr",   desc:"Telugu New Year celebrated with special pooja." },
-              { name:"Rathotsavam",        month:"Varies",    desc:"Chariot festival where deity is taken in procession." },
-            ].map((f,i) => (
-              <div key={i} className="tdp-festival-card">
-                <div className="tdp-festival-icon">{ICONS[i % ICONS.length]}</div>
-                <h3 className="tdp-festival-name">{f.name}</h3>
-                <div className="tdp-festival-meta">
-                  <span className="tdp-festival-month">📅 {f.month}</span>
-                </div>
-                <p className="tdp-festival-desc">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-          {enrichError && <p className="tdp-retry-note">⚠️ Temple-specific festivals could not be loaded.</p>}
-        </div>
-      </section>
-    </div>
-  );
+  const displayContent =
+    content && content.trim()
+      ? content
+      : "Information not available for this temple.";
+  const hasSources = sources && sources.length > 0;
 
   return (
-    <div className="tab-festivals">
-      <section className="tdp-section">
-        <h2 className="tdp-section-title">🎊 Festivals at {templeName}</h2>
-        <div className="tdp-festival-grid">
-          {festivals.map((f, i) => (
-            <div key={i} className="tdp-festival-card">
-              <div className="tdp-festival-icon">{ICONS[i % ICONS.length]}</div>
-              <h3 className="tdp-festival-name">{f.name}</h3>
-              <div className="tdp-festival-meta">
-                {f.month    && <span className="tdp-festival-month">📅 {f.month}</span>}
-                {f.duration && <span className="tdp-festival-dur">⏳ {f.duration}</span>}
-              </div>
-              {f.description && <p className="tdp-festival-desc">{f.description}</p>}
-              {f.importance  && (
-                <div className="tdp-festival-importance">
-                  <span>⭐ Significance:</span> {f.importance}
-                </div>
-              )}
-            </div>
+    <div className="tab-content festivals-tab">
+      {/* Main Content */}
+      <div className="festivals-main">
+        <h2 className="festivals-title">🎊 Festivals at {templeName}</h2>
+
+        <div className="festivals-text">
+          {displayContent.split("\n\n").map((paragraph, idx) => (
+            <p key={idx} className="festivals-paragraph">
+              {paragraph}
+            </p>
           ))}
         </div>
-      </section>
+
+        {/* Source Attribution */}
+        {hasSources && (
+          <div className="festivals-sources">
+            <h4>Sources</h4>
+            <ul className="sources-list">
+              {sources.map((source, idx) => (
+                <li key={idx} className="source-item">
+                  <span className="source-icon">✨</span>
+                  <span className="source-text">{source}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="sources-disclaimer">
+              Festival information is sourced from Wikipedia, official temple
+              websites, and cultural documentation.
+            </p>
+          </div>
+        )}
+
+        {/* No Data State */}
+        {displayContent === "Information not available for this temple." && (
+          <div className="festivals-no-data">
+            <div className="no-data-icon">🎉</div>
+            <p>Festival information for this temple is not yet documented in our sources.</p>
+            <p className="no-data-hint">
+              Check the temple's official website or local announcements for upcoming festivals.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Festival Planning Tips */}
+      <div className="festivals-tips">
+        <h4>Festival Planning</h4>
+        <ul className="tips-list">
+          <li>📅 Check exact dates with the temple's official website</li>
+          <li>👥 Expect larger crowds during major festivals</li>
+          <li>🚗 Plan your travel in advance</li>
+          <li>🙏 Arrive early for the best experience</li>
+        </ul>
+      </div>
+
+      {/* Info Box */}
+      <div className="festivals-info-box">
+        <h4>About this content</h4>
+        <p>
+          Festival information is compiled from Wikipedia articles, official
+          temple sources, and cultural documentation to provide accurate dates
+          and descriptions.
+        </p>
+      </div>
     </div>
   );
 }
+
+export default FestivalsTab;
