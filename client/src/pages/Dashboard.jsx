@@ -5,7 +5,7 @@ import Cards from "../components/Cards/Cards";
 import ChatPanel from "../components/ChatPanel/ChatPanel";
 import Hero from "../components/Hero/Hero";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
-import RecommendedPlaces from "../components/PlacesSection/RecommendedPlaces";
+import Recommendedplaces from "Section/Recommendedplaces";
 import { useTranslation } from "react-i18next";
 
 import "../styles/layout.css";
