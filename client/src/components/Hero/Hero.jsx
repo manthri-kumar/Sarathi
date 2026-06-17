@@ -19,18 +19,22 @@ const Hero = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const goTo = useCallback((next) => {
-    if (animating) return;
-    setAnimating(true);
-    setIndex(next);
-    setTimeout(() => setAnimating(false), 800);
-  }, [animating]);
+  const goTo = useCallback(
+    (next) => {
+      if (animating) return;
+      setAnimating(true);
+      setIndex(next);
+      setTimeout(() => setAnimating(false), 850);
+    },
+    [animating]
+  );
 
+  /* Auto-advance */
   useEffect(() => {
-    const interval = setInterval(() => {
+    const id = setInterval(() => {
       goTo((index + 1) % slides.length);
     }, 5000);
-    return () => clearInterval(interval);
+    return () => clearInterval(id);
   }, [index, goTo]);
 
   const nextSlide = () => goTo((index + 1) % slides.length);
@@ -44,16 +48,16 @@ const Hero = () => {
         {slides.map((slide, i) => (
           <div
             key={i}
-            className={`hero-slide ${i === index ? "active" : ""}`}
+            className={`hero-slide${i === index ? " active" : ""}`}
             style={{ backgroundImage: `url(${slide.image})` }}
           />
         ))}
       </div>
 
-      {/* ── Cinematic Gradient Overlay ── */}
+      {/* ── Left-panel gradient (only darkens left half) ── */}
       <div className="hero-gradient" />
 
-      {/* ── Content ── */}
+      {/* ── Text Content ── */}
       <div className="hero-content">
 
         <span className="hero-badge">
@@ -62,19 +66,17 @@ const Hero = () => {
         </span>
 
         <h1 className="hero-heading">
-          {t("discover") || (
-            <>Discover the <span className="hero-accent">unexplored</span></>
-          )}
+          Discover the{" "}
+          <span className="hero-accent">
+            {t("unexplored") || "unexplored"}
+          </span>
         </h1>
 
         <p className="hero-subtitle">
           {t("recommendations") || "AI-powered recommendations just for you."}
         </p>
 
-        <button
-          className="hero-cta"
-          onClick={() => navigate("/explore")}
-        >
+        <button className="hero-cta" onClick={() => navigate("/explore")}>
           {t("explorePlaces") || "Explore Places"}
           <span className="hero-cta-arrow">→</span>
         </button>
@@ -82,12 +84,20 @@ const Hero = () => {
       </div>
 
       {/* ── Left Arrow ── */}
-      <button className="hero-arrow hero-arrow--left" onClick={prevSlide} aria-label="Previous slide">
+      <button
+        className="hero-arrow hero-arrow--left"
+        onClick={prevSlide}
+        aria-label="Previous slide"
+      >
         ‹
       </button>
 
       {/* ── Right Arrow ── */}
-      <button className="hero-arrow hero-arrow--right" onClick={nextSlide} aria-label="Next slide">
+      <button
+        className="hero-arrow hero-arrow--right"
+        onClick={nextSlide}
+        aria-label="Next slide"
+      >
         ›
       </button>
 

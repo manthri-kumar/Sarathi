@@ -167,7 +167,7 @@
   position: relative;
   width: 100%;
   /* KEY FIX: fixed height instead of aspect-ratio so overlay is always measured correctly */
-  height: 320px;
+  height: 400px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -400,7 +400,7 @@
   overflow: hidden;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  height: 320px;
+  height: 400px;
   position: relative;
   pointer-events: none;
 }

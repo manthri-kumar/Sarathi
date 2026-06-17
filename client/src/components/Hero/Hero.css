@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
-   Hero.css — Sarathi v4  (Premium Travel Banner)
-   260-280px desktop · cinematic overlay · Poppins
+   Hero.css — Sarathi v4.2
+   Left-panel text area · full image right · Poppins
    ═══════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
@@ -8,18 +8,18 @@
 /* ── Wrapper ── */
 .hero {
   width: 100%;
-  height: 270px;
+  height: 280px;
   border-radius: 18px;
   overflow: hidden;
   position: relative;
   margin-top: 20px;
   font-family: 'Poppins', sans-serif;
-  /* Subtle border for premium feel */
   box-shadow: 0 2px 40px rgba(0, 0, 0, 0.45);
+  background: #040814;
 }
 
 /* ═══════════════════════════
-   SLIDES
+   SLIDES  (full bleed, image fills right half)
 ═══════════════════════════ */
 .hero-slides {
   position: absolute;
@@ -30,40 +30,40 @@
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center;
+  background-position: center right;   /* image focal point on right */
   opacity: 0;
-  /* Slight scale-in for cinematic feel */
-  transform: scale(1.06);
+  transform: scale(1.04);
   transition:
-    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
     transform 6s ease;
 }
 
 .hero-slide.active {
   opacity: 1;
-  transform: scale(1.04);
+  transform: scale(1.02);
 }
 
 /* ═══════════════════════════
-   GRADIENT OVERLAY
+   GRADIENT  — only left panel darkens, right stays clear
 ═══════════════════════════ */
 .hero-gradient {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(4, 8, 20, 0.88) 0%,
-      rgba(4, 8, 20, 0.50) 35%,
-      rgba(4, 8, 20, 0.18) 60%,
-      transparent 100%
-    );
+  /* KEY: sharp fade — very dark on left, fully transparent by 55% */
+  background: linear-gradient(
+    90deg,
+    rgba(4, 8, 20, 0.97) 0%,
+    rgba(4, 8, 20, 0.95) 28%,
+    rgba(4, 8, 20, 0.70) 42%,
+    rgba(4, 8, 20, 0.20) 55%,
+    transparent 68%
+  );
   z-index: 1;
   pointer-events: none;
 }
 
 /* ═══════════════════════════
-   CONTENT
+   CONTENT  — left-aligned panel
 ═══════════════════════════ */
 .hero-content {
   position: absolute;
@@ -73,7 +73,8 @@
   flex-direction: column;
   justify-content: center;
   padding: 0 40px;
-  max-width: 460px;
+  /* Content never crosses into image territory */
+  max-width: 480px;
   gap: 10px;
 }
 
@@ -86,7 +87,7 @@
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: rgba(255, 255, 255, 0.82);
   font-size: 0.75rem;
   font-weight: 500;
@@ -96,13 +97,13 @@
 }
 
 .hero-badge-icon {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 /* ── Heading ── */
 .hero-heading {
   margin: 0;
-  font-size: 3rem;
+  font-size: 2.8rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1.1;
@@ -117,11 +118,11 @@
 /* ── Subtitle ── */
 .hero-subtitle {
   margin: 0;
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.68);
   line-height: 1.5;
   font-weight: 400;
-  max-width: 340px;
+  max-width: 320px;
 }
 
 /* ── CTA Button ── */
@@ -140,18 +141,16 @@
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
   width: fit-content;
-  margin-top: 4px;
+  margin-top: 2px;
   box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
   transition:
     transform 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
+    box-shadow 0.2s ease;
 }
 
 .hero-cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(0, 210, 106, 0.5);
-  background: linear-gradient(135deg, #00e273, #00b857);
 }
 
 .hero-cta-arrow {
@@ -171,15 +170,15 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #ffffff;
-  font-size: 26px;
+  font-size: 24px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -188,32 +187,24 @@
   padding-bottom: 2px;
   transition:
     background 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.2s ease;
 }
 
 .hero-arrow:hover {
-  background: rgba(255, 255, 255, 0.16);
-  transform: translateY(-50%) scale(1.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-50%) scale(1.1);
 }
 
-.hero-arrow--left {
-  left: 24px;
-}
-
-.hero-arrow--right {
-  right: 24px;
-}
+.hero-arrow--left  { left: 20px; }
+.hero-arrow--right { right: 20px; }
 
 /* ═══════════════════════════
    DOTS
 ═══════════════════════════ */
 .hero-dots {
   position: absolute;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 16px;
+  left: 40px;           /* align with left content, not centred */
   z-index: 3;
   display: flex;
   align-items: center;
@@ -221,10 +212,10 @@
 }
 
 .hero-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.28);
   border: none;
   cursor: pointer;
   padding: 0;
@@ -232,99 +223,147 @@
 }
 
 .hero-dot.active {
-  width: 24px;
-  border-radius: 5px;
+  width: 22px;
+  border-radius: 4px;
   background: #00d26a;
-  box-shadow: 0 0 12px rgba(0, 210, 106, 0.7);
+  box-shadow: 0 0 10px rgba(0, 210, 106, 0.65);
 }
 
 /* ═══════════════════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════════════════ */
 
-/* ── Tablet ── */
+/* ── Tablet (769px – 1024px) ── */
 @media (max-width: 1024px) {
   .hero {
     height: 240px;
   }
 
-  .hero-heading {
-    font-size: 2.4rem;
-  }
-
   .hero-content {
-    padding: 0 30px;
+    padding: 0 28px;
     max-width: 400px;
-  }
-}
-
-/* ── Mobile ── */
-@media (max-width: 768px) {
-  .hero {
-    height: 220px;
-    border-radius: 14px;
-  }
-
-  .hero-content {
-    padding: 0 22px;
-    max-width: 100%;
     gap: 8px;
   }
 
   .hero-heading {
-    font-size: 1.8rem;
+    font-size: 2.2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.88rem;
+  }
+
+  .hero-dots {
+    left: 28px;
+  }
+}
+
+/* ── Mobile (≤768px) ──
+   Switch to top-to-bottom layout:
+   image fills full card, gradient covers from left edge
+   to ~60% so content stays readable
+═══════════════════════════ */
+@media (max-width: 768px) {
+  .hero {
+    height: auto;           /* let content decide height */
+    min-height: 220px;
+    border-radius: 14px;
+  }
+
+  /* On mobile the image is full-bleed underneath */
+  .hero-slide {
+    background-position: center center;
+  }
+
+  /* Stronger left-to-right gradient on mobile so short width is still readable */
+  .hero-gradient {
+    background: linear-gradient(
+      90deg,
+      rgba(4, 8, 20, 0.97) 0%,
+      rgba(4, 8, 20, 0.92) 40%,
+      rgba(4, 8, 20, 0.55) 65%,
+      transparent 100%
+    );
+  }
+
+  .hero-content {
+    position: relative;       /* back in normal flow so height expands */
+    z-index: 2;
+    max-width: 100%;
+    padding: 28px 20px 52px 20px;   /* bottom pad gives dots room */
+    gap: 8px;
+  }
+
+  .hero-heading {
+    font-size: 1.75rem;
     letter-spacing: -0.02em;
   }
 
   .hero-subtitle {
-    font-size: 0.85rem;
-    max-width: 260px;
+    font-size: 0.82rem;
+    max-width: 240px;
   }
 
   .hero-cta {
     height: 40px;
-    font-size: 0.9rem;
-    padding: 0 20px;
+    font-size: 0.88rem;
+    padding: 0 18px;
   }
 
-  /* Hide left arrow on mobile */
+  /* Hide left arrow; keep only right */
   .hero-arrow--left {
     display: none;
   }
 
   .hero-arrow--right {
-    width: 42px;
-    height: 42px;
-    right: 16px;
-    font-size: 22px;
+    width: 38px;
+    height: 38px;
+    right: 14px;
+    font-size: 20px;
   }
 
   .hero-badge {
     font-size: 0.7rem;
-    padding: 4px 11px;
+    padding: 4px 10px;
+  }
+
+  /* Dots at bottom-left */
+  .hero-dots {
+    position: absolute;
+    bottom: 14px;
+    left: 20px;
   }
 }
 
-/* ── Small Mobile ── */
+/* ── Small Mobile (≤480px) ── */
 @media (max-width: 480px) {
   .hero {
-    height: 200px;
+    min-height: 200px;
+    border-radius: 12px;
+  }
+
+  .hero-content {
+    padding: 24px 16px 48px 16px;
+    gap: 7px;
   }
 
   .hero-heading {
-    font-size: 1.55rem;
+    font-size: 1.5rem;
   }
 
+  /* Hide subtitle on very small screens */
   .hero-subtitle {
     display: none;
   }
 
-  .hero-gradient {
-    background: linear-gradient(
-      90deg,
-      rgba(4, 8, 20, 0.92) 0%,
-      rgba(4, 8, 20, 0.60) 50%,
-      rgba(4, 8, 20, 0.25) 100%
-    );
+  .hero-cta {
+    height: 38px;
+    font-size: 0.84rem;
+    padding: 0 16px;
+  }
+
+  .hero-dots {
+    left: 16px;
+    bottom: 12px;
   }
 }
