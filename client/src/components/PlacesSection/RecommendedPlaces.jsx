@@ -209,23 +209,22 @@ const RecommendedPlaces = ({ userLocation }) => {
 
   {/* Header */}
   <div className="rp-header">
-
     {/* Left Side */}
-    <div className="rp-header-left">
-      <div className="rp-title-wrapper">
-        <span className="rp-title-accent"></span>
+      <div className="rp-header-left">
+  <div className="rp-title-wrapper">
+    <span className="rp-title-accent"></span>
 
-        <div>
-          <h2 className="rp-title">
-            {t("Recommended For You")}
-          </h2>
+    <div className="rp-title-group">
+      <h2 className="rp-title">
+        Recommended For You
+      </h2>
 
-          <p className="rp-subtitle">
-            {t("Places Within 150Km")}
-          </p>
-        </div>
-      </div>
+      <p className="rp-subtitle">
+        Places Within 150 Km
+      </p>
     </div>
+  </div>
+</div>
 
     {/* Right Side */}
     <div className="rp-header-right">

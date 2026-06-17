@@ -26,11 +26,10 @@
 }
 .rp-title {
   margin: 0;
-  font-size: 1.2rem; /* was 2rem */
+  font-size: 1.7rem;
   font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  color: #fff;
+  line-height: 1;
 }
 
 .rp-subtitle {
@@ -427,13 +426,13 @@
 
 .rp-title-wrapper {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .rp-title-accent {
-  width: 3px;
-  height: 24px; /* was 42px */
+  width: 4px;
+  height: 26px;
   border-radius: 999px;
 
   background: linear-gradient(
@@ -442,6 +441,17 @@
     #22c55e
   );
 
-  box-shadow:
-    0 0 8px rgba(34, 197, 94, 0.5);
+  margin-top: 2px;
+
+  box-shadow: 0 0 8px rgba(34,197,94,0.4);
+}
+
+.rp-title-group{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.rp-subtitle{
+  margin:0;
 }
