@@ -155,14 +155,14 @@
 
 /* ── Badge ── */
 .ps-badge {
+  font-size: 0.82rem;
+  padding: 7px 14px;
+  font-weight: 700;
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 2;
-  padding: 5px 11px;
   border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.01em;
 }
@@ -175,15 +175,16 @@
 /* ── Card Content (overlaid on image) ── */
 .ps-card-content {
   position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
+ left: 18px;
+  right: 18px;
+  bottom: 18px;
   z-index: 2;
 }
 
 .ps-card-name {
-  font-size: 0.98rem;
+   font-size: 1.25rem;
   font-weight: 700;
+  line-height: 1.2;
   color: #ffffff;
   margin: 0 0 4px 0;
   white-space: nowrap;
@@ -194,8 +195,8 @@
 }
 
 .ps-card-location {
-  font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.75);
   margin: 0 0 10px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -211,10 +212,11 @@
 }
 
 .ps-card-rating {
+  font-size: 0.95rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.78rem;
 }
 
 .ps-star {
@@ -237,14 +239,15 @@
   background: rgba(42, 197, 34, 0.12);
   border: 1px solid rgba(42, 197, 34, 0.3);
   color: #2ac522;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.74rem;
-  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
+ padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 110px;
 }
 
 .ps-explore-btn:hover {

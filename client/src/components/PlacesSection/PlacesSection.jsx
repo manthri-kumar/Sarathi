@@ -9,7 +9,7 @@ import img2 from "../../assets/Hero/img2.png";
 import img3 from "../../assets/Hero/img3.png";
 import img4 from "../../assets/Hero/img4.png";
 
-const CARDS_PER_SLIDE_DESKTOP = 5;
+const CARDS_PER_SLIDE_DESKTOP = 4;
 
 const defaultPlaces = [
   {
