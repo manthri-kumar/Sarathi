@@ -218,7 +218,13 @@ const PlacesSection = ({ places = [], title }) => {
     <section className="ps-section">
       {/* Header */}
       <div className="ps-header">
-        <h2 className="ps-title">{title || t("popularPlaces") || "Most Popular Places"}</h2>
+        <div className="ps-title-wrapper">
+  <span className="ps-title-accent"></span>
+
+  <h2 className="ps-title">
+    {title || t("popularPlaces") || "Most Popular Places"}
+  </h2>
+</div>
 
         <div className="ps-header-right">
           {/* Arrows — desktop only */}
