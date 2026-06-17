@@ -1,140 +1,330 @@
-/* HERO */
+/* ═══════════════════════════════════════════════════════
+   Hero.css — Sarathi v4  (Premium Travel Banner)
+   260-280px desktop · cinematic overlay · Poppins
+   ═══════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ── Wrapper ── */
 .hero {
   width: 100%;
-  height: 260px;
+  height: 270px;
   border-radius: 18px;
   overflow: hidden;
   position: relative;
   margin-top: 20px;
+  font-family: 'Poppins', sans-serif;
+  /* Subtle border for premium feel */
+  box-shadow: 0 2px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* ===== SLIDER FIX ===== */
-.slider-wrapper {
-  display: flex;
-  height: 100%;
-
-  /* 🔥 KEY FIX */
-  width: 100%;
-  transition: transform 0.6s ease-in-out;
-}
-
-/* Each slide */
-.slide {
-  min-width: 100%;   /* 🔥 VERY IMPORTANT */
-  height: 100%;
-
-  background-size: cover;
-  background-position: center;
-}
-/* ===== OVERLAY ===== */
-.hero-overlay {
+/* ═══════════════════════════
+   SLIDES
+═══════════════════════════ */
+.hero-slides {
   position: absolute;
   inset: 0;
+}
 
-  background: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0.7),
-    rgba(0, 0, 0, 0.2)
-  );
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  /* Slight scale-in for cinematic feel */
+  transform: scale(1.06);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 6s ease;
+}
 
-  padding: 30px;
+.hero-slide.active {
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+/* ═══════════════════════════
+   GRADIENT OVERLAY
+═══════════════════════════ */
+.hero-gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(4, 8, 20, 0.88) 0%,
+      rgba(4, 8, 20, 0.50) 35%,
+      rgba(4, 8, 20, 0.18) 60%,
+      transparent 100%
+    );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════
+   CONTENT
+═══════════════════════════ */
+.hero-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 0 40px;
+  max-width: 460px;
+  gap: 10px;
 }
 
-.hero h2 {
-  font-size: 14px;
-  color: #9ca3af;
+/* ── Badge ── */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
 }
 
-.hero h1 {
-  font-size: 28px;
-  margin: 5px 0;
+.hero-badge-icon {
+  font-size: 0.82rem;
 }
 
-.hero p {
-  color: #cbd5f5;
-  margin-bottom: 15px;
+/* ── Heading ── */
+.hero-heading {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-family: 'Poppins', sans-serif;
 }
 
-/* Button */
-.explore-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+.hero-accent {
+  color: #00d26a;
+}
+
+/* ── Subtitle ── */
+.hero-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.5;
+  font-weight: 400;
+  max-width: 340px;
+}
+
+/* ── CTA Button ── */
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #00d26a, #00a84f);
+  color: #ffffff;
   border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  color: white;
+  padding: 0 24px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
   cursor: pointer;
   width: fit-content;
-  transition: 0.3s;
+  margin-top: 4px;
+  box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-.explore-btn:hover {
-  transform: scale(1.05);
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 210, 106, 0.5);
+  background: linear-gradient(135deg, #00e273, #00b857);
 }
 
-/* ===== ARROWS ===== */
-.arrow {
+.hero-cta-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.hero-cta:hover .hero-cta-arrow {
+  transform: translateX(4px);
+}
+
+/* ═══════════════════════════
+   ARROWS
+═══════════════════════════ */
+.hero-arrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0,0,0,0.4);
-  border: none;
-  color: white;
-  font-size: 20px;
-  padding: 10px;
+  z-index: 3;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 26px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  padding-bottom: 2px;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.arrow.left {
-  left: 15px;
+.hero-arrow:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-50%) scale(1.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
-.arrow.right {
-  right: 15px;
+.hero-arrow--left {
+  left: 24px;
 }
 
-/* ===== DOTS ===== */
-.dots {
+.hero-arrow--right {
+  right: 24px;
+}
+
+/* ═══════════════════════════
+   DOTS
+═══════════════════════════ */
+.hero-dots {
   position: absolute;
-  bottom: 15px;
+  bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 3;
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  background: rgba(255,255,255,0.4);
+.hero-dot {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
   cursor: pointer;
+  padding: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dot.active {
-  background: white;
+.hero-dot.active {
+  width: 24px;
+  border-radius: 5px;
+  background: #00d26a;
+  box-shadow: 0 0 12px rgba(0, 210, 106, 0.7);
 }
 
-/* ===== MOBILE HERO ===== */
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════ */
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+  .hero {
+    height: 240px;
+  }
+
+  .hero-heading {
+    font-size: 2.4rem;
+  }
+
+  .hero-content {
+    padding: 0 30px;
+    max-width: 400px;
+  }
+}
+
+/* ── Mobile ── */
 @media (max-width: 768px) {
+  .hero {
+    height: 220px;
+    border-radius: 14px;
+  }
 
+  .hero-content {
+    padding: 0 22px;
+    max-width: 100%;
+    gap: 8px;
+  }
+
+  .hero-heading {
+    font-size: 1.8rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-subtitle {
+    font-size: 0.85rem;
+    max-width: 260px;
+  }
+
+  .hero-cta {
+    height: 40px;
+    font-size: 0.9rem;
+    padding: 0 20px;
+  }
+
+  /* Hide left arrow on mobile */
+  .hero-arrow--left {
+    display: none;
+  }
+
+  .hero-arrow--right {
+    width: 42px;
+    height: 42px;
+    right: 16px;
+    font-size: 22px;
+  }
+
+  .hero-badge {
+    font-size: 0.7rem;
+    padding: 4px 11px;
+  }
+}
+
+/* ── Small Mobile ── */
+@media (max-width: 480px) {
   .hero {
     height: 200px;
   }
 
-  .hero-overlay {
-    padding: 15px;
+  .hero-heading {
+    font-size: 1.55rem;
   }
 
-  .hero h1 {
-    font-size: 20px;
+  .hero-subtitle {
+    display: none;
   }
 
-  .hero p {
-    font-size: 12px;
+  .hero-gradient {
+    background: linear-gradient(
+      90deg,
+      rgba(4, 8, 20, 0.92) 0%,
+      rgba(4, 8, 20, 0.60) 50%,
+      rgba(4, 8, 20, 0.25) 100%
+    );
   }
-
 }

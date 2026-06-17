@@ -1,118 +1,106 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./Hero.css";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import img1 from "../../assets/Hero/img1.png";
 import img2 from "../../assets/Hero/img2.png";
 import img3 from "../../assets/Hero/img3.png";
 
-const images = [img1, img2, img3];
+const slides = [
+  { image: img1 },
+  { image: img2 },
+  { image: img3 },
+];
 
 const Hero = () => {
   const [index, setIndex] = useState(0);
-
+  const [animating, setAnimating] = useState(false);
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const goTo = useCallback((next) => {
+    if (animating) return;
+    setAnimating(true);
+    setIndex(next);
+    setTimeout(() => setAnimating(false), 800);
+  }, [animating]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % images.length);
+      goTo((index + 1) % slides.length);
     }, 5000);
-
     return () => clearInterval(interval);
-  }, []);
+  }, [index, goTo]);
 
-  const nextSlide = () => {
-    setIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevSlide = () => {
-    setIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
+  const nextSlide = () => goTo((index + 1) % slides.length);
+  const prevSlide = () => goTo((index - 1 + slides.length) % slides.length);
 
   return (
     <div className="hero">
 
-      {/* Background Slider */}
-      <div
-        className="slider-wrapper"
-        style={{
-          transform: `translateX(-${index * 100}%)`,
-        }}
-      >
-        {images.map((img, i) => (
+      {/* ── Background Slides ── */}
+      <div className="hero-slides">
+        {slides.map((slide, i) => (
           <div
             key={i}
-            className="slide"
-            style={{
-              backgroundImage: `url(${img})`,
-            }}
+            className={`hero-slide ${i === index ? "active" : ""}`}
+            style={{ backgroundImage: `url(${slide.image})` }}
           />
         ))}
       </div>
 
-      {/* Dark Overlay */}
-      <div className="hero-dark-overlay"></div>
+      {/* ── Cinematic Gradient Overlay ── */}
+      <div className="hero-gradient" />
 
-      {/* Content */}
-      <div className="hero-overlay">
+      {/* ── Content ── */}
+      <div className="hero-content">
 
         <span className="hero-badge">
-          ✈ {t("nextAdventure")}
+          <span className="hero-badge-icon">✈</span>
+          {t("nextAdventure") || "Your Next Adventure Awaits"}
         </span>
 
-        <h1>
-          {t("discover")}
+        <h1 className="hero-heading">
+          {t("discover") || (
+            <>Discover the <span className="hero-accent">unexplored</span></>
+          )}
         </h1>
 
-        <p>
-          {t("recommendations")}
+        <p className="hero-subtitle">
+          {t("recommendations") || "AI-powered recommendations just for you."}
         </p>
 
-        <div className="hero-buttons">
-
-          <button className="explore-btn">
-            {t("explorePlaces")} →
-          </button>
-
-          
-
-        </div>
+        <button
+          className="hero-cta"
+          onClick={() => navigate("/explore")}
+        >
+          {t("explorePlaces") || "Explore Places"}
+          <span className="hero-cta-arrow">→</span>
+        </button>
 
       </div>
 
-      {/* Left Arrow */}
-      <button
-        className="arrow left"
-        onClick={prevSlide}
-      >
-        ❮
+      {/* ── Left Arrow ── */}
+      <button className="hero-arrow hero-arrow--left" onClick={prevSlide} aria-label="Previous slide">
+        ‹
       </button>
 
-      {/* Right Arrow */}
-      <button
-        className="arrow right"
-        onClick={nextSlide}
-      >
-        ❯
+      {/* ── Right Arrow ── */}
+      <button className="hero-arrow hero-arrow--right" onClick={nextSlide} aria-label="Next slide">
+        ›
       </button>
 
-      {/* Dots */}
-      <div className="dots">
-
-        {images.map((_, i) => (
-          <span
+      {/* ── Dots ── */}
+      <div className="hero-dots">
+        {slides.map((_, i) => (
+          <button
             key={i}
-            className={
-              index === i
-                ? "dot active"
-                : "dot"
-            }
-            onClick={() =>
-              setIndex(i)
-            }
+            className={`hero-dot${i === index ? " active" : ""}`}
+            onClick={() => goTo(i)}
+            aria-label={`Slide ${i + 1}`}
           />
         ))}
-
       </div>
 
     </div>
