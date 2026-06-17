@@ -9,7 +9,8 @@ const API_BASE =
   process.env.REACT_APP_API_URL ||
   "https://sarathi-backend-7u0y.onrender.com";
 
-const CARDS_PER_SLIDE = 5;
+const CARDS_PER_SLIDE_DESKTOP = 5;
+const CARDS_MOBILE = 4; // tablet + mobile always show first 4
 
 const parseCoord = (value) => {
   const n = Number(value);
@@ -26,7 +27,6 @@ const SkeletonCard = React.memo(() => (
 /* ── Place Card ── */
 const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) => {
   const { t } = useTranslation();
-
   const isSaved = savedIds.has(place.id || index);
 
   const formatReviews = useCallback((reviews) => {
@@ -43,7 +43,7 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
 
   return (
     <div className="rp-card">
-      {/* Image Layer */}
+      {/* ── Image Zone ── */}
       <div className="rp-card-img-wrap">
         <img
           src={image}
@@ -54,7 +54,7 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
         />
         <div className="rp-card-gradient" />
 
-        {/* Save Button */}
+        {/* Heart Save Button */}
         <button
           className={`rp-save-btn${isSaved ? " saved" : ""}`}
           onClick={(e) => { e.stopPropagation(); onSave(place.id || index); }}
@@ -71,7 +71,7 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
         )}
       </div>
 
-      {/* Info Layer */}
+      {/* ── Info Zone ── */}
       <div className="rp-card-info">
         <h3 className="rp-card-name">{place.name}</h3>
         <p className="rp-card-location">{location}</p>
@@ -84,12 +84,11 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
             </span>
             <span className="rp-reviews">({reviews} reviews)</span>
           </div>
-
           <button
             className="rp-explore-btn"
             onClick={() => onNavigate(place)}
           >
-            {t("explore")} →
+            {t("explore") || "Explore"} →
           </button>
         </div>
       </div>
@@ -112,7 +111,7 @@ const RecommendedPlaces = ({ userLocation }) => {
   const lat = parseCoord(userLocation?.lat ?? localStorage.getItem("lat"));
   const lng = parseCoord(userLocation?.lng ?? localStorage.getItem("lng"));
 
-  /* Fetch */
+  /* ── Fetch ── */
   useEffect(() => {
     if (!lat || !lng) return;
     const controller = new AbortController();
@@ -120,18 +119,15 @@ const RecommendedPlaces = ({ userLocation }) => {
     const fetchRecommendations = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const res = await fetch(
           `${API_BASE}/api/recommendations?lat=${lat}&lng=${lng}`,
           { signal: controller.signal }
         );
-
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || `HTTP ${res.status}`);
         }
-
         const data = await res.json();
         setPlaces(Array.isArray(data.recommendations) ? data.recommendations : []);
       } catch (err) {
@@ -147,29 +143,29 @@ const RecommendedPlaces = ({ userLocation }) => {
     return () => controller.abort();
   }, [lat, lng]);
 
-  /* Slide math */
+  /* ── Desktop slide math ── */
   const totalSlides = useMemo(
-    () => Math.ceil(places.length / CARDS_PER_SLIDE),
+    () => Math.ceil(places.length / CARDS_PER_SLIDE_DESKTOP),
     [places.length]
   );
 
-  const visiblePlaces = useMemo(
+  const desktopVisiblePlaces = useMemo(
     () => places.slice(
-      currentSlide * CARDS_PER_SLIDE,
-      currentSlide * CARDS_PER_SLIDE + CARDS_PER_SLIDE
+      currentSlide * CARDS_PER_SLIDE_DESKTOP,
+      currentSlide * CARDS_PER_SLIDE_DESKTOP + CARDS_PER_SLIDE_DESKTOP
     ),
     [places, currentSlide]
   );
 
-  const handlePrev = useCallback(() => {
-    setCurrentSlide((s) => Math.max(0, s - 1));
-  }, []);
+  /* First 4 only for tablet + mobile */
+  const mobileVisiblePlaces = useMemo(
+    () => places.slice(0, CARDS_MOBILE),
+    [places]
+  );
 
-  const handleNext = useCallback(() => {
-    setCurrentSlide((s) => Math.min(totalSlides - 1, s + 1));
-  }, [totalSlides]);
+  const handlePrev = useCallback(() => setCurrentSlide((s) => Math.max(0, s - 1)), []);
+  const handleNext = useCallback(() => setCurrentSlide((s) => Math.min(totalSlides - 1, s + 1)), [totalSlides]);
 
-  /* View All / Explore button */
   const handleHeaderBtn = useCallback(() => {
     if (currentSlide === 0 && totalSlides > 1) {
       setCurrentSlide(1);
@@ -178,12 +174,10 @@ const RecommendedPlaces = ({ userLocation }) => {
     }
   }, [currentSlide, totalSlides, navigate]);
 
-  const headerBtnLabel = useMemo(
-    () => (currentSlide === 0 && totalSlides > 1 ? t("viewAll") : t("explore") || "Explore"),
-    [currentSlide, totalSlides, t]
-  );
+  const headerBtnLabel = currentSlide === 0 && totalSlides > 1
+    ? (t("viewAll") || "viewAll")
+    : (t("explore") || "Explore");
 
-  /* Save toggle */
   const handleSave = useCallback((id) => {
     setSavedIds((prev) => {
       const next = new Set(prev);
@@ -192,7 +186,6 @@ const RecommendedPlaces = ({ userLocation }) => {
     });
   }, []);
 
-  /* Navigate to maps */
   const handleNavigate = useCallback((place) => {
     if (!place?.lat || !place?.lng) return;
     window.open(
@@ -205,91 +198,92 @@ const RecommendedPlaces = ({ userLocation }) => {
   if (!loading && !error && places.length === 0) return null;
 
   return (
-   <section className="rp-section">
+    <section className="rp-section">
 
-  {/* Header */}
-  <div className="rp-header">
-    {/* Left Side */}
-      <div className="rp-header-left">
-  <div className="rp-title-wrapper">
-    <span className="rp-title-accent"></span>
+      {/* ── Header ── */}
+      <div className="rp-header">
+        <div className="rp-header-left">
+          <div className="rp-title-wrapper">
+            <span className="rp-title-accent" />
+            <div className="rp-title-group">
+              <h2 className="rp-title">Recommended For You</h2>
+              <p className="rp-subtitle">Places Within 150 Km</p>
+            </div>
+          </div>
+        </div>
 
-    <div className="rp-title-group">
-      <h2 className="rp-title">
-        Recommended For You
-      </h2>
+        <div className="rp-header-right">
+          {/* Arrows — desktop only (hidden via CSS on tablet/mobile) */}
+          <div className="rp-arrows">
+            <button
+              className="rp-arrow"
+              onClick={handlePrev}
+              disabled={currentSlide === 0}
+              aria-label="Previous"
+            >‹</button>
+            <button
+              className="rp-arrow"
+              onClick={handleNext}
+              disabled={currentSlide >= totalSlides - 1}
+              aria-label="Next"
+            >›</button>
+          </div>
 
-      <p className="rp-subtitle">
-        Places Within 150 Km
-      </p>
-    </div>
-  </div>
-</div>
-
-    {/* Right Side */}
-    <div className="rp-header-right">
-
-      <div className="rp-arrows">
-        <button
-          className="rp-arrow"
-          onClick={handlePrev}
-          disabled={currentSlide === 0}
-          aria-label="Previous"
-        >
-          ‹
-        </button>
-
-        <button
-          className="rp-arrow"
-          onClick={handleNext}
-          disabled={currentSlide >= totalSlides - 1}
-          aria-label="Next"
-        >
-          ›
-        </button>
+          {places.length > 0 && (
+            <button className="rp-view-btn" onClick={handleHeaderBtn}>
+              {headerBtnLabel} →
+            </button>
+          )}
+        </div>
       </div>
 
-      {places.length > 0 && (
-        <button
-          className="rp-view-btn"
-          onClick={handleHeaderBtn}
-        >
-          {headerBtnLabel} →
-        </button>
+      {/* ── Error ── */}
+      {error && (
+        <div className="rp-error" role="alert">⚠️ {t(error)}</div>
       )}
 
-    </div>
+      {/* ── Desktop Grid (5 cards, carousel) ── */}
+      {!error && (
+        <div className="rp-grid rp-grid--desktop" ref={trackRef}>
+          {loading
+            ? Array.from({ length: CARDS_PER_SLIDE_DESKTOP }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))
+            : desktopVisiblePlaces.map((place, index) => (
+                <PlaceCard
+                  key={place.id || currentSlide * CARDS_PER_SLIDE_DESKTOP + index}
+                  place={place}
+                  index={currentSlide * CARDS_PER_SLIDE_DESKTOP + index}
+                  onNavigate={handleNavigate}
+                  onSave={handleSave}
+                  savedIds={savedIds}
+                />
+              ))}
+        </div>
+      )}
 
-  </div>
+      {/* ── Tablet + Mobile Grid (4 cards, 2-col static) ── */}
+      {!error && (
+        <div className="rp-grid rp-grid--mobile">
+          {loading
+            ? Array.from({ length: CARDS_MOBILE }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))
+            : mobileVisiblePlaces.map((place, index) => (
+                <PlaceCard
+                  key={place.id || index}
+                  place={place}
+                  index={index}
+                  onNavigate={handleNavigate}
+                  onSave={handleSave}
+                  savedIds={savedIds}
+                />
+              ))}
+        </div>
+      )}
 
-  {/* Error */}
-  {error && (
-    <div className="rp-error" role="alert">
-      ⚠️ {t(error)}
-    </div>
-  )}
-
-  {/* Cards Grid */}
-  {!error && (
-    <>
-      <div className="rp-grid" ref={trackRef}>
-        {loading
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))
-          : visiblePlaces.map((place, index) => (
-              <PlaceCard
-                key={place.id || currentSlide * CARDS_PER_SLIDE + index}
-                place={place}
-                index={currentSlide * CARDS_PER_SLIDE + index}
-                onNavigate={handleNavigate}
-                onSave={handleSave}
-                savedIds={savedIds}
-              />
-            ))}
-      </div>
-
-      {totalSlides > 1 && (
+      {/* ── Pagination Dots — desktop only ── */}
+      {!error && totalSlides > 1 && (
         <div className="rp-dots" role="tablist">
           {Array.from({ length: totalSlides }).map((_, i) => (
             <button
@@ -303,10 +297,8 @@ const RecommendedPlaces = ({ userLocation }) => {
           ))}
         </div>
       )}
-    </>
-  )}
 
-</section>
+    </section>
   );
 };
 
