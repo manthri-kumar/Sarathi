@@ -217,11 +217,11 @@ const RecommendedPlaces = ({ userLocation }) => {
 
         <div>
           <h2 className="rp-title">
-            {t("recommendedForYou")}
+            {t("Recommended For You")}
           </h2>
 
           <p className="rp-subtitle">
-            {t("placesWithin150Km")}
+            {t("Places Within 150Km")}
           </p>
         </div>
       </div>
