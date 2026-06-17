@@ -1,12 +1,15 @@
-/* ── Container Workspace Configuration ── */
-.rp-container {
-  max-width: 1400px;
-  margin: 40px auto;
-  padding: 0 24px;
-  position: relative;
+/* ═══════════════════════════════════════════
+   RecommendedPlaces.css  — Sarathi v2
+   Taller cards · 4-col carousel · premium feel
+   ═══════════════════════════════════════════ */
+
+/* ── Section Wrapper ── */
+.rp-section {
+  width: 100%;
+  padding: 0 0 40px 0;
 }
 
-/* ── Section Header Layout Blocks ── */
+/* ── Header ── */
 .rp-header {
   display: flex;
   justify-content: space-between;
@@ -14,8 +17,14 @@
   margin-bottom: 24px;
 }
 
-.rp-header-titles h2 {
-  font-size: 1.6rem;
+.rp-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rp-title {
+  font-size: 1.55rem;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
@@ -23,203 +32,220 @@
 }
 
 .rp-subtitle {
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.45);
-  margin: 6px 0 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
 }
 
-.rp-header-controls {
+.rp-header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* ── Glassmorphism Controls Arrow Elements ── */
-.rp-carousel-arrows {
+/* ── Arrow Buttons ── */
+.rp-arrows {
   display: flex;
   gap: 8px;
 }
 
-.rp-arrow-btn {
-  width: 36px;
-  height: 36px;
+.rp-arrow {
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  padding-bottom: 4px; /* Align arrow metrics */
+  transition: background 0.2s, transform 0.15s;
+  padding-bottom: 2px;
 }
 
-.rp-arrow-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
+.rp-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.06);
 }
 
-.rp-arrow-btn:disabled {
-  opacity: 0.25;
+.rp-arrow:disabled {
+  opacity: 0.22;
   cursor: not-allowed;
 }
 
-.rp-view-all-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #2ac522; /* Matches system primary accent color */
-  padding: 8px 16px;
+/* ── View All / Explore Button ── */
+.rp-view-btn {
+  background: transparent;
+  border: 1px solid rgba(42, 197, 34, 0.4);
+  color: #2ac522;
+  padding: 7px 16px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
 }
 
-.rp-view-all-btn:hover {
+.rp-view-btn:hover {
   background: rgba(42, 197, 34, 0.1);
-  border-color: rgba(42, 197, 34, 0.3);
+  border-color: rgba(42, 197, 34, 0.7);
 }
 
-/* ── VIEWPORT CLIPPING WINDOW & MODES ── */
-.rp-view-window {
-  width: 100%;
-  position: relative;
-}
-
-.rp-view-window.carousel-mode {
-  overflow: hidden; /* Clips out overflowing columns */
-}
-
-.rp-carousel-track {
-  display: flex;
-  width: 100%;
-  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
-  will-change: transform;
-}
-
-/* Dynamic Grid Expansion Transition Layout */
-.rp-view-window.grid-mode .rp-carousel-track {
+/* ── Card Grid ── */
+.rp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-  transform: none !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
 }
 
-/* ── PREMIUM CAROUSEL CARD SPECIFICATIONS ── */
-.rp-carousel-card {
-  flex: 0 0 calc(25% - 18px); /* 4 Columns less margins spacing math */
-  margin-right: 24px;
-  height: 190px;
-  border-radius: 18px;
-  background-size: cover;
-  background-position: center;
-  position: relative;
+/* ── Individual Card ── */
+.rp-card {
+  background: #0d1117;
+  border-radius: 16px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+              box-shadow 0.3s ease,
+              border-color 0.2s;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 16px;
-  box-sizing: border-box;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease;
 }
 
-.rp-view-window.grid-mode .rp-carousel-card {
-  flex: none;
-  margin-right: 0;
+.rp-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55),
+              0 0 0 1px rgba(42, 197, 34, 0.12);
+  border-color: rgba(42, 197, 34, 0.18);
+}
+
+/* ── Image Wrapper ── */
+.rp-card-img-wrap {
+  position: relative;
   width: 100%;
+  aspect-ratio: 4 / 5;   /* Taller portrait ratio */
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.rp-carousel-card:hover {
-  transform: translateY(-6px) scale(1.01);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(42, 197, 34, 0.1);
+.rp-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
 }
 
-/* Deep cinematic gradient backdrop mask overlay layer */
-.rp-card-overlay {
+.rp-card:hover .rp-card-img {
+  transform: scale(1.04);
+}
+
+/* Cinematic gradient — stronger at bottom */
+.rp-card-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(2, 4, 2, 0.9) 0%, rgba(2, 4, 2, 0.4) 50%, transparent 100%);
-  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(5, 8, 5, 0.82) 0%,
+    rgba(5, 8, 5, 0.25) 45%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
-/* Card Distance Data Chip */
-.rp-distance-badge {
-  position: relative;
+/* ── Save Heart Button ── */
+.rp-save-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   z-index: 2;
-  align-self: flex-start;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+  line-height: 1;
+}
+
+.rp-save-btn:hover {
+  transform: scale(1.1);
+  color: #ff6b6b;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rp-save-btn.saved {
+  color: #ff6b6b;
+  background: rgba(255, 50, 50, 0.18);
+  border-color: rgba(255, 100, 100, 0.35);
+}
+
+/* ── Distance Chip ── */
+.rp-distance-chip {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 2;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.85);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 500;
   padding: 4px 10px;
   border-radius: 20px;
   backdrop-filter: blur(6px);
 }
 
-/* Floating Heart Icon Button element */
-.rp-heart-action {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 16px;
+/* ── Card Info Panel ── */
+.rp-card-info {
+  padding: 14px 16px 16px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-  line-height: 1;
-  transition: all 0.2s ease;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
 }
 
-.rp-heart-action:hover {
-  transform: scale(1.1);
-  color: #ff6b6b;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.rp-heart-action.saved {
-  color: #ff6b6b;
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 91, 91, 0.3);
-  text-shadow: 0 0 8px rgba(255, 91, 91, 0.5);
-}
-
-/* Content Text Typography Wrappers */
-.rp-card-content {
-  position: relative;
-  z-index: 2;
-  margin-top: auto; /* Push down cleanly */
-}
-
-.rp-place-name {
-  font-size: 1.15rem;
+.rp-card-name {
+  font-size: 1rem;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 6px 0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.rp-card-location {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0 8px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.rp-rating-row {
+/* ── Footer Row ── */
+.rp-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.rp-card-rating {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -227,8 +253,8 @@
 }
 
 .rp-star {
-  color: #f59e0b; /* Golden tone metrics */
-  font-size: 0.9rem;
+  color: #f59e0b;
+  font-size: 0.85rem;
 }
 
 .rp-rating-val {
@@ -236,12 +262,33 @@
   color: #ffffff;
 }
 
-.rp-reviews-count {
-  color: rgba(255, 255, 255, 0.45);
+.rp-reviews {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.75rem;
 }
 
-/* ── PAGINATION INDICATOR DOTS ── */
-.rp-pagination {
+/* ── Explore Button ── */
+.rp-explore-btn {
+  background: rgba(42, 197, 34, 0.12);
+  border: 1px solid rgba(42, 197, 34, 0.3);
+  color: #2ac522;
+  padding: 6px 13px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rp-explore-btn:hover {
+  background: rgba(42, 197, 34, 0.22);
+  transform: translateX(2px);
+}
+
+/* ── Pagination Dots ── */
+.rp-dots {
   display: flex;
   justify-content: center;
   gap: 6px;
@@ -252,8 +299,10 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
   cursor: pointer;
+  padding: 0;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -261,56 +310,110 @@
   width: 18px;
   border-radius: 4px;
   background: #2ac522;
-  box-shadow: 0 0 8px rgba(42, 197, 34, 0.4);
+  box-shadow: 0 0 8px rgba(42, 197, 34, 0.45);
 }
 
-/* Status Parsing Strings style outputs */
-.rp-status-msg {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.9rem;
-  padding: 20px 0;
+/* ── Error ── */
+.rp-error {
+  color: #f87171;
+  font-size: 0.88rem;
+  padding: 16px 0;
 }
-.rp-status-msg.rp-error { color: #f87171; }
 
-/* ── SHIMMER LOADING HOVER SKELETONS ── */
-.rp-skeleton {
-  background: rgba(255, 255, 255, 0.03) !important;
+/* ── Skeleton ── */
+.rp-skeleton-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  aspect-ratio: 4 / 6;
+  position: relative;
   pointer-events: none;
 }
 
 .rp-skeleton-shimmer {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
   background-size: 200% 100%;
-  animation: rpShimmerAnim 1.5s infinite;
+  animation: rpShimmer 1.6s infinite;
 }
 
-@keyframes rpShimmerAnim {
-  0% { background-position: 200% 0; }
+@keyframes rpShimmer {
+  0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-/* ── RESPONSIVE ADAPTIVE BREAKPOINTS ── */
-@media (max-width: 1200px) {
-  .rp-carousel-card {
-    flex: 0 0 calc(33.333% - 16px);
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
+
+/* Tablet — 2-col grid, 4 cards, no carousel */
+@media (max-width: 1024px) {
+  .rp-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  /* Hide carousel arrows on tablet */
+  .rp-arrows {
+    display: none;
+  }
+
+  /* Dots hidden on tablet (static grid) */
+  .rp-dots {
+    display: none;
   }
 }
 
-@media (max-width: 768px) {
-  .rp-carousel-card {
-    flex: 0 0 calc(50% - 12px);
-    height: 170px;
+/* Mobile — 2-col grid, compact */
+@media (max-width: 640px) {
+  .rp-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
-  .rp-header-titles h2 { font-size: 1.4rem; }
+
+  .rp-title {
+    font-size: 1.25rem;
+  }
+
+  .rp-card-name {
+    font-size: 0.88rem;
+  }
+
+  .rp-card-location {
+    font-size: 0.72rem;
+  }
+
+  .rp-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .rp-explore-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .rp-arrows {
+    display: none;
+  }
+
+  .rp-dots {
+    display: none;
+  }
 }
 
-@media (max-width: 480px) {
-  .rp-carousel-card {
-    flex: 0 0 100%;
-    margin-right: 0;
+/* Tiny screens — single column */
+@media (max-width: 380px) {
+  .rp-grid {
+    grid-template-columns: 1fr;
   }
-  .rp-carousel-arrows { display: none; } /* Rely on dots and touch tracking natively */
 }
