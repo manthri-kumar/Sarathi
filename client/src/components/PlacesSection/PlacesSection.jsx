@@ -112,6 +112,7 @@ const PlaceCard = React.memo(({ destination, onNavigate }) => {
 
   return (
     <div className="ps-card" onClick={() => onNavigate(destination)}>
+      {/* ── Image Zone ── */}
       <div className="ps-card-img-wrap">
         <img
           src={image}
@@ -120,27 +121,29 @@ const PlaceCard = React.memo(({ destination, onNavigate }) => {
           loading="lazy"
           onError={(e) => { e.target.src = img1; }}
         />
-        <div className="ps-card-gradient" />
-
+        {/* Fade at bottom of image into info panel */}
+        <div className="ps-card-img-fade" />
+        {/* Badge */}
         <span className={`ps-badge ${badgeClass}`}>{badge}</span>
+      </div>
 
-        <div className="ps-card-content">
-          <h3 className="ps-card-name">{destination.name}</h3>
-          <p className="ps-card-location">{location}</p>
+      {/* ── Info Zone ── */}
+      <div className="ps-card-info">
+        <h3 className="ps-card-name">{destination.name}</h3>
+        <p className="ps-card-location">{location}</p>
 
-          <div className="ps-card-footer">
-            <div className="ps-card-rating">
-              <span className="ps-star">★</span>
-              <span className="ps-rating-val">{rating}</span>
-              <span className="ps-reviews">({reviews})</span>
-            </div>
-            <button
-              className="ps-explore-btn"
-              onClick={(e) => { e.stopPropagation(); onNavigate(destination); }}
-            >
-              Explore →
-            </button>
+        <div className="ps-card-footer">
+          <div className="ps-card-rating">
+            <span className="ps-star">★</span>
+            <span className="ps-rating-val">{rating}</span>
+            <span className="ps-reviews">({reviews})</span>
           </div>
+          <button
+            className="ps-explore-btn"
+            onClick={(e) => { e.stopPropagation(); onNavigate(destination); }}
+          >
+            Explore →
+          </button>
         </div>
       </div>
     </div>
@@ -173,8 +176,11 @@ const PlacesSection = ({ places = [], title }) => {
     [destinationData, currentSlide]
   );
 
-  // Desktop: first slide → "View All" advances carousel; after → "Explore" navigates
-  // Tablet/Mobile: always navigate to /explore
+  const mobileVisiblePlaces = useMemo(
+    () => destinationData.slice(0, 4),
+    [destinationData]
+  );
+
   const handleHeaderBtn = useCallback(() => {
     const isDesktop = window.innerWidth > 1024;
     if (isDesktop && currentSlide === 0 && totalSlides > 1) {
@@ -184,20 +190,16 @@ const PlacesSection = ({ places = [], title }) => {
     }
   }, [currentSlide, totalSlides, navigate]);
 
-  const headerBtnLabel = useMemo(() => {
-    const isDesktop = typeof window !== "undefined" && window.innerWidth > 1024;
-    return isDesktop && currentSlide === 0 && totalSlides > 1
+  const headerBtnLabel =
+    typeof window !== "undefined" &&
+    window.innerWidth > 1024 &&
+    currentSlide === 0 &&
+    totalSlides > 1
       ? "View All →"
       : "Explore →";
-  }, [currentSlide, totalSlides]);
 
-  const handlePrev = useCallback(() => {
-    setCurrentSlide((s) => Math.max(0, s - 1));
-  }, []);
-
-  const handleNext = useCallback(() => {
-    setCurrentSlide((s) => Math.min(totalSlides - 1, s + 1));
-  }, [totalSlides]);
+  const handlePrev = useCallback(() => setCurrentSlide((s) => Math.max(0, s - 1)), []);
+  const handleNext = useCallback(() => setCurrentSlide((s) => Math.min(totalSlides - 1, s + 1)), [totalSlides]);
 
   const handleNavigate = useCallback((destination) => {
     if (!destination?.lat || !destination?.lng) return;
@@ -208,52 +210,33 @@ const PlacesSection = ({ places = [], title }) => {
     );
   }, []);
 
-  // Tablet/Mobile: show only first 4, no carousel
-  const mobileVisiblePlaces = useMemo(
-    () => destinationData.slice(0, 4),
-    [destinationData]
-  );
-
   return (
     <section className="ps-section">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="ps-header">
         <div className="ps-title-wrapper">
-  <span className="ps-title-accent"></span>
-
-  <h2 className="ps-title">
-    {title || t("popularPlaces") || "Most Popular Places"}
-  </h2>
-</div>
+          <span className="ps-title-accent" />
+          <h2 className="ps-title">
+            {title || t("popularPlaces") || "Most Popular Places"}
+          </h2>
+        </div>
 
         <div className="ps-header-right">
-          {/* Arrows — desktop only */}
           <div className="ps-arrows">
-            <button
-              className="ps-arrow"
-              onClick={handlePrev}
-              disabled={currentSlide === 0}
-              aria-label="Previous"
-            >
+            <button className="ps-arrow" onClick={handlePrev} disabled={currentSlide === 0} aria-label="Previous">
               ‹
             </button>
-            <button
-              className="ps-arrow"
-              onClick={handleNext}
-              disabled={currentSlide >= totalSlides - 1}
-              aria-label="Next"
-            >
+            <button className="ps-arrow" onClick={handleNext} disabled={currentSlide >= totalSlides - 1} aria-label="Next">
               ›
             </button>
           </div>
-
           <button className="ps-view-btn" onClick={handleHeaderBtn}>
             {headerBtnLabel}
           </button>
         </div>
       </div>
 
-      {/* Desktop Grid (carousel) */}
+      {/* ── Desktop Grid (carousel) ── */}
       <div className="ps-grid ps-grid--desktop">
         {visiblePlaces.map((destination, index) => (
           <PlaceCard
@@ -264,7 +247,7 @@ const PlacesSection = ({ places = [], title }) => {
         ))}
       </div>
 
-      {/* Tablet / Mobile Grid (static, 4 cards) */}
+      {/* ── Tablet / Mobile Grid (static) ── */}
       <div className="ps-grid ps-grid--mobile">
         {mobileVisiblePlaces.map((destination, index) => (
           <PlaceCard
@@ -275,7 +258,7 @@ const PlacesSection = ({ places = [], title }) => {
         ))}
       </div>
 
-      {/* Pagination dots — desktop only */}
+      {/* ── Pagination Dots ── */}
       {totalSlides > 1 && (
         <div className="ps-dots">
           {Array.from({ length: totalSlides }).map((_, i) => (
