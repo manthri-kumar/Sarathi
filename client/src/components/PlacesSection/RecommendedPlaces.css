@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════
-   RecommendedPlaces.css — Sarathi v2
+   RecommendedPlaces.css — Sarathi v3
+   Full-image cards · content overlaid on gradient
    Desktop: 5-col carousel | Tablet/Mobile: 2-col 4-card
    ═══════════════════════════════════════════════════════ */
 
@@ -22,13 +23,9 @@
 }
 
 .rp-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
   flex: 1;
 }
 
-/* Green accent bar + title group */
 .rp-title-wrapper {
   display: flex;
   align-items: flex-start;
@@ -68,7 +65,6 @@
   line-height: 1;
 }
 
-/* Right side controls */
 .rp-header-right {
   display: flex;
   align-items: center;
@@ -133,7 +129,6 @@
    GRIDS
 ═══════════════════════════ */
 
-/* Desktop: 5-col carousel — visible only on desktop */
 .rp-grid--desktop {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -141,16 +136,14 @@
   width: 100%;
 }
 
-/* Tablet/Mobile: 2-col static — hidden on desktop */
 .rp-grid--mobile {
   display: none;
 }
 
 /* ═══════════════════════════
-   CARD
+   CARD — Full Image
 ═══════════════════════════ */
 .rp-card {
-  background: #0d1117;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -158,25 +151,24 @@
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
               box-shadow 0.3s ease,
               border-color 0.2s;
-  display: flex;
-  flex-direction: column;
+  /* No background — image fills everything */
+  background: #0a0f18;
 }
 
 .rp-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5),
-              0 0 0 1px rgba(42, 197, 34, 0.1);
-  border-color: rgba(42, 197, 34, 0.18);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6),
+              0 0 0 1px rgba(42, 197, 34, 0.12);
+  border-color: rgba(42, 197, 34, 0.2);
 }
 
-/* ── Image Zone ── */
+/* ── Image Wrapper — full card ── */
 .rp-card-img-wrap {
   position: relative;
   width: 100%;
-  /* Desktop: landscape-ish to fit 5 cols comfortably */
-  aspect-ratio: 4 / 3;
+  /* Desktop: portrait-ish — content lives inside */
+  aspect-ratio: 4 / 5;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 .rp-card-img {
@@ -184,87 +176,93 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.4s ease;
+  transition: transform 0.45s ease;
 }
 
 .rp-card:hover .rp-card-img {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
-/* Gradient fade from image into info panel */
+/* ── Cinematic Gradient (stronger at bottom) ── */
 .rp-card-gradient {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    to bottom,
-    transparent 40%,
-    rgba(13, 17, 23, 0.65) 100%
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.55) 35%,
+    rgba(0, 0, 0, 0.15) 65%,
+    transparent 100%
   );
   pointer-events: none;
+  z-index: 1;
 }
 
 /* ── Heart Save Button ── */
 .rp-save-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  width: 32px;
-  height: 32px;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: rgba(20, 20, 20, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(10, 10, 10, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   line-height: 1;
 }
 
 .rp-save-btn:hover {
   transform: scale(1.1);
   color: #ff6b6b;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .rp-save-btn.saved {
   color: #ff6b6b;
-  background: rgba(255, 50, 50, 0.2);
-  border-color: rgba(255, 100, 100, 0.35);
+  background: rgba(255, 50, 50, 0.22);
+  border-color: rgba(255, 100, 100, 0.4);
 }
 
 /* ── Distance Chip ── */
 .rp-distance-chip {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.55);
+  /* Sits above overlay content */
+  bottom: 92px;
+  left: 14px;
+  z-index: 3;
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 500;
   padding: 4px 10px;
   border-radius: 20px;
   backdrop-filter: blur(6px);
 }
 
-/* ── Info Panel (below image) ── */
-.rp-card-info {
-  padding: 12px 14px 14px;
+/* ── Overlay Content — floats on image ── */
+.rp-overlay-content {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  background: #0d1117;
+  gap: 4px;
 }
 
 .rp-card-name {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
@@ -273,12 +271,13 @@
   text-overflow: ellipsis;
   letter-spacing: -0.01em;
   line-height: 1.2;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
 .rp-card-location {
-  font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.42);
-  margin: 0 0 8px 0;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 6px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -290,7 +289,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-top: auto;
 }
 
 .rp-card-rating {
@@ -311,27 +309,28 @@
 }
 
 .rp-reviews {
-  color: rgba(255, 255, 255, 0.38);
-  font-size: 0.73rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.7rem;
 }
 
-/* ── Explore Button (desktop: inline pill) ── */
+/* ── Explore Button ── */
 .rp-explore-btn {
-  background: rgba(42, 197, 34, 0.12);
-  border: 1px solid rgba(42, 197, 34, 0.3);
+  background: rgba(42, 197, 34, 0.18);
+  border: 1px solid rgba(42, 197, 34, 0.4);
   color: #2ac522;
-  padding: 5px 12px;
+  padding: 5px 13px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
+  backdrop-filter: blur(4px);
 }
 
 .rp-explore-btn:hover {
-  background: rgba(42, 197, 34, 0.22);
+  background: rgba(42, 197, 34, 0.3);
   transform: translateX(2px);
 }
 
@@ -398,28 +397,29 @@
 }
 
 /* ═══════════════════════════════════════════════════════
-   RESPONSIVE BREAKPOINTS
+   RESPONSIVE
 ═══════════════════════════════════════════════════════ */
 
 /* ── Tablet: 641px – 1024px ── */
 @media (max-width: 1024px) {
-  /* Hide desktop carousel */
   .rp-grid--desktop { display: none; }
 
-  /* Show 2-col mobile grid */
   .rp-grid--mobile {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
 
-  /* No arrows, no dots on tablet */
   .rp-arrows { display: none; }
   .rp-dots   { display: none; }
 
-  /* Portrait image for taller cards */
   .rp-card-img-wrap {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 4 / 4.6;
+  }
+
+  /* Chip sits above overlay content — adjust offset */
+  .rp-distance-chip {
+    bottom: 100px;
   }
 }
 
@@ -430,25 +430,29 @@
     gap: 12px;
   }
 
-  /* Header tweaks */
-  .rp-title { font-size: 1.2rem; }
-  .rp-subtitle { font-size: 0.72rem; }
-  .rp-title-accent { min-height: 38px; }
+  .rp-title         { font-size: 1.2rem; }
+  .rp-subtitle      { font-size: 0.72rem; }
+  .rp-title-accent  { min-height: 36px; }
 
-  /* Portrait cards on mobile */
   .rp-card-img-wrap {
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 4 / 4.2;
   }
 
-  /* Card info */
   .rp-card-name     { font-size: 0.88rem; }
-  .rp-card-location { font-size: 0.7rem; }
+  .rp-card-location { font-size: 0.68rem; }
 
-  /* Full-width Explore button on mobile (like screenshot) */
+  .rp-overlay-content {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    gap: 3px;
+  }
+
+  /* Full-width explore button on mobile */
   .rp-card-footer {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 6px;
   }
 
   .rp-explore-btn {
@@ -456,13 +460,14 @@
     text-align: center;
     padding: 8px 12px;
     border-radius: 999px;
-    font-size: 0.8rem;
-    /* Solid green bg like screenshot */
-    background: rgba(34, 197, 94, 0.15);
-    border-color: rgba(34, 197, 94, 0.4);
+    font-size: 0.78rem;
   }
 
-  /* View All button — pill style matching screenshot */
+  .rp-distance-chip {
+    bottom: 110px;
+    font-size: 0.64rem;
+  }
+
   .rp-view-btn {
     font-size: 0.78rem;
     padding: 6px 14px;
@@ -471,7 +476,5 @@
 
 /* ── Tiny screens ── */
 @media (max-width: 380px) {
-  .rp-grid--mobile {
-    grid-template-columns: 1fr;
-  }
+  .rp-grid--mobile { grid-template-columns: 1fr; }
 }

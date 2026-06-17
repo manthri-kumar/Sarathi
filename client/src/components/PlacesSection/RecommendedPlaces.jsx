@@ -10,7 +10,7 @@ const API_BASE =
   "https://sarathi-backend-7u0y.onrender.com";
 
 const CARDS_PER_SLIDE_DESKTOP = 5;
-const CARDS_MOBILE = 4; // tablet + mobile always show first 4
+const CARDS_MOBILE = 4;
 
 const parseCoord = (value) => {
   const n = Number(value);
@@ -32,19 +32,20 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
   const formatReviews = useCallback((reviews) => {
     if (!reviews) return "1k";
     if (reviews >= 1_000_000) return `${(reviews / 1_000_000).toFixed(1)}M`;
-    if (reviews >= 1_000) return `${(reviews / 1_000).toFixed(1)}k`;
+    if (reviews >= 1_000)     return `${(reviews / 1_000).toFixed(1)}k`;
     return String(reviews);
   }, []);
 
-  const rating = place.rating || 4.5;
-  const reviews = formatReviews(place.reviews);
-  const image = place.photo || img1;
+  const rating   = place.rating || 4.5;
+  const reviews  = formatReviews(place.reviews);
+  const image    = place.photo || img1;
   const location = place.location || place.vicinity || "India";
 
   return (
     <div className="rp-card">
-      {/* ── Image Zone ── */}
       <div className="rp-card-img-wrap">
+
+        {/* Full-bleed image */}
         <img
           src={image}
           alt={place.name}
@@ -52,6 +53,8 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
           loading="lazy"
           onError={(e) => { e.target.src = img1; }}
         />
+
+        {/* Cinematic gradient overlay */}
         <div className="rp-card-gradient" />
 
         {/* Heart Save Button */}
@@ -69,28 +72,30 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
             📍 {place.distance} {t("kmFromYou")}
           </div>
         )}
-      </div>
 
-      {/* ── Info Zone ── */}
-      <div className="rp-card-info">
-        <h3 className="rp-card-name">{place.name}</h3>
-        <p className="rp-card-location">{location}</p>
+        {/* ── Overlay Content (replaces rp-card-info) ── */}
+        <div className="rp-overlay-content">
+          <h3 className="rp-card-name">{place.name}</h3>
+          <p  className="rp-card-location">{location}</p>
 
-        <div className="rp-card-footer">
-          <div className="rp-card-rating">
-            <span className="rp-star">★</span>
-            <span className="rp-rating-val">
-              {typeof rating === "number" ? rating.toFixed(1) : rating}
-            </span>
-            <span className="rp-reviews">({reviews} reviews)</span>
+          <div className="rp-card-footer">
+            <div className="rp-card-rating">
+              <span className="rp-star">★</span>
+              <span className="rp-rating-val">
+                {typeof rating === "number" ? rating.toFixed(1) : rating}
+              </span>
+              <span className="rp-reviews">({reviews} reviews)</span>
+            </div>
+
+            <button
+              className="rp-explore-btn"
+              onClick={() => onNavigate(place)}
+            >
+              {t("explore") || "Explore"} →
+            </button>
           </div>
-          <button
-            className="rp-explore-btn"
-            onClick={() => onNavigate(place)}
-          >
-            {t("explore") || "Explore"} →
-          </button>
         </div>
+
       </div>
     </div>
   );
@@ -101,11 +106,11 @@ const RecommendedPlaces = ({ userLocation }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [savedIds, setSavedIds] = useState(new Set());
+  const [places,      setPlaces]      = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState(null);
+  const [currentSlide,setCurrentSlide]= useState(0);
+  const [savedIds,    setSavedIds]    = useState(new Set());
   const trackRef = useRef(null);
 
   const lat = parseCoord(userLocation?.lat ?? localStorage.getItem("lat"));
@@ -143,7 +148,7 @@ const RecommendedPlaces = ({ userLocation }) => {
     return () => controller.abort();
   }, [lat, lng]);
 
-  /* ── Desktop slide math ── */
+  /* ── Slide math ── */
   const totalSlides = useMemo(
     () => Math.ceil(places.length / CARDS_PER_SLIDE_DESKTOP),
     [places.length]
@@ -157,26 +162,28 @@ const RecommendedPlaces = ({ userLocation }) => {
     [places, currentSlide]
   );
 
-  /* First 4 only for tablet + mobile */
   const mobileVisiblePlaces = useMemo(
     () => places.slice(0, CARDS_MOBILE),
     [places]
   );
 
-  const handlePrev = useCallback(() => setCurrentSlide((s) => Math.max(0, s - 1)), []);
-  const handleNext = useCallback(() => setCurrentSlide((s) => Math.min(totalSlides - 1, s + 1)), [totalSlides]);
+  const handlePrev = useCallback(
+    () => setCurrentSlide((s) => Math.max(0, s - 1)), []
+  );
+  const handleNext = useCallback(
+    () => setCurrentSlide((s) => Math.min(totalSlides - 1, s + 1)),
+    [totalSlides]
+  );
 
   const handleHeaderBtn = useCallback(() => {
-    if (currentSlide === 0 && totalSlides > 1) {
-      setCurrentSlide(1);
-    } else {
-      navigate("/explore");
-    }
+    if (currentSlide === 0 && totalSlides > 1) setCurrentSlide(1);
+    else navigate("/explore");
   }, [currentSlide, totalSlides, navigate]);
 
-  const headerBtnLabel = currentSlide === 0 && totalSlides > 1
-    ? (t("viewAll") || "viewAll")
-    : (t("explore") || "Explore");
+  const headerBtnLabel =
+    currentSlide === 0 && totalSlides > 1
+      ? (t("viewAll") || "View All")
+      : (t("explore") || "Explore");
 
   const handleSave = useCallback((id) => {
     setSavedIds((prev) => {
@@ -207,26 +214,15 @@ const RecommendedPlaces = ({ userLocation }) => {
             <span className="rp-title-accent" />
             <div className="rp-title-group">
               <h2 className="rp-title">Recommended For You</h2>
-              <p className="rp-subtitle">Places Within 150 Km</p>
+              <p  className="rp-subtitle">Places Within 150 Km</p>
             </div>
           </div>
         </div>
 
         <div className="rp-header-right">
-          {/* Arrows — desktop only (hidden via CSS on tablet/mobile) */}
           <div className="rp-arrows">
-            <button
-              className="rp-arrow"
-              onClick={handlePrev}
-              disabled={currentSlide === 0}
-              aria-label="Previous"
-            >‹</button>
-            <button
-              className="rp-arrow"
-              onClick={handleNext}
-              disabled={currentSlide >= totalSlides - 1}
-              aria-label="Next"
-            >›</button>
+            <button className="rp-arrow" onClick={handlePrev} disabled={currentSlide === 0} aria-label="Previous">‹</button>
+            <button className="rp-arrow" onClick={handleNext} disabled={currentSlide >= totalSlides - 1} aria-label="Next">›</button>
           </div>
 
           {places.length > 0 && (
@@ -238,17 +234,13 @@ const RecommendedPlaces = ({ userLocation }) => {
       </div>
 
       {/* ── Error ── */}
-      {error && (
-        <div className="rp-error" role="alert">⚠️ {t(error)}</div>
-      )}
+      {error && <div className="rp-error" role="alert">⚠️ {t(error)}</div>}
 
-      {/* ── Desktop Grid (5 cards, carousel) ── */}
+      {/* ── Desktop Grid ── */}
       {!error && (
         <div className="rp-grid rp-grid--desktop" ref={trackRef}>
           {loading
-            ? Array.from({ length: CARDS_PER_SLIDE_DESKTOP }).map((_, i) => (
-                <SkeletonCard key={i} />
-              ))
+            ? Array.from({ length: CARDS_PER_SLIDE_DESKTOP }).map((_, i) => <SkeletonCard key={i} />)
             : desktopVisiblePlaces.map((place, index) => (
                 <PlaceCard
                   key={place.id || currentSlide * CARDS_PER_SLIDE_DESKTOP + index}
@@ -262,13 +254,11 @@ const RecommendedPlaces = ({ userLocation }) => {
         </div>
       )}
 
-      {/* ── Tablet + Mobile Grid (4 cards, 2-col static) ── */}
+      {/* ── Mobile Grid ── */}
       {!error && (
         <div className="rp-grid rp-grid--mobile">
           {loading
-            ? Array.from({ length: CARDS_MOBILE }).map((_, i) => (
-                <SkeletonCard key={i} />
-              ))
+            ? Array.from({ length: CARDS_MOBILE }).map((_, i) => <SkeletonCard key={i} />)
             : mobileVisiblePlaces.map((place, index) => (
                 <PlaceCard
                   key={place.id || index}
@@ -282,7 +272,7 @@ const RecommendedPlaces = ({ userLocation }) => {
         </div>
       )}
 
-      {/* ── Pagination Dots — desktop only ── */}
+      {/* ── Pagination Dots ── */}
       {!error && totalSlides > 1 && (
         <div className="rp-dots" role="tablist">
           {Array.from({ length: totalSlides }).map((_, i) => (
