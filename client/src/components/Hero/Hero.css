@@ -1,27 +1,25 @@
 /* ═══════════════════════════════════════════════════════
-   Hero.css — Sarathi v4.3  (Premium Polish)
-   240px desktop · compact left panel · Poppins
+   Hero.css — Sarathi v4.2
+   Left-panel text area · full image right · Poppins
    ═══════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
-/* ═══════════════════════════
-   WRAPPER
-═══════════════════════════ */
+/* ── Wrapper ── */
 .hero {
   width: 100%;
-  height: 240px;
+  height: 280px;
   border-radius: 18px;
   overflow: hidden;
   position: relative;
   margin-top: 20px;
   font-family: 'Poppins', sans-serif;
-  background: #03081c;
-  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 40px rgba(0, 0, 0, 0.45);
+  background: #040814;
 }
 
 /* ═══════════════════════════
-   SLIDES
+   SLIDES  (full bleed, image fills right half)
 ═══════════════════════════ */
 .hero-slides {
   position: absolute;
@@ -32,7 +30,7 @@
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center right;
+  background-position: center right;   /* image focal point on right */
   opacity: 0;
   transform: scale(1.04);
   transition:
@@ -45,28 +43,27 @@
   transform: scale(1.02);
 }
 
-/* Cinematic gradient baked into slide pseudo-element
-   — dark left panel, clear image on right */
-.hero-slide::after {
-  content: "";
+/* ═══════════════════════════
+   GRADIENT  — only left panel darkens, right stays clear
+═══════════════════════════ */
+.hero-gradient {
   position: absolute;
   inset: 0;
+  /* KEY: sharp fade — very dark on left, fully transparent by 55% */
   background: linear-gradient(
     90deg,
-    rgba(3, 8, 20, 0.96) 0%,
-    rgba(3, 8, 20, 0.82) 25%,
-    rgba(3, 8, 20, 0.38) 48%,
-    transparent 70%
+    rgba(4, 8, 20, 0.97) 0%,
+    rgba(4, 8, 20, 0.95) 28%,
+    rgba(4, 8, 20, 0.70) 42%,
+    rgba(4, 8, 20, 0.20) 55%,
+    transparent 68%
   );
-}
-
-/* Remove separate gradient div — slide::after handles it */
-.hero-gradient {
-  display: none;
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* ═══════════════════════════
-   CONTENT
+   CONTENT  — left-aligned panel
 ═══════════════════════════ */
 .hero-content {
   position: absolute;
@@ -75,38 +72,39 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 48px;
-  max-width: 360px;
-  gap: 9px;
+  padding: 0 40px;
+  /* Content never crosses into image territory */
+  max-width: 480px;
+  gap: 10px;
 }
 
 /* ── Badge ── */
 .hero-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   width: fit-content;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.75rem;
   font-weight: 500;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 999px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 
 .hero-badge-icon {
-  font-size: 10px;
+  font-size: 0.8rem;
 }
 
 /* ── Heading ── */
 .hero-heading {
   margin: 0;
-  font-size: 2.15rem;
-  font-weight: 600;
+  font-size: 2.8rem;
+  font-weight: 700;
   color: #ffffff;
   line-height: 1.1;
   letter-spacing: -0.03em;
@@ -115,49 +113,49 @@
 
 .hero-accent {
   color: #00d26a;
-  font-weight: 700;
 }
 
 /* ── Subtitle ── */
 .hero-subtitle {
   margin: 0;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.68);
   line-height: 1.5;
   font-weight: 400;
-  max-width: 260px;
+  max-width: 320px;
 }
 
 /* ── CTA Button ── */
 .hero-cta {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: linear-gradient(135deg, #00d26a, #00b85c);
+  gap: 8px;
+  background: linear-gradient(135deg, #00d26a, #00a84f);
   color: #ffffff;
   border: none;
-  padding: 0 18px;
-  height: 38px;
-  border-radius: 10px;
-  font-size: 13px;
+  padding: 0 24px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 0.95rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
   width: fit-content;
   margin-top: 2px;
-  box-shadow: 0 8px 24px rgba(0, 210, 106, 0.25);
-  transition: all 0.35s ease;
+  box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .hero-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(0, 210, 106, 0.4);
-  background: linear-gradient(135deg, #00e07a, #00c963);
+  box-shadow: 0 8px 28px rgba(0, 210, 106, 0.5);
 }
 
 .hero-cta-arrow {
   display: inline-block;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .hero-cta:hover .hero-cta-arrow {
@@ -172,49 +170,50 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #ffffff;
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding-bottom: 2px;
-  transition: all 0.35s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .hero-arrow:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-50%) scale(1.08);
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-50%) scale(1.1);
 }
 
-.hero-arrow--left  { left: 18px; }
-.hero-arrow--right { right: 18px; }
+.hero-arrow--left  { left: 20px; }
+.hero-arrow--right { right: 20px; }
 
 /* ═══════════════════════════
-   DOTS — centered, reference style
+   DOTS
 ═══════════════════════════ */
 .hero-dots {
   position: absolute;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 16px;
+  left: 40px;           /* align with left content, not centred */
   z-index: 3;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .hero-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.28);
   border: none;
@@ -225,10 +224,9 @@
 
 .hero-dot.active {
   width: 22px;
-  height: 7px;
-  border-radius: 20px;
+  border-radius: 4px;
   background: #00d26a;
-  box-shadow: 0 0 10px rgba(0, 210, 106, 0.6);
+  box-shadow: 0 0 10px rgba(0, 210, 106, 0.65);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -238,120 +236,130 @@
 /* ── Tablet (769px – 1024px) ── */
 @media (max-width: 1024px) {
   .hero {
-    height: 220px;
+    height: 240px;
   }
 
   .hero-content {
-    padding: 0 32px;
-    max-width: 320px;
+    padding: 0 28px;
+    max-width: 400px;
     gap: 8px;
   }
 
   .hero-heading {
-    font-size: 1.85rem;
+    font-size: 2.2rem;
   }
 
   .hero-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.88rem;
+  }
+
+  .hero-dots {
+    left: 28px;
   }
 }
 
 /* ── Mobile (≤768px) ──
-   Content in normal flow so card height grows with text.
-   Image bleeds through on right side.
+   Switch to top-to-bottom layout:
+   image fills full card, gradient covers from left edge
+   to ~60% so content stays readable
 ═══════════════════════════ */
 @media (max-width: 768px) {
   .hero {
-    height: auto;
-    min-height: 200px;
+    height: auto;           /* let content decide height */
+    min-height: 220px;
     border-radius: 14px;
   }
 
-  /* Stronger gradient on narrow screens */
-  .hero-slide::after {
+  /* On mobile the image is full-bleed underneath */
+  .hero-slide {
+    background-position: center center;
+  }
+
+  /* Stronger left-to-right gradient on mobile so short width is still readable */
+  .hero-gradient {
     background: linear-gradient(
       90deg,
-      rgba(3, 8, 20, 0.97) 0%,
-      rgba(3, 8, 20, 0.90) 38%,
-      rgba(3, 8, 20, 0.52) 62%,
+      rgba(4, 8, 20, 0.97) 0%,
+      rgba(4, 8, 20, 0.92) 40%,
+      rgba(4, 8, 20, 0.55) 65%,
       transparent 100%
     );
   }
 
   .hero-content {
-    position: relative;
+    position: relative;       /* back in normal flow so height expands */
     z-index: 2;
     max-width: 100%;
-    padding: 26px 20px 50px 20px;
+    padding: 28px 20px 52px 20px;   /* bottom pad gives dots room */
     gap: 8px;
   }
 
   .hero-heading {
-    font-size: 1.45rem;
+    font-size: 1.75rem;
     letter-spacing: -0.02em;
   }
 
   .hero-subtitle {
-    font-size: 0.75rem;
-    max-width: 220px;
+    font-size: 0.82rem;
+    max-width: 240px;
   }
 
   .hero-cta {
-    height: 36px;
-    font-size: 12px;
-    padding: 0 16px;
+    height: 40px;
+    font-size: 0.88rem;
+    padding: 0 18px;
   }
 
-  .hero-badge {
-    font-size: 10px;
-    padding: 3px 10px;
-  }
-
-  /* Hide left arrow on mobile */
+  /* Hide left arrow; keep only right */
   .hero-arrow--left {
     display: none;
   }
 
   .hero-arrow--right {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     right: 14px;
-    font-size: 18px;
+    font-size: 20px;
   }
 
-  /* Dots sit below the content block */
+  .hero-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  /* Dots at bottom-left */
   .hero-dots {
     position: absolute;
     bottom: 14px;
     left: 20px;
-    transform: none;   /* left-aligned on mobile */
   }
 }
 
 /* ── Small Mobile (≤480px) ── */
 @media (max-width: 480px) {
   .hero {
-    min-height: 180px;
+    min-height: 200px;
     border-radius: 12px;
   }
 
   .hero-content {
-    padding: 22px 16px 46px 16px;
+    padding: 24px 16px 48px 16px;
     gap: 7px;
   }
 
   .hero-heading {
-    font-size: 1.35rem;
+    font-size: 1.5rem;
   }
 
+  /* Hide subtitle on very small screens */
   .hero-subtitle {
     display: none;
   }
 
   .hero-cta {
-    height: 34px;
-    font-size: 11px;
-    padding: 0 14px;
+    height: 38px;
+    font-size: 0.84rem;
+    padding: 0 16px;
   }
 
   .hero-dots {
