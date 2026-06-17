@@ -1,390 +1,356 @@
-/* ═══════════════════════════════════════════
-   PlacesSection.css — Sarathi v2
-   5-col carousel · matches RecommendedPlaces
-   ═══════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-/* ── Section ── */
-.ps-section {
-  width: 100%;
-  padding: 0 0 40px 0;
-  margin-top: 1px; /* was 40px */
+/* =========================================
+   DESTINATIONS SECTION
+========================================= */
+
+.destinations-showcase {
+  margin-top: 40px;
 }
 
-/* ── Header ── */
-.ps-header {
+/* =========================================
+   HEADER
+========================================= */
+
+.destinations-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-
-.ps-section,
-.ps-section * {
-  font-family: 'Poppins', sans-serif;
+.destinations-header h2 {
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
 }
 
-.ps-title {
-  font-size: 1.55rem;
-  font-weight: 500;
-  color: #ffffff;
-  margin: 0;
-  letter-spacing: -0.02em;
+.view-destinations-btn {
+  background: transparent;
+  color: white;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  padding: 10px 18px;
+
+  border-radius: 14px;
+
+  cursor: pointer;
+
+  transition: 0.3s;
 }
 
-.ps-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.view-destinations-btn:hover {
+  border-color: #22c55e;
+  color: #22c55e;
 }
 
-/* Title Wrapper */
-.ps-title-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* =========================================
+   GRID
+========================================= */
+
+.destinations-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
 }
 
-.ps-title-accent {
-  width: 4px;
-  height: 32px;
-  border-radius: 999px;
+/* =========================================
+   CARD
+========================================= */
 
-  background: linear-gradient(
-    180deg,
-    #00ff95,
-    #22c55e
-  );
+.destination-card {
+  position: relative;
+
+  height: 300px;
+
+  border-radius: 24px;
+
+  overflow: hidden;
+
+  cursor: pointer;
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  transition: all 0.35s ease;
+}
+
+.destination-card:hover {
+  transform: translateY(-8px);
+
+  border-color: rgba(34, 197, 94, 0.3);
 
   box-shadow:
-    0 0 12px rgba(34, 197, 94, 0.5);
+    0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
-.ps-title {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 500;
-  color: #ffffff;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
+/* =========================================
+   IMAGE
+========================================= */
 
-/* ── Arrow Buttons ── */
-.ps-arrows {
-  display: flex;
-  gap: 8px;
-}
-
-.ps-arrow {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-size: 22px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  padding-bottom: 2px;
-}
-
-.ps-arrow:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
-  transform: scale(1.06);
-}
-
-.ps-arrow:disabled {
-  opacity: 0.22;
-  cursor: not-allowed;
-}
-
-/* ── View All / Explore Button ── */
-.ps-view-btn {
-  background: transparent;
-  border: 1px solid rgba(42, 197, 34, 0.4);
-  color: #2ac522;
-  padding: 7px 16px;
-  border-radius: 20px;
-  font-size: 0.83rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  white-space: nowrap;
-}
-
-.ps-view-btn:hover {
-  background: rgba(42, 197, 34, 0.1);
-  border-color: rgba(42, 197, 34, 0.7);
-}
-
-/* ── Grids ── */
-
-/* Desktop: 5-col carousel grid */
-.ps-grid--desktop {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
-  width: 100%;
-}
-
-/* Mobile: hidden by default, shown on tablet/mobile */
-.ps-grid--mobile {
-  display: none;
-}
-
-/* ── Card ── */
-.ps-card {
-  background: #0d1117;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
-              box-shadow 0.3s ease,
-              border-color 0.2s;
-  display: flex;
-  flex-direction: column;
-}
-
-.ps-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55),
-              0 0 0 1px rgba(42, 197, 34, 0.12);
-  border-color: rgba(42, 197, 34, 0.18);
-}
-
-/* ── Image Wrap ── */
-.ps-card-img-wrap {
+.destination-image {
   position: relative;
   width: 100%;
-  aspect-ratio: 5 / 4; /* Slightly less tall than rp cards — 5 per row needs breathing room */
-  overflow: hidden;
-  flex-shrink: 0;
+  height: 100%;
 }
 
-.ps-card-img {
+.destination-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  transition: transform 0.4s ease;
+
+  transition: transform 0.6s ease;
 }
 
-.ps-card:hover .ps-card-img {
+.destination-card:hover img {
   transform: scale(1.05);
 }
 
-/* Cinematic gradient */
-.ps-card-gradient {
+/* =========================================
+   PREMIUM FADE
+========================================= */
+
+.image-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(5, 8, 5, 0.88) 0%,
-    rgba(5, 8, 5, 0.3) 45%,
-    transparent 100%
-  );
-  pointer-events: none;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 10%,
+      rgba(0, 0, 0, 0.15) 40%,
+      rgba(0, 0, 0, 0.55) 70%,
+      rgba(2, 6, 23, 0.98) 100%
+    );
 }
 
-/* ── Badge ── */
-.ps-badge {
- font-size: 0.9rem;
-  padding: 8px 16px;
-  font-weight: 500;
+/* =========================================
+   FAVORITE BUTTON
+========================================= */
+
+.favorite-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  border-radius: 999px;
-  color: #ffffff;
-  letter-spacing: 0.01em;
-}
 
-.ps-badge--trending  { background: #f97316; }
-.ps-badge--popular   { background: #16a34a; }
-.ps-badge--toprated  { background: #7c3aed; }
-.ps-badge--bestforyou { background: #2563eb; }
+  top: 14px;
+  left: 14px;
 
-/* ── Card Content (overlaid on image) ── */
-.ps-card-content {
-  position: absolute;
-left: 22px;
-  right: 22px;
-  bottom: 22px;
-  z-index: 2;
-}
+  width: 38px;
+  height: 38px;
 
-
-.ps-card-name {
-   font-family: 'Poppins', sans-serif;
-  font-size: 1.9rem;
-  font-weight: 600;
-  line-height: 1.15;
-  color: #ffffff;
-  margin: 0 0 8px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-
-}
-
-
-.ps-card-location {
- font-size: 1.05rem;
-  font-weight: 300;
-  color: rgba(255,255,255,0.82);
-  margin: 0 0 14px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Card Footer ── */
-.ps-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.ps-card-rating {
-  font-size: 1.05rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.ps-star {
-  color: #D4AF37;
-  font-size: 1rem;
-}
-
-.ps-reviews {
-  font-size: 0.85rem;
-}
-
-.ps-reviews {
-  color: rgba(255, 255, 255, 0.38);
-  font-size: 0.85rem;
-}
-
-/* ── Explore Button ── */
-.ps-explore-btn {
-  background: rgba(42, 197, 34, 0.18);
-  border: 1px solid rgba(42, 197, 34, 0.45);
-  color: #2ac522;
-  padding: 10px 22px;
-  min-width: 125px;
-  border-radius: 999px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  font-family: 'Poppins', sans-serif;
-  transition: all 0.3s ease;
-}
-
-.ps-explore-btn:hover {
-  background: #2ac522;
-  color: #000;
-  transform: translateY(-2px);
-}
-
-/* ── Pagination Dots ── */
-.ps-dots {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 24px;
-}
-
-.ps-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
   border: none;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.18);
+
+  backdrop-filter: blur(12px);
+
+  color: white;
+
   cursor: pointer;
-  padding: 0;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  z-index: 5;
+
+  transition: 0.3s;
 }
 
-.ps-dot.active {
-  width: 18px;
-  border-radius: 4px;
-  background: #2ac522;
-  box-shadow: 0 0 8px rgba(42, 197, 34, 0.45);
+.favorite-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════ */
+/* =========================================
+   BADGES
+========================================= */
 
-/* Tablet — switch to 2-col static grid */
-@media (max-width: 1024px) {
-  .ps-grid--desktop {
-    display: none;
-  }
+.destination-badge {
+  position: absolute;
 
-  .ps-grid--mobile {
-    display: grid;
+  top: 14px;
+  right: 14px;
+
+  padding: 6px 12px;
+
+  border-radius: 999px;
+
+  color: white;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  z-index: 5;
+}
+
+.trending {
+  background: #f97316;
+}
+
+.popular {
+  background: #16a34a;
+}
+
+.toprated {
+  background: #7c3aed;
+}
+
+.bestforyou {
+  background: #2563eb;
+}
+
+/* =========================================
+   CONTENT OVER IMAGE
+========================================= */
+
+.destination-content {
+  position: absolute;
+
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+
+  z-index: 5;
+}
+
+.destination-content h3 {
+  color: white;
+
+  font-size: 28px;
+
+  font-weight: 700;
+
+  margin-bottom: 6px;
+}
+
+.destination-content p {
+  color: #d1d5db;
+
+  font-size: 14px;
+
+  margin-bottom: 16px;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+
+.destination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.destination-rating {
+  color: #22c55e;
+
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+.destination-rating span {
+  color: #cbd5e1;
+}
+
+/* =========================================
+   EXPLORE BUTTON
+========================================= */
+
+.explore-btn {
+  border: none;
+
+  padding: 10px 16px;
+
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  backdrop-filter: blur(12px);
+
+  color: white;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+
+.explore-btn:hover {
+  background:
+    linear-gradient(
+      135deg,
+      #00ff94,
+      #22c55e
+    );
+
+  color: #000;
+}
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 1200px) {
+
+  .destinations-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
   }
 
-  .ps-arrows {
-    display: none;
-  }
-
-  .ps-dots {
-    display: none;
-  }
-
-  .ps-card-img-wrap {
-    aspect-ratio: 4 / 5;
-  }
 }
+/* =========================================
+   MOBILE
+========================================= */
 
-/* Mobile — 2-col compact */
-@media (max-width: 640px) {
-  .ps-title {
-    font-size: 1.25rem;
-  }
+@media (max-width: 768px) {
 
-  .ps-grid--mobile {
-    grid-template-columns: repeat(2, 1fr);
+  .destinations-header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
 
-  .ps-card-name {
-    font-size: 0.85rem;
+  .destinations-header h2 {
+    font-size: 24px;
   }
 
-  .ps-card-location {
-    font-size: 0.68rem;
-    margin-bottom: 6px;
+  .destinations-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
   }
 
-  .ps-card-footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+  .destination-card {
+    height: 220px;
+    border-radius: 18px;
   }
 
-  .ps-explore-btn {
-    width: 100%;
-    text-align: center;
+  .destination-content {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
   }
-}
 
-/* Tiny screens */
-@media (max-width: 380px) {
-  .ps-grid--mobile {
-    grid-template-columns: 1fr;
+  .destination-content h3 {
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+
+  .destination-content p {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  .destination-rating {
+    font-size: 11px;
+  }
+
+  .explore-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 10px;
+  }
+
+  .favorite-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .destination-badge {
+    font-size: 9px;
+    padding: 4px 8px;
   }
 }
