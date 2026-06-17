@@ -26,7 +26,7 @@
 
 .ps-title {
   font-size: 1.55rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #ffffff;
   margin: 0;
   letter-spacing: -0.02em;
@@ -63,7 +63,7 @@
 .ps-title {
   margin: 0;
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #ffffff;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -110,7 +110,7 @@
   padding: 7px 16px;
   border-radius: 20px;
   font-size: 0.83rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
   white-space: nowrap;
@@ -195,7 +195,7 @@
 .ps-badge {
  font-size: 0.9rem;
   padding: 8px 16px;
-  font-weight: 700;
+  font-weight: 500;
   position: absolute;
   top: 12px;
   right: 12px;
@@ -223,7 +223,7 @@ left: 22px;
 .ps-card-name {
    font-family: 'Poppins', sans-serif;
   font-size: 1.9rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.15;
   color: #ffffff;
   margin: 0 0 8px 0;
@@ -237,7 +237,7 @@ left: 22px;
 
 .ps-card-location {
  font-size: 1.05rem;
-  font-weight: 400;
+  font-weight: 300;
   color: rgba(255,255,255,0.82);
   margin: 0 0 14px 0;
   white-space: nowrap;
@@ -255,7 +255,7 @@ left: 22px;
 
 .ps-card-rating {
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -284,7 +284,7 @@ left: 22px;
   min-width: 125px;
   border-radius: 999px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: 'Poppins', sans-serif;
   transition: all 0.3s ease;
 }
