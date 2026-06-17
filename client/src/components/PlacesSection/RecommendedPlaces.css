@@ -25,6 +25,8 @@
   flex: 1;
 }
 .rp-title {
+    font-family: 'Poppins', sans-serif;
+
   margin: 0;
   font-size: 1.7rem;
   font-weight: 700;
@@ -33,6 +35,8 @@
 }
 
 .rp-subtitle {
+    font-family: 'Poppins', sans-serif;
+
   margin: 2px 0 0 13px;
   font-size: 0.75rem;
   color: rgba(255,255,255,0.45);
@@ -222,6 +226,8 @@
 }
 
 .rp-card-name {
+    font-family: 'Poppins', sans-serif;
+
   font-size: 1rem;
   font-weight: 700;
   color: #ffffff;
@@ -233,6 +239,8 @@
 }
 
 .rp-card-location {
+    font-family: 'Poppins', sans-serif;
+
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.4);
   margin: 0 0 8px 0;
@@ -274,6 +282,8 @@
 
 /* ── Explore Button ── */
 .rp-explore-btn {
+    font-family: 'Poppins', sans-serif;
+
   background: rgba(42, 197, 34, 0.12);
   border: 1px solid rgba(42, 197, 34, 0.3);
   color: #2ac522;
