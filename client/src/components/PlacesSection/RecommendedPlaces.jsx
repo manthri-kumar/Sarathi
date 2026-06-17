@@ -73,7 +73,7 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
           </div>
         )}
 
-        {/* ── Overlay Content (replaces rp-card-info) ── */}
+        {/* ── Overlay Content ── */}
         <div className="rp-overlay-content">
           <h3 className="rp-card-name">{place.name}</h3>
           <p  className="rp-card-location">{location}</p>
@@ -106,11 +106,11 @@ const RecommendedPlaces = ({ userLocation }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [places,      setPlaces]      = useState([]);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState(null);
-  const [currentSlide,setCurrentSlide]= useState(0);
-  const [savedIds,    setSavedIds]    = useState(new Set());
+  const [places,       setPlaces]       = useState([]);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [savedIds,     setSavedIds]     = useState(new Set());
   const trackRef = useRef(null);
 
   const lat = parseCoord(userLocation?.lat ?? localStorage.getItem("lat"));
@@ -221,8 +221,22 @@ const RecommendedPlaces = ({ userLocation }) => {
 
         <div className="rp-header-right">
           <div className="rp-arrows">
-            <button className="rp-arrow" onClick={handlePrev} disabled={currentSlide === 0} aria-label="Previous">‹</button>
-            <button className="rp-arrow" onClick={handleNext} disabled={currentSlide >= totalSlides - 1} aria-label="Next">›</button>
+            <button
+              className="rp-arrow"
+              onClick={handlePrev}
+              disabled={currentSlide === 0}
+              aria-label="Previous"
+            >
+              ‹
+            </button>
+            <button
+              className="rp-arrow"
+              onClick={handleNext}
+              disabled={currentSlide >= totalSlides - 1}
+              aria-label="Next"
+            >
+              ›
+            </button>
           </div>
 
           {places.length > 0 && (
@@ -240,7 +254,9 @@ const RecommendedPlaces = ({ userLocation }) => {
       {!error && (
         <div className="rp-grid rp-grid--desktop" ref={trackRef}>
           {loading
-            ? Array.from({ length: CARDS_PER_SLIDE_DESKTOP }).map((_, i) => <SkeletonCard key={i} />)
+            ? Array.from({ length: CARDS_PER_SLIDE_DESKTOP }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))
             : desktopVisiblePlaces.map((place, index) => (
                 <PlaceCard
                   key={place.id || currentSlide * CARDS_PER_SLIDE_DESKTOP + index}
@@ -258,7 +274,9 @@ const RecommendedPlaces = ({ userLocation }) => {
       {!error && (
         <div className="rp-grid rp-grid--mobile">
           {loading
-            ? Array.from({ length: CARDS_MOBILE }).map((_, i) => <SkeletonCard key={i} />)
+            ? Array.from({ length: CARDS_MOBILE }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))
             : mobileVisiblePlaces.map((place, index) => (
                 <PlaceCard
                   key={place.id || index}
