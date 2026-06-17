@@ -66,15 +66,16 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
           {isSaved ? "♥" : "♡"}
         </button>
 
-        {/* Distance chip */}
-        {place.distance != null && (
-          <div className="rp-distance-chip">
-            📍 {place.distance} {t("kmFromYou")}
-          </div>
-        )}
-
-        {/* ── Overlay Content ── */}
+        {/* ── Overlay Content — distance chip + name + location + footer ── */}
         <div className="rp-overlay-content">
+
+          {/* Distance chip lives INSIDE overlay flow, above name */}
+          {place.distance != null && (
+            <div className="rp-distance-chip">
+              📍 {place.distance} {t("kmFromYou")}
+            </div>
+          )}
+
           <h3 className="rp-card-name">{place.name}</h3>
           <p  className="rp-card-location">{location}</p>
 
@@ -94,6 +95,7 @@ const PlaceCard = React.memo(({ place, index, onNavigate, onSave, savedIds }) =>
               {t("explore") || "Explore"} →
             </button>
           </div>
+
         </div>
 
       </div>
