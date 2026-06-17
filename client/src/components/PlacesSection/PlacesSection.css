@@ -1,13 +1,13 @@
-/* ═══════════════════════════════════════════════════════
-   PlacesSection.css — Sarathi
-   Matches screenshot: landscape cards, 2-zone layout
-   ═══════════════════════════════════════════════════════ */
-
+/* ═══════════════════════════════════════════
+   PlacesSection.css — Sarathi v2
+   5-col carousel · matches RecommendedPlaces
+   ═══════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 /* ── Section ── */
 .ps-section {
   width: 100%;
-  margin-top: 40px;
-  padding-bottom: 40px;
+  padding: 0 0 40px 0;
+  margin-top: 1px; /* was 40px */
 }
 
 /* ── Header ── */
@@ -15,39 +15,58 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-.ps-title-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
-/* Green vertical accent bar */
-.ps-title-accent {
-  display: block;
-  width: 4px;
-  height: 28px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #00ff95, #22c55e);
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
-  flex-shrink: 0;
+.ps-section,
+.ps-section * {
+  font-family: 'Poppins', sans-serif;
 }
 
 .ps-title {
-  margin: 0;
-  font-size: 1.45rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 500;
   color: #ffffff;
+  margin: 0;
   letter-spacing: -0.02em;
-  line-height: 1;
 }
 
 .ps-header-right {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* Title Wrapper */
+.ps-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ps-title-accent {
+  width: 4px;
+  height: 32px;
+  border-radius: 999px;
+
+  background: linear-gradient(
+    180deg,
+    #00ff95,
+    #22c55e
+  );
+
+  box-shadow:
+    0 0 12px rgba(34, 197, 94, 0.5);
+}
+
+.ps-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 /* ── Arrow Buttons ── */
@@ -57,13 +76,14 @@
 }
 
 .ps-arrow {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  font-size: 20px;
+  font-size: 22px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -78,45 +98,49 @@
 }
 
 .ps-arrow:disabled {
-  opacity: 0.2;
+  opacity: 0.22;
   cursor: not-allowed;
 }
 
 /* ── View All / Explore Button ── */
 .ps-view-btn {
   background: transparent;
-  border: none;
+  border: 1px solid rgba(42, 197, 34, 0.4);
   color: #2ac522;
-  font-size: 0.88rem;
-  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 0.63rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
-  padding: 0;
+  transition: background 0.2s, border-color 0.2s;
   white-space: nowrap;
 }
 
 .ps-view-btn:hover {
-  opacity: 0.75;
+  background: rgba(42, 197, 34, 0.1);
+  border-color: rgba(42, 197, 34, 0.7);
 }
 
 /* ── Grids ── */
+
+/* Desktop: 5-col carousel grid */
 .ps-grid--desktop {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
 }
 
+/* Mobile: hidden by default, shown on tablet/mobile */
 .ps-grid--mobile {
   display: none;
 }
 
-/* ══════════════════════════════════════════
-   CARD — Two-zone: image on top, info below
-   ══════════════════════════════════════════ */
+/* ── Card ── */
 .ps-card {
-  border-radius: 14px;
+  background: #0d1117;
+  border-radius: 16px;
   overflow: hidden;
-  background: #0f1117;
   border: 1px solid rgba(255, 255, 255, 0.07);
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
@@ -127,18 +151,17 @@
 }
 
 .ps-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5),
-              0 0 0 1px rgba(42, 197, 34, 0.1);
-  border-color: rgba(42, 197, 34, 0.2);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55),
+              0 0 0 1px rgba(42, 197, 34, 0.12);
+  border-color: rgba(42, 197, 34, 0.18);
 }
 
-/* ── Image Zone ── */
+/* ── Image Wrap ── */
 .ps-card-img-wrap {
   position: relative;
   width: 100%;
-  /* Landscape ratio matching screenshot */
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 5 / 4; /* Slightly less tall than rp cards — 5 per row needs breathing room */
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -148,128 +171,128 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.45s ease;
+  transition: transform 0.4s ease;
 }
 
 .ps-card:hover .ps-card-img {
   transform: scale(1.05);
 }
 
-/* Subtle fade at bottom of image — blends into info panel */
-.ps-card-img-fade {
+/* Cinematic gradient */
+.ps-card-gradient {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40%;
+  inset: 0;
   background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(15, 17, 23, 0.6) 100%
+    to top,
+    rgba(5, 8, 5, 0.88) 0%,
+    rgba(5, 8, 5, 0.3) 45%,
+    transparent 100%
   );
   pointer-events: none;
 }
 
-/* ── Badge (overlaid on image) ── */
+/* ── Badge ── */
 .ps-badge {
+ font-size: 0.6rem;
+  padding: 8px 16px;
+  font-weight: 500;
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
   z-index: 2;
-  padding: 4px 11px;
   border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 700;
   color: #ffffff;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 
-.ps-badge--trending   { background: #f97316; }
-.ps-badge--popular    { background: #16a34a; }
-.ps-badge--toprated   { background: #7c3aed; }
+.ps-badge--trending  { background: #f97316; }
+.ps-badge--popular   { background: #16a34a; }
+.ps-badge--toprated  { background: #7c3aed; }
 .ps-badge--bestforyou { background: #2563eb; }
 
-/* ── Info Zone (below image) ── */
-.ps-card-info {
-  padding: 14px 16px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  background: #0f1117;
-  flex: 1;
+/* ── Card Content (overlaid on image) ── */
+.ps-card-content {
+  position: absolute;
+left: 22px;
+  right: 22px;
+  bottom: 22px;
+  z-index: 2;
 }
+
 
 .ps-card-name {
-  font-size: 1.05rem;
-  font-weight: 700;
+   font-family: 'Poppins', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.15;
   color: #ffffff;
-  margin: 0;
+  margin: 0 0 8px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+
 }
+
 
 .ps-card-location {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
-  margin: 0 0 10px 0;
+ font-size: 1.4rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.82);
+  margin: 0 0 14px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ── Footer Row ── */
+/* ── Card Footer ── */
 .ps-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
+  gap: 6px;
 }
 
 .ps-card-rating {
+  font-size: 1.05rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.82rem;
 }
 
 .ps-star {
-  color: #f59e0b;
-  font-size: 0.82rem;
+  color: #D4AF37;
+  font-size: 0.7rem;
 }
 
-.ps-rating-val {
-  font-weight: 700;
-  color: #ffffff;
+.ps-reviews {
+  font-size: 0.65rem;
 }
 
 .ps-reviews {
   color: rgba(255, 255, 255, 0.38);
-  font-size: 0.75rem;
+  font-size: 0.65rem;
 }
 
 /* ── Explore Button ── */
 .ps-explore-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.85);
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  background: rgba(42, 197, 34, 0.18);
+  border: 1px solid rgba(42, 197, 34, 0.45);
+  color: #2ac522;
+  padding: 10px 22px;
+  min-width: 125px;
+  border-radius: 999px;
+  font-size: 0.75rem;
   font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
 }
 
 .ps-explore-btn:hover {
-  background: rgba(42, 197, 34, 0.12);
-  border-color: rgba(42, 197, 34, 0.45);
-  color: #2ac522;
+  background: #2ac522;
+  color: #000;
+  transform: translateY(-2px);
 }
 
 /* ── Pagination Dots ── */
@@ -277,7 +300,7 @@
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .ps-dot {
@@ -302,31 +325,50 @@
    RESPONSIVE
    ══════════════════════════════════════════ */
 
-/* Tablet */
+/* Tablet — switch to 2-col static grid */
 @media (max-width: 1024px) {
-  .ps-grid--desktop { display: none; }
+  .ps-grid--desktop {
+    display: none;
+  }
 
   .ps-grid--mobile {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    gap: 16px;
   }
 
-  .ps-arrows { display: none; }
-  .ps-dots   { display: none; }
+  .ps-arrows {
+    display: none;
+  }
+
+  .ps-dots {
+    display: none;
+  }
+
+  .ps-card-img-wrap {
+    aspect-ratio: 4 / 5;
+  }
 }
 
-/* Mobile */
+/* Mobile — 2-col compact */
 @media (max-width: 640px) {
-  .ps-title { font-size: 1.15rem; }
+  .ps-title {
+    font-size: 1.15rem;
+  }
 
   .ps-grid--mobile {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 12px;
   }
 
-  .ps-card-name     { font-size: 0.88rem; }
-  .ps-card-location { font-size: 0.7rem; margin-bottom: 6px; }
+  .ps-card-name {
+    font-size: 0.65rem;
+  }
+
+  .ps-card-location {
+    font-size: 0.48rem;
+    margin-bottom: 6px;
+  }
 
   .ps-card-footer {
     flex-direction: column;
@@ -340,7 +382,9 @@
   }
 }
 
-/* Tiny */
+/* Tiny screens */
 @media (max-width: 380px) {
-  .ps-grid--mobile { grid-template-columns: 1fr; }
+  .ps-grid--mobile {
+    grid-template-columns: 1fr;
+  }
 }
