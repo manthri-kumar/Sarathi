@@ -207,11 +207,22 @@ const RecommendedPlaces = ({ userLocation }) => {
   return (
     <section className="rp-section">
       {/* Header */}
-      <div className="rp-header">
-        <div className="rp-header-left">
-          <h2 className="rp-title">{t("recommendedForYou")}</h2>
-          <p className="rp-subtitle">{t("placesWithin150Km")}</p>
-        </div>
+      <div className="rp-header-left">
+
+  <div className="rp-title-wrapper">
+    <span className="rp-title-accent"></span>
+
+    <div>
+      <h2 className="rp-title">
+        {t("recommendedForYou")}
+      </h2>
+
+      <p className="rp-subtitle">
+        {t("placesWithin150Km")}
+      </p>
+    </div>
+  </div>
+
 
         <div className="rp-header-right">
           {/* Arrow controls — desktop only */}
