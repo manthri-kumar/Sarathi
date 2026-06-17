@@ -98,9 +98,9 @@
 /* ── Card Grid ── */
 .rp-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(260px, 280px));
-  justify-content: center;
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
+  width: 100%;
 }
 
 /* ── Individual Card ── */

@@ -9,7 +9,7 @@ const API_BASE =
   process.env.REACT_APP_API_URL ||
   "https://sarathi-backend-7u0y.onrender.com";
 
-const CARDS_PER_SLIDE = 4;
+const CARDS_PER_SLIDE = 5;
 
 const parseCoord = (value) => {
   const n = Number(value);
