@@ -89,8 +89,9 @@
 /* Desktop: 5-col carousel grid */
 .ps-grid--desktop {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
 }
 
 /* Mobile: hidden by default, shown on tablet/mobile */
@@ -123,7 +124,7 @@
 .ps-card-img-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 4; /* Slightly less tall than rp cards — 5 per row needs breathing room */
+  aspect-ratio: 5 / 4; /* Slightly less tall than rp cards — 5 per row needs breathing room */
   overflow: hidden;
   flex-shrink: 0;
 }
