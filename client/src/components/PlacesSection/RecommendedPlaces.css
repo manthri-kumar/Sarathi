@@ -259,18 +259,18 @@
 }
 
 .rp-card-name {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 6px 0;
-  white-space: nowrap;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+  min-height: 3rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
-
 .rp-card-location {
   font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.72);
@@ -426,10 +426,17 @@
     font-size: 1.15rem;
   }
 
-  .rp-card-location {
-    font-size: 0.8rem;
-    margin-bottom: 12px;
-  }
+ .rp-card-location {
+  margin-top: 4px;
+  margin-bottom: 18px;
+
+  font-size: 0.82rem;
+  color: rgba(255,255,255,.75);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
   /* Keep footer horizontal on tablet */
   .rp-card-footer {
@@ -445,10 +452,14 @@
   }
 
   .rp-overlay-content {
-    left: 14px;
-    right: 14px;
-    bottom: 14px;
-  }
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 28px;
+
+  display: flex;
+  flex-direction: column;
+}
 }
 
 /* ── Mobile: max-width 640px ── */
@@ -505,7 +516,7 @@
   }
 
   .rp-distance-chip {
-    bottom: 108px;
+    bottom: 130px;
     left: 12px;
     font-size: 0.64rem;
   }
