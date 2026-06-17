@@ -98,7 +98,8 @@
 /* ── Card Grid ── */
 .rp-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(260px, 280px));
+  justify-content: center;
   gap: 20px;
 }
 
@@ -126,8 +127,8 @@
 /* ── Image Wrapper ── */
 .rp-card-img-wrap {
   position: relative;
-  width: 80%;
-  aspect-ratio: 5/4;   /* Taller portrait ratio */
+  width: 100%;
+  aspect-ratio: 5/4;   
   overflow: hidden;
   flex-shrink: 0;
 }
