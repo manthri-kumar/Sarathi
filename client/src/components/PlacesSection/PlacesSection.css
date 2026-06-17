@@ -25,7 +25,7 @@
 }
 
 .ps-title {
-  font-size: 1.55rem;
+  font-size: 1.5rem;
   font-weight: 500;
   color: #ffffff;
   margin: 0;
@@ -109,7 +109,7 @@
   color: #2ac522;
   padding: 7px 16px;
   border-radius: 20px;
-  font-size: 0.83rem;
+  font-size: 0.63rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
@@ -193,7 +193,7 @@
 
 /* ── Badge ── */
 .ps-badge {
- font-size: 0.9rem;
+ font-size: 0.6rem;
   padding: 8px 16px;
   font-weight: 500;
   position: absolute;
@@ -222,7 +222,7 @@ left: 22px;
 
 .ps-card-name {
    font-family: 'Poppins', sans-serif;
-  font-size: 1.9rem;
+  font-size: 1.6rem;
   font-weight: 600;
   line-height: 1.15;
   color: #ffffff;
@@ -236,7 +236,7 @@ left: 22px;
 
 
 .ps-card-location {
- font-size: 1.05rem;
+ font-size: 1.4rem;
   font-weight: 300;
   color: rgba(255,255,255,0.82);
   margin: 0 0 14px 0;
@@ -263,16 +263,16 @@ left: 22px;
 
 .ps-star {
   color: #D4AF37;
-  font-size: 1rem;
+  font-size: 0.7rem;
 }
 
 .ps-reviews {
-  font-size: 0.85rem;
+  font-size: 0.65rem;
 }
 
 .ps-reviews {
   color: rgba(255, 255, 255, 0.38);
-  font-size: 0.85rem;
+  font-size: 0.65rem;
 }
 
 /* ── Explore Button ── */
@@ -283,7 +283,7 @@ left: 22px;
   padding: 10px 22px;
   min-width: 125px;
   border-radius: 999px;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   font-weight: 500;
   font-family: 'Poppins', sans-serif;
   transition: all 0.3s ease;
@@ -353,7 +353,7 @@ left: 22px;
 /* Mobile — 2-col compact */
 @media (max-width: 640px) {
   .ps-title {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
   }
 
   .ps-grid--mobile {
@@ -362,11 +362,11 @@ left: 22px;
   }
 
   .ps-card-name {
-    font-size: 0.85rem;
+    font-size: 0.65rem;
   }
 
   .ps-card-location {
-    font-size: 0.68rem;
+    font-size: 0.48rem;
     margin-bottom: 6px;
   }
 
