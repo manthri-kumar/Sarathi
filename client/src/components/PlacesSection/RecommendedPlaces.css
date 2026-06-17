@@ -127,7 +127,7 @@
 .rp-card-img-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;   /* Taller portrait ratio */
+  aspect-ratio: 5/4;   /* Taller portrait ratio */
   overflow: hidden;
   flex-shrink: 0;
 }
