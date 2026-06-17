@@ -205,97 +205,109 @@ const RecommendedPlaces = ({ userLocation }) => {
   if (!loading && !error && places.length === 0) return null;
 
   return (
-    <section className="rp-section">
-      {/* Header */}
-      <div className="rp-header-left">
+   <section className="rp-section">
 
-  <div className="rp-title-wrapper">
-    <span className="rp-title-accent"></span>
+  {/* Header */}
+  <div className="rp-header">
 
-    <div>
-      <h2 className="rp-title">
-        {t("recommendedForYou")}
-      </h2>
+    {/* Left Side */}
+    <div className="rp-header-left">
+      <div className="rp-title-wrapper">
+        <span className="rp-title-accent"></span>
 
-      <p className="rp-subtitle">
-        {t("placesWithin150Km")}
-      </p>
-    </div>
-  </div>
+        <div>
+          <h2 className="rp-title">
+            {t("recommendedForYou")}
+          </h2>
 
-
-        <div className="rp-header-right">
-          {/* Arrow controls — desktop only */}
-          <div className="rp-arrows">
-            <button
-              className="rp-arrow"
-              onClick={handlePrev}
-              disabled={currentSlide === 0}
-              aria-label="Previous"
-            >
-              ‹
-            </button>
-            <button
-              className="rp-arrow"
-              onClick={handleNext}
-              disabled={currentSlide >= totalSlides - 1}
-              aria-label="Next"
-            >
-              ›
-            </button>
-          </div>
-
-          {places.length > 0 && (
-            <button className="rp-view-btn" onClick={handleHeaderBtn}>
-              {headerBtnLabel} →
-            </button>
-          )}
+          <p className="rp-subtitle">
+            {t("placesWithin150Km")}
+          </p>
         </div>
       </div>
+    </div>
 
-      {/* Error */}
-      {error && (
-        <div className="rp-error" role="alert">
-          ⚠️ {t(error)}
+    {/* Right Side */}
+    <div className="rp-header-right">
+
+      <div className="rp-arrows">
+        <button
+          className="rp-arrow"
+          onClick={handlePrev}
+          disabled={currentSlide === 0}
+          aria-label="Previous"
+        >
+          ‹
+        </button>
+
+        <button
+          className="rp-arrow"
+          onClick={handleNext}
+          disabled={currentSlide >= totalSlides - 1}
+          aria-label="Next"
+        >
+          ›
+        </button>
+      </div>
+
+      {places.length > 0 && (
+        <button
+          className="rp-view-btn"
+          onClick={handleHeaderBtn}
+        >
+          {headerBtnLabel} →
+        </button>
+      )}
+
+    </div>
+
+  </div>
+
+  {/* Error */}
+  {error && (
+    <div className="rp-error" role="alert">
+      ⚠️ {t(error)}
+    </div>
+  )}
+
+  {/* Cards Grid */}
+  {!error && (
+    <>
+      <div className="rp-grid" ref={trackRef}>
+        {loading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))
+          : visiblePlaces.map((place, index) => (
+              <PlaceCard
+                key={place.id || currentSlide * CARDS_PER_SLIDE + index}
+                place={place}
+                index={currentSlide * CARDS_PER_SLIDE + index}
+                onNavigate={handleNavigate}
+                onSave={handleSave}
+                savedIds={savedIds}
+              />
+            ))}
+      </div>
+
+      {totalSlides > 1 && (
+        <div className="rp-dots" role="tablist">
+          {Array.from({ length: totalSlides }).map((_, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={i === currentSlide}
+              className={`rp-dot${i === currentSlide ? " active" : ""}`}
+              onClick={() => setCurrentSlide(i)}
+              aria-label={`Slide ${i + 1}`}
+            />
+          ))}
         </div>
       )}
+    </>
+  )}
 
-      {/* Cards Grid */}
-      {!error && (
-        <>
-          <div className="rp-grid" ref={trackRef}>
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-              : visiblePlaces.map((place, index) => (
-                  <PlaceCard
-                    key={place.id || currentSlide * CARDS_PER_SLIDE + index}
-                    place={place}
-                    index={currentSlide * CARDS_PER_SLIDE + index}
-                    onNavigate={handleNavigate}
-                    onSave={handleSave}
-                    savedIds={savedIds}
-                  />
-                ))}
-          </div>
-
-          {/* Pagination dots — desktop only */}
-          {totalSlides > 1 && (
-            <div className="rp-dots" role="tablist">
-              {Array.from({ length: totalSlides }).map((_, i) => (
-                <button
-                  key={i}
-                  role="tab"
-                  aria-selected={i === currentSlide}
-                  className={`rp-dot${i === currentSlide ? " active" : ""}`}
-                  onClick={() => setCurrentSlide(i)}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </section>
+</section>
   );
 };
 

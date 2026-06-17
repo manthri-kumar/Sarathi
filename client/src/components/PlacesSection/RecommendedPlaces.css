@@ -13,14 +13,16 @@
 .rp-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 24px;
+  align-items: center;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 .rp-header-left {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  flex: 1;
 }
 .rp-title {
   margin: 0;
@@ -41,11 +43,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto; /* pushes to right */
+  flex-shrink: 0;
 }
 
 /* ── Arrow Buttons ── */
 .rp-arrows {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
