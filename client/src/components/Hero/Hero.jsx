@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./Hero.css";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 import img1 from "../../assets/Hero/img1.png";
 import img2 from "../../assets/Hero/img2.png";
@@ -17,47 +16,50 @@ const Hero = () => {
   const [index, setIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const goTo = useCallback(
     (next) => {
       if (animating) return;
+
       setAnimating(true);
       setIndex(next);
-      setTimeout(() => setAnimating(false), 850);
+
+      setTimeout(() => {
+        setAnimating(false);
+      }, 850);
     },
     [animating]
   );
 
-  /* Auto-advance */
+  /* Auto Slider */
   useEffect(() => {
     const id = setInterval(() => {
       goTo((index + 1) % slides.length);
     }, 5000);
+
     return () => clearInterval(id);
   }, [index, goTo]);
-
-  const nextSlide = () => goTo((index + 1) % slides.length);
-  const prevSlide = () => goTo((index - 1 + slides.length) % slides.length);
 
   return (
     <div className="hero">
 
-      {/* ── Background Slides ── */}
+      {/* Background Slides */}
       <div className="hero-slides">
         {slides.map((slide, i) => (
           <div
             key={i}
             className={`hero-slide${i === index ? " active" : ""}`}
-            style={{ backgroundImage: `url(${slide.image})` }}
+            style={{
+              backgroundImage: `url(${slide.image})`,
+            }}
           />
         ))}
       </div>
 
-      {/* ── Left-panel gradient (only darkens left half) ── */}
+      {/* Gradient Overlay */}
       <div className="hero-gradient" />
 
-      {/* ── Text Content ── */}
+      {/* Hero Content */}
       <div className="hero-content">
 
         <span className="hero-badge">
@@ -73,15 +75,13 @@ const Hero = () => {
         </h1>
 
         <p className="hero-subtitle">
-          {t("recommendations") || "AI-powered recommendations just for you."}
+          {t("recommendations") ||
+            "AI-powered recommendations just for you."}
         </p>
-
-        
 
       </div>
 
-
-      {/* ── Dots ── */}
+      {/* Dots */}
       <div className="hero-dots">
         {slides.map((_, i) => (
           <button
