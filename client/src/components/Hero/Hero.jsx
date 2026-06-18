@@ -71,9 +71,9 @@ const Hero = () => {
         </span>
 
         <h1 className="hero-heading">
-          {t("discover")}{" "}
+          {t("Discover")}{" "}
           <span className="hero-accent">
-            {t("unexplored") , "Unexplored"}
+            {t("unexplored") || "Unexplored"}
           </span>
         </h1>
 
