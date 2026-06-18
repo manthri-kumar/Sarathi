@@ -95,7 +95,6 @@
   border-radius: 999px;
   letter-spacing: 0.01em;
     transform: translateY(-25px);
-    padding-left: 3rem;
 
 }
 
@@ -113,7 +112,6 @@
   letter-spacing: -0.03em;
   font-family: 'Poppins', sans-serif;
     transform: translateY(-25px);
-    padding-left: 20px;  /* prevent text from touching right edge */
 
 }
 
@@ -130,7 +128,6 @@
   font-weight: 400;
   max-width: 320px;
     transform: translateY(-40px);
-    padding-left: 20px;
 
  
 }

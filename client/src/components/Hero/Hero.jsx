@@ -80,23 +80,6 @@ const Hero = () => {
 
       </div>
 
-      {/* ── Left Arrow ── */}
-      <button
-        className="hero-arrow hero-arrow--left"
-        onClick={prevSlide}
-        aria-label="Previous slide"
-      >
-        ‹
-      </button>
-
-      {/* ── Right Arrow ── */}
-      <button
-        className="hero-arrow hero-arrow--right"
-        onClick={nextSlide}
-        aria-label="Next slide"
-      >
-        ›
-      </button>
 
       {/* ── Dots ── */}
       <div className="hero-dots">
