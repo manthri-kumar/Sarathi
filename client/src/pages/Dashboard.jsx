@@ -22,21 +22,20 @@ const Dashboard = () => {
   });
 
   const touchStartX = useRef(0);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     console.log("Dashboard Token:", localStorage.getItem("token"));
     console.log("Dashboard User:", localStorage.getItem("user"));
-    console.log("Current language:", i18n.language);
-  }, [i18n.language]);
+  }, []);
 
   /* ================= USER ================= */
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user) {
-      setUserName(user.name || user.username || t("defaultUser"));
+      setUserName(user.name || user.username || "User");
     }
-  }, [t]);
+  }, []);
 
   /* ================= LOCATION ================= */
   useEffect(() => {
@@ -99,10 +98,10 @@ const Dashboard = () => {
       },
       (err) => {
         console.log("Location Error:", err);
-        alert(t("allowLocation"));
+        alert("Please allow location access");
       }
     );
-  }, [t]);
+  }, []);
 
   /* ================= TOUCH SWIPE HANDLERS ================= */
   const handleTouchStart = (e) => {
@@ -136,7 +135,7 @@ const Dashboard = () => {
         {/* Dynamic Typography Greeting Hub */}
         <div className="greeting">
           <h2>
-            {t("hello")}, {userName}
+            {t("Hello,")} {userName}
           </h2>
           <p>
             {city ? (
