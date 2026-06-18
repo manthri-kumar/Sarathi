@@ -13,151 +13,329 @@ import "../styles/layout.css";
 const Dashboard = () => {
   const [openChat, setOpenChat] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [userName, setUserName] = useState("");
   const [city, setCity] = useState("");
 
+
   const [userLocation, setUserLocation] = useState({
-    lat: null,
-    lng: null,
-  });
+  lat: null,
+  lng: null,
+});
+
+
+
+
 
   const touchStartX = useRef(0);
+
   const { t } = useTranslation();
 
   useEffect(() => {
-    console.log("Dashboard Token:", localStorage.getItem("token"));
-    console.log("Dashboard User:", localStorage.getItem("user"));
-  }, []);
+  console.log(
+    "Dashboard Token:",
+    localStorage.getItem("token")
+  );
+
+  console.log(
+    "Dashboard User:",
+    localStorage.getItem("user")
+  );
+}, []);
 
   /* ================= USER ================= */
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = JSON.parse(
+      localStorage.getItem("user")
+    );
+
     if (user) {
-      setUserName(user.name || user.username || "User");
+      setUserName(
+        user.name ||
+        user.username ||
+        "User"
+      );
     }
   }, []);
 
   /* ================= LOCATION ================= */
-  useEffect(() => {
-    const savedCity = localStorage.getItem("city");
-    if (savedCity) {
-      setCity(savedCity);
-    }
+  /* ================= LOCATION ================= */
+useEffect(() => {
 
-    if (!navigator.geolocation) {
-      console.log("Geolocation not supported");
-      return;
-    }
+  const savedCity =
+    localStorage.getItem("city");
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
+  if (savedCity) {
+    setCity(savedCity);
+  }
 
-        localStorage.setItem("lat", latitude);
-        localStorage.setItem("lng", longitude);
-
-        console.log("Location:", latitude, longitude);
-
-        try {
-          const res = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
-          );
-          const data = await res.json();
-          console.log("Geocode Response:", data);
-
-          if (data.status !== "OK" || !data.results?.length) {
-            console.log("Google Geocode Failed");
-            return;
-          }
-
-          const detectedCity =
-            data.results[0]?.address_components?.find((item) =>
-              item.types.includes("locality")
-            )?.long_name ||
-            data.results[0]?.address_components?.find((item) =>
-              item.types.includes("administrative_area_level_3")
-            )?.long_name ||
-            data.results[0]?.address_components?.find((item) =>
-              item.types.includes("administrative_area_level_2")
-            )?.long_name ||
-            data.results[0]?.address_components?.find((item) =>
-              item.types.includes("administrative_area_level_1")
-            )?.long_name ||
-            "";
-
-          console.log("Detected City:", detectedCity);
-
-          if (detectedCity) {
-            localStorage.setItem("city", detectedCity);
-            setCity(detectedCity);
-          }
-        } catch (err) {
-          console.log("Geocode Error:", err);
-        }
-      },
-      (err) => {
-        console.log("Location Error:", err);
-        alert("Please allow location access");
-      }
+  if (!navigator.geolocation) {
+    console.log(
+      "Geolocation not supported"
     );
-  }, []);
+    return;
+  }
 
-  /* ================= TOUCH SWIPE HANDLERS ================= */
+  navigator.geolocation.getCurrentPosition(
+
+    async (pos) => {
+
+      const {
+        latitude,
+        longitude
+      } = pos.coords;
+
+      setUserLocation({
+  lat: latitude,
+  lng: longitude,
+});
+
+      localStorage.setItem(
+        "lat",
+        latitude
+      );
+
+      localStorage.setItem(
+        "lng",
+        longitude
+      );
+
+      console.log(
+        "Location:",
+        latitude,
+        longitude
+      );
+
+      try {
+
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
+        );
+
+        const data =
+          await res.json();
+
+        console.log(
+          "Geocode Response:",
+          data
+        );
+
+        if (
+          data.status !== "OK" ||
+          !data.results?.length
+        ) {
+          console.log(
+            "Google Geocode Failed"
+          );
+          return;
+        }
+
+        const detectedCity =
+
+          data.results[0]
+            ?.address_components?.find(
+              item =>
+                item.types.includes(
+                  "locality"
+                )
+            )?.long_name ||
+
+          data.results[0]
+            ?.address_components?.find(
+              item =>
+                item.types.includes(
+                  "administrative_area_level_3"
+                )
+            )?.long_name ||
+
+          data.results[0]
+            ?.address_components?.find(
+              item =>
+                item.types.includes(
+                  "administrative_area_level_2"
+                )
+            )?.long_name ||
+
+          data.results[0]
+            ?.address_components?.find(
+              item =>
+                item.types.includes(
+                  "administrative_area_level_1"
+                )
+            )?.long_name ||
+
+          "";
+
+        console.log(
+          "Detected City:",
+          detectedCity
+        );
+
+        if (detectedCity) {
+
+          localStorage.setItem(
+            "city",
+            detectedCity
+          );
+
+          setCity(
+            detectedCity
+          );
+
+        }
+
+      } catch (err) {
+
+        console.log(
+          "Geocode Error:",
+          err
+        );
+
+      }
+
+    },
+
+    (err) => {
+
+      console.log(
+        "Location Error:",
+        err
+      );
+
+      alert(
+        "Please allow location access"
+      );
+
+    }
+
+  );
+
+}, []);
+
+  /* ================= TOUCH ================= */
+
   const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
+    touchStartX.current =
+      e.touches[0].clientX;
   };
 
   const handleTouchEnd = (e) => {
-    const diff = e.changedTouches[0].clientX - touchStartX.current;
-    if (diff > 80) setSidebarOpen(true);
-    if (diff < -80) setSidebarOpen(false);
+
+    const diff =
+      e.changedTouches[0].clientX -
+      touchStartX.current;
+
+    if (diff > 80)
+      setSidebarOpen(true);
+
+    if (diff < -80)
+      setSidebarOpen(false);
+
   };
 
   return (
     <div
       className="dashboard"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={
+        handleTouchStart
+      }
+      onTouchEnd={
+        handleTouchEnd
+      }
     >
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} />
 
-      {/* Slide Navigation Overlay */}
+      <Sidebar
+        isOpen={sidebarOpen}
+      />
+
+      {/* Overlay */}
+
       {sidebarOpen && (
-        <div className="overlay" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="overlay"
+          onClick={() =>
+            setSidebarOpen(false)
+          }
+        />
       )}
 
-      {/* Main Content Workspace Layout */}
-      <div className="main-content">
-        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      {/* Main Content */}
 
-        {/* Dynamic Typography Greeting Hub */}
+      <div className="main-content">
+
+        <Navbar
+          toggleSidebar={() =>
+            setSidebarOpen(
+              !sidebarOpen
+            )
+          }
+        />
+
+        {/* Greeting */}
+
         <div className="greeting">
+
           <h2>
-            {t("hello")} {userName}
+            {t("hello")}{" "}
+            {userName}
           </h2>
+
           <p>
+
             {city ? (
               <>
                 {t("youAreIn")}{" "}
-                <span style={{ color: "#22c55e" }}>{city}</span>
+
+                <span
+                  style={{
+                    color:
+                      "#22c55e"
+                  }}
+                >
+                  {city}
+                </span>
               </>
             ) : (
-              t("detectingLocation")
+              t(
+                "detectingLocation"
+              )
             )}
+
           </p>
+
         </div>
 
-        {/* Content Widgets */}
-        <Cards openChat={setOpenChat} />
+        <Cards
+          openChat={
+            setOpenChat
+          }
+        />
+
         <Hero />
-        <RecommendedPlaces userLocation={userLocation} />
-        <PlacesSection title={t("popularPlaces")} />
+
+{/* Recommended For You */}
+<RecommendedPlaces
+  userLocation={userLocation}
+/>
+
+{/* Most Popular Places */}
+<PlacesSection
+  title={t("popularPlaces")}
+/>
+
       </div>
 
-      {/* Global AI Assistant Floating Chat Drawer */}
-      {openChat && <ChatPanel closeChat={() => setOpenChat(false)} />}
+      {/* Chat Panel */}
+
+      {openChat && (
+        <ChatPanel
+          closeChat={() =>
+            setOpenChat(false)
+          }
+        />
+      )}
+
     </div>
   );
 };
