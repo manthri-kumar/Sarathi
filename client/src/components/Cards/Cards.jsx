@@ -94,9 +94,7 @@ const Cards = ({ openChat }) => {
     </h3>
   </div>
 
-  <div className="qa-arrow">
-    →
-  </div>
+ 
 </div>
 
 <div className="qa-chip">
