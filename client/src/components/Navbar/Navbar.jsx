@@ -169,6 +169,16 @@ const Navbar = ({ toggleSidebar }) => {
           </div>
 
           {/* Mail Icon (UI enhancement kept) */}
+          <div className="mail-wrapper">
+            <button
+              className="mail-icon"
+              onClick={() => navigate("/messages")}
+              title="Messages"
+            >
+              <Mail size={18} />
+              <span className="notification-dot"></span>
+            </button>
+          </div>
 
           {/* Notification Bell */}
           <div className="bell-wrapper">
@@ -219,7 +229,9 @@ const Navbar = ({ toggleSidebar }) => {
                   </div>
                   <div className="header-info">
                     <div className="header-name">{username}</div>
-                    
+                    <div className="header-email">
+                      {user?.email || "user@sarathi.com"}
+                    </div>
                   </div>
                 </div>
 
