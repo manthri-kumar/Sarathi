@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   Hero.css — Sarathi v4.2
+   Hero.css — Sarathi v4.4
    Left-panel text area · full image right · Poppins
    ═══════════════════════════════════════════════════════ */
 
@@ -19,7 +19,7 @@
 }
 
 /* ═══════════════════════════
-   SLIDES  (full bleed, image fills right half)
+   SLIDES
 ═══════════════════════════ */
 .hero-slides {
   position: absolute;
@@ -30,7 +30,7 @@
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center right;   /* image focal point on right */
+  background-position: center right;
   opacity: 0;
   transform: scale(1.04);
   transition:
@@ -44,12 +44,11 @@
 }
 
 /* ═══════════════════════════
-   GRADIENT  — only left panel darkens, right stays clear
+   GRADIENT
 ═══════════════════════════ */
 .hero-gradient {
   position: absolute;
   inset: 0;
-  /* KEY: sharp fade — very dark on left, fully transparent by 55% */
   background: linear-gradient(
     90deg,
     rgba(4, 8, 20, 0.97) 0%,
@@ -63,7 +62,7 @@
 }
 
 /* ═══════════════════════════
-   CONTENT  — left-aligned panel
+   CONTENT — desktop: absolute centred left panel
 ═══════════════════════════ */
 .hero-content {
   position: absolute;
@@ -73,9 +72,9 @@
   flex-direction: column;
   justify-content: center;
   padding: 0 40px;
-  /* Content never crosses into image territory */
   max-width: 480px;
   gap: 10px;
+  /* NO translateY hacks — remove them entirely */
 }
 
 /* ── Badge ── */
@@ -94,8 +93,7 @@
   padding: 5px 14px;
   border-radius: 999px;
   letter-spacing: 0.01em;
-    transform: translateY(-25px);
-
+  /* No transform */
 }
 
 .hero-badge-icon {
@@ -111,8 +109,7 @@
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-family: 'Poppins', sans-serif;
-    transform: translateY(-25px);
-
+  /* No transform */
 }
 
 .hero-accent {
@@ -127,9 +124,7 @@
   line-height: 1.5;
   font-weight: 400;
   max-width: 320px;
-    transform: translateY(-40px);
-
- 
+  /* No transform */
 }
 
 /* ── CTA Button ── */
@@ -148,13 +143,12 @@
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
   width: fit-content;
-  margin-top: 2px;
   box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
-  transform: translateY(-35px);
-
+  /* No translateY hack — margin-top handles spacing */
+  margin-top: 2px;
 }
 
 .hero-cta:hover {
@@ -171,23 +165,52 @@
   transform: translateX(4px);
 }
 
+/* ═══════════════════════════
+   ARROWS
+═══════════════════════════ */
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding-bottom: 2px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
 
+.hero-arrow:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.hero-arrow--left  { left: 20px; }
+.hero-arrow--right { right: 20px; }
 
 /* ═══════════════════════════
    DOTS
 ═══════════════════════════ */
 .hero-dots {
   position: absolute;
-  left: 50%;
   bottom: 18px;
+  left: 50%;
   transform: translateX(-50%);
-
+  z-index: 3;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 10px;
-
-  z-index: 20;
+  gap: 8px;
 }
 
 .hero-dot {
@@ -231,46 +254,50 @@
   .hero-subtitle {
     font-size: 0.88rem;
   }
-
-  .hero-dots {
-    left: 28px;
-  }
 }
 
 /* ── Mobile (≤768px) ──
-   Switch to top-to-bottom layout:
-   image fills full card, gradient covers from left edge
-   to ~60% so content stays readable
+   KEY FIX: content becomes position:relative so the card
+   height grows to fit it. No translateY hacks needed.
 ═══════════════════════════ */
 @media (max-width: 768px) {
   .hero {
-    height: auto;           /* let content decide height */
-    min-height: 220px;
+    height: auto;
+    min-height: 0;           /* let content fully control height */
     border-radius: 14px;
+    overflow: hidden;
   }
 
-  /* On mobile the image is full-bleed underneath */
-  .hero-slide {
-    background-position: center center;
+  /* Image stays position:absolute and fills the card */
+  .hero-slides {
+    position: absolute;
+    inset: 0;
+    /* height is inherited from .hero which is auto — the
+       slides div itself stretches via min-height below */
+    min-height: 100%;
   }
 
-  /* Stronger left-to-right gradient on mobile so short width is still readable */
+  /* Stronger gradient on narrow screens */
   .hero-gradient {
     background: linear-gradient(
       90deg,
       rgba(4, 8, 20, 0.97) 0%,
-      rgba(4, 8, 20, 0.92) 40%,
-      rgba(4, 8, 20, 0.55) 65%,
+      rgba(4, 8, 20, 0.90) 38%,
+      rgba(4, 8, 20, 0.52) 65%,
       transparent 100%
     );
   }
 
+  /* Content drives card height — sits on top of image */
   .hero-content {
-    position: relative;       /* back in normal flow so height expands */
+    position: relative;    /* back in normal flow */
+    inset: unset;
     z-index: 2;
     max-width: 100%;
-    padding: 28px 20px 52px 20px;   /* bottom pad gives dots room */
-    gap: 8px;
+    /* Top/bottom padding + enough bottom room for dots */
+    padding: 28px 20px 56px 20px;
+    gap: 10px;
+    justify-content: flex-start;   /* start from top, no vertical centering */
   }
 
   .hero-heading {
@@ -280,16 +307,22 @@
 
   .hero-subtitle {
     font-size: 0.82rem;
-    max-width: 240px;
+    max-width: 260px;
   }
 
   .hero-cta {
     height: 40px;
     font-size: 0.88rem;
     padding: 0 18px;
+    margin-top: 4px;
   }
 
-  /* Hide left arrow; keep only right */
+  .hero-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  /* Hide left arrow on mobile */
   .hero-arrow--left {
     display: none;
   }
@@ -301,36 +334,30 @@
     font-size: 20px;
   }
 
-  .hero-badge {
-    font-size: 0.7rem;
-    padding: 4px 10px;
-  }
-
-  /* Dots at bottom-left */
+  /* Dots: absolute inside the hero, bottom-left */
   .hero-dots {
     position: absolute;
-    bottom: 14px;
+    bottom: 16px;
     left: 20px;
+    transform: none;
   }
 }
 
 /* ── Small Mobile (≤480px) ── */
 @media (max-width: 480px) {
   .hero {
-    min-height: 200px;
     border-radius: 12px;
   }
 
   .hero-content {
-    padding: 24px 16px 48px 16px;
-    gap: 7px;
+    padding: 22px 16px 50px 16px;
+    gap: 8px;
   }
 
   .hero-heading {
     font-size: 1.5rem;
   }
 
-  /* Hide subtitle on very small screens */
   .hero-subtitle {
     display: none;
   }
@@ -343,6 +370,6 @@
 
   .hero-dots {
     left: 16px;
-    bottom: 12px;
+    bottom: 14px;
   }
 }
