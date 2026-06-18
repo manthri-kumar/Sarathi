@@ -14,17 +14,19 @@
   "estimatedCost": "Estimated Cost",
   "todayPlan": "Today's Plan",
   "navigate": "Navigate",
-  
-  "recommendedForYou": "Recommended For You",
-  "viewAll": "View All",
-  "explore": "Explore",
-  "kmFromYou": "km from you",
-  "recommendationLoadError": "Could not load recommendations. Please try again.",
+
+  "discover": "Discover the",
+  "unexplored": "Unexplored",
   "discoverUnexplored": "Discover the unexplored",
   "spiritualTravel": "Your guide to spiritual and cultural travel",
+
   "recommendedForYou": "Recommended For You",
   "placesWithin150Km": "Places Within 150 Km",
   "topDestinationsIndia": "Top destinations across India",
-  "viewAll": "View All"
-  
+
+  "viewAll": "View All",
+  "explore": "Explore",
+  "kmFromYou": "km from you",
+
+  "recommendationLoadError": "Could not load recommendations. Please try again."
 }

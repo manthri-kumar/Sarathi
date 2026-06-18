@@ -15,18 +15,18 @@
   "todayPlan": "आज की योजना",
   "navigate": "नेविगेट करें",
 
-  
-  "recommendedForYou": "आपके लिए अनुशंसित स्थान",
-  
-  "viewAll": "सभी देखें",
-  "explore": "देखें",
-  "kmFromYou": "किमी दूर",
-  "recommendationLoadError": "अनुशंसित स्थान लोड नहीं किए जा सके।",
+  "discover": "खोजें",
+  "unexplored": "अनदेखी जगहों को",
   "discoverUnexplored": "अनदेखी जगहों की खोज करें",
   "spiritualTravel": "आध्यात्मिक और सांस्कृतिक यात्राओं के लिए आपका मार्गदर्शक",
+
   "recommendedForYou": "आपके लिए सुझाए गए स्थान",
   "placesWithin150Km": "150 किमी के भीतर के स्थान",
   "topDestinationsIndia": "भारत के शीर्ष पर्यटन स्थल",
-  "viewAll": "सभी देखें"
 
+  "viewAll": "सभी देखें",
+  "explore": "देखें",
+  "kmFromYou": "किमी दूर",
+
+  "recommendationLoadError": "अनुशंसित स्थान लोड नहीं किए जा सके।"
 }

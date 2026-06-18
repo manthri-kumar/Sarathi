@@ -15,17 +15,18 @@
   "todayPlan": "ఈరోజు ప్రణాళిక",
   "navigate": "మార్గనిర్దేశం",
 
-  "recommendedForYou": "మీ కోసం సిఫార్సు చేసిన ప్రదేశాలు",
- 
-  "viewAll": "అన్నీ చూడండి",
-  "explore": "అన్వేషించండి",
-  "kmFromYou": "కి.మీ దూరంలో",
-  "recommendationLoadError": "సిఫార్సు చేసిన ప్రదేశాలను లోడ్ చేయలేకపోయాము.",
+  "discover": "అన్వేషించండి",
+  "unexplored": "తెలియని ప్రదేశాలను",
   "discoverUnexplored": "కనుగొనని ప్రదేశాలను అన్వేషించండి",
   "spiritualTravel": "ఆధ్యాత్మిక మరియు సాంస్కృతిక ప్రయాణాలకు మీ మార్గదర్శి",
+
   "recommendedForYou": "మీ కోసం సిఫార్సులు",
   "placesWithin150Km": "150 కి.మీ పరిధిలోని ప్రదేశాలు",
   "topDestinationsIndia": "భారతదేశంలోని అగ్ర గమ్యస్థానాలు",
-  "viewAll": "అన్నీ చూడండి"
-}
 
+  "viewAll": "అన్నీ చూడండి",
+  "explore": "అన్వేషించండి",
+  "kmFromYou": "కి.మీ దూరంలో",
+
+  "recommendationLoadError": "సిఫార్సు చేసిన ప్రదేశాలను లోడ్ చేయలేకపోయాము."
+}
