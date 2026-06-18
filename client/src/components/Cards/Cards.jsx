@@ -75,9 +75,6 @@ const Cards = ({ openChat }) => {
               </div>
               <h3 className="qa-title">{t(titleKey) || defaultTitle}</h3>
             </div>
-            <span className="qa-arrow">
-              <ArrowRight size={16} strokeWidth={2.2} />
-            </span>
           </div>
 
           {/* Footer Row: Contains Premium Context Token Chip */}
