@@ -100,7 +100,7 @@
 .hero-badge {
   display: inline-flex;
   align-items: center;
-  gap: 15px;
+  gap: 2rem;
   width: fit-content;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
