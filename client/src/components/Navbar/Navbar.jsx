@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 const Navbar = ({ toggleSidebar }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [showLanguages, setShowLanguages] = useState(false);
@@ -31,7 +31,7 @@ const Navbar = ({ toggleSidebar }) => {
     localStorage.getItem("user")
   );
 
-  const username = user?.username || user?.name || "User";
+  const username = user?.username || user?.name || t("defaultUser");
   const profilePic = user?.picture;
 
   // Get first letter of username for avatar fallback
@@ -40,26 +40,26 @@ const Navbar = ({ toggleSidebar }) => {
   };
 
   const appItems = [
-    { name: "Dashboard", route: "/dashboard" },
-    { name: "Explore", route: "/explore" },
-    { name: "Trip Planner", route: "/trip-planner" },
-    { name: "Day Planner", route: "/day-planner" },
-    { name: "Saved", route: "/saved" },
-    { name: "Profile", route: "/profile" },
-    { name: "Itinerary", route: "/itinerary" }
+    { nameKey: "dashboard", route: "/dashboard" },
+    { nameKey: "explore", route: "/explore" },
+    { nameKey: "tripPlanner", route: "/trip-planner" },
+    { nameKey: "dayPlanner", route: "/day-planner" },
+    { nameKey: "saved", route: "/saved" },
+    { nameKey: "profile", route: "/profile" },
+    { nameKey: "itinerary", route: "/itinerary" }
   ];
 
   const profileMenuItems = [
-    { icon: User, label: "My Profile", route: "/profile" },
-    { icon: Luggage, label: "My Trips", route: "/my-trips" },
-    { icon: Heart, label: "Saved Places", route: "/saved" },
-    { icon: Settings, label: "Settings", route: "/settings" },
+    { icon: User, labelKey: "myProfile", route: "/profile" },
+    { icon: Luggage, labelKey: "myTrips", route: "/my-trips" },
+    { icon: Heart, labelKey: "savedPlaces", route: "/saved" },
+    { icon: Settings, labelKey: "settings", route: "/settings" },
   ];
 
   const filteredItems =
     search.length > 0
       ? appItems.filter((item) =>
-          item.name
+          t(item.nameKey)
             .toLowerCase()
             .includes(search.toLowerCase())
         )
@@ -109,7 +109,7 @@ const Navbar = ({ toggleSidebar }) => {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search Features..."
+            placeholder={t("searchFeatures")}
           />
 
           {filteredItems.length > 0 && (
@@ -120,7 +120,7 @@ const Navbar = ({ toggleSidebar }) => {
                   className="search-item"
                   onClick={() => handleNavigate(item.route)}
                 >
-                  {item.name}
+                  {t(item.nameKey)}
                 </div>
               ))}
             </div>
@@ -135,7 +135,7 @@ const Navbar = ({ toggleSidebar }) => {
               onClick={() =>
                 setShowLanguages(!showLanguages)
               }
-              title="Change Language"
+              title={t("changeLanguage")}
             >
               <Languages size={20} />
             </button>
@@ -180,7 +180,7 @@ const Navbar = ({ toggleSidebar }) => {
             <button
               className="mail-icon"
               onClick={() => navigate("/messages")}
-              title="Messages"
+              title={t("messages")}
             >
               <Mail size={18} />
               <span className="notification-dot"></span>
@@ -191,7 +191,7 @@ const Navbar = ({ toggleSidebar }) => {
           <div className="bell-wrapper">
             <button
               className="bell-icon"
-              title="Notifications"
+              title={t("notifications")}
             >
               <Bell size={18} />
               <span className="notification-dot"></span>
@@ -264,7 +264,7 @@ const Navbar = ({ toggleSidebar }) => {
                         onClick={() => handleNavigate(item.route)}
                       >
                         <IconComponent size={18} />
-                        <span>{item.label}</span>
+                        <span>{t(item.labelKey)}</span>
                       </div>
                     );
                   })}
@@ -277,7 +277,7 @@ const Navbar = ({ toggleSidebar }) => {
                   onClick={handleLogout}
                 >
                   <LogOut size={18} />
-                  <span>Logout</span>
+                  <span>{t("logout")}</span>
                 </div>
               </div>
             )}
@@ -290,7 +290,7 @@ const Navbar = ({ toggleSidebar }) => {
         <button
           className="menu-btn"
           onClick={toggleSidebar}
-          aria-label="Toggle sidebar"
+          aria-label={t("dashboard")}
         >
           ☰
         </button>
@@ -302,7 +302,7 @@ const Navbar = ({ toggleSidebar }) => {
               onClick={() =>
                 setShowLanguages(!showLanguages)
               }
-              title="Change Language"
+              title={t("changeLanguage")}
             >
               <Languages size={18} />
             </button>
@@ -341,19 +341,9 @@ const Navbar = ({ toggleSidebar }) => {
               </div>
             )}
           </div>
-
-          <button
-            className="mail-icon"
-            onClick={() => navigate("/messages")}
-            title="Messages"
-          >
-            <Mail size={18} />
-            <span className="notification-dot"></span>
-          </button>
-
           <button
             className="bell-icon"
-            title="Notifications"
+            title={t("notifications")}
           >
             <Bell size={18} />
             <span className="notification-dot"></span>
@@ -363,7 +353,7 @@ const Navbar = ({ toggleSidebar }) => {
             <button
               className="nav-avatar"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              aria-label="Profile menu"
+              aria-label={t("profile")}
             >
               {profilePic ? (
                 <img src={profilePic} alt={username} />
@@ -386,7 +376,7 @@ const Navbar = ({ toggleSidebar }) => {
                         onClick={() => handleNavigate(item.route)}
                       >
                         <IconComponent size={18} />
-                        <span>{item.label}</span>
+                        <span>{t(item.labelKey)}</span>
                       </div>
                     );
                   })}
@@ -399,7 +389,7 @@ const Navbar = ({ toggleSidebar }) => {
                   onClick={handleLogout}
                 >
                   <LogOut size={18} />
-                  <span>Logout</span>
+                  <span>{t("logout")}</span>
                 </div>
               </div>
             )}
@@ -414,7 +404,7 @@ const Navbar = ({ toggleSidebar }) => {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search Features..."
+          placeholder={t("searchFeatures")}
         />
 
         {filteredItems.length > 0 && (
@@ -425,7 +415,7 @@ const Navbar = ({ toggleSidebar }) => {
                 className="search-item"
                 onClick={() => handleNavigate(item.route)}
               >
-                {item.name}
+                {t(item.nameKey)}
               </div>
             ))}
           </div>
