@@ -78,7 +78,7 @@ const Hero = () => {
         </h1>
 
         <p className="hero-subtitle">
-          {t("travelGuide") ||
+          {t("Your guide to spiritual and cultural travel") ||
             "Your guide to spiritual and cultural travel."}
         </p>
 
