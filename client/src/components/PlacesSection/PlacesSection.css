@@ -3,7 +3,7 @@
 ========================================= */
 
 .destinations-showcase {
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 /* =========================================
@@ -41,6 +41,52 @@
 .view-destinations-btn:hover {
   border-color: #22c55e;
   color: #22c55e;
+}
+
+/* =========================================
+   PREMIUM TITLE
+========================================= */
+
+.destinations-title-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.destinations-title-accent {
+  width: 4px;
+  min-height: 46px;
+  border-radius: 999px;
+
+  background: linear-gradient(
+    180deg,
+    #00ff95,
+    #22c55e
+  );
+
+  box-shadow:
+    0 0 12px rgba(34,197,94,.55);
+}
+
+.destinations-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.destinations-title-group h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.destinations-title-group p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,.42);
 }
 
 /* =========================================

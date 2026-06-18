@@ -77,15 +77,22 @@ const PlacesSection = ({
 
       <div className="destinations-header">
 
-        <h2>
-          {title || t("popularPlaces")}
-        </h2>
+  <div className="destinations-title-wrapper">
 
-        <button className="view-destinations-btn">
-          View All →
-        </button>
+    <span className="destinations-title-accent" />
 
-      </div>
+    <div className="destinations-title-group">
+      <h2>{title || t("popularPlaces")}</h2>
+      <p>Top destinations across India</p>
+    </div>
+
+  </div>
+
+  <button className="view-destinations-btn">
+    View All →
+  </button>
+
+</div>
 
       <div className="destinations-grid">
 
