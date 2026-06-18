@@ -153,6 +153,8 @@
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
+  transform: translateY(-25px);
+
 }
 
 .hero-cta:hover {
