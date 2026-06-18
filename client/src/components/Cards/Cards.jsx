@@ -1,6 +1,6 @@
 import React from "react";
 import "./Cards.css";
-import { MapPin, Backpack, Bot, Sun, ArrowRight } from "lucide-react";
+import { MapPin, Backpack, Bot, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -44,51 +44,66 @@ const Cards = ({ openChat }) => {
   const { t } = useTranslation();
 
   const handleClick = (key) => {
-    if (key === "location") {
-      localStorage.setItem("locationSelected", "true");
-      navigate("/explore");
-    } else if (key === "budget") {
-      navigate("/trip-planner");
-    } else if (key === "chat") {
-      openChat(true);
-    } else if (key === "planner") {
-      navigate("/day-planner");
+    switch (key) {
+      case "location":
+        localStorage.setItem("locationSelected", "true");
+        navigate("/explore");
+        break;
+
+      case "budget":
+        navigate("/trip-planner");
+        break;
+
+      case "chat":
+        openChat(true);
+        break;
+
+      case "planner":
+        navigate("/day-planner");
+        break;
+
+      default:
+        break;
     }
   };
 
   return (
     <div className="qa-grid">
-      {cardData.map(({ key, colorClass, Icon, chipLabel, titleKey, defaultTitle }) => (
-        <div
-          key={key}
-          className={`qa-card ${colorClass}`}
-          onClick={() => handleClick(key)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && handleClick(key)}
-        >
-          {/* Header Row: Contains Icon Container, Title, and Action Arrow */}
-          <div className="qa-header-row">
-            <div className="qa-title-wrapper">
+      {cardData.map(
+        ({
+          key,
+          colorClass,
+          Icon,
+          chipLabel,
+          titleKey,
+          defaultTitle,
+        }) => (
+          <div
+            key={key}
+            className={`qa-card ${colorClass}`}
+            onClick={() => handleClick(key)}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="qa-header-row">
               <div className="qa-orb">
-                <Icon size={18} strokeWidth={2} />
+                <Icon size={22} strokeWidth={2} />
               </div>
-              <h3 className="qa-title">{t(titleKey) || defaultTitle}</h3>
+
+              <h3 className="qa-title">
+                {t(titleKey) || defaultTitle}
+              </h3>
             </div>
+
+            <div className="qa-footer-row">
+              <div className="qa-chip">{chipLabel}</div>
+            </div>
+
+            <div className="qa-glow" />
+            <div className="qa-shimmer" />
           </div>
-
-          {/* Footer Row: Contains Premium Context Token Chip */}
-          <div className="qa-footer-row">
-            <div className="qa-chip">{chipLabel}</div>
-          </div>
-
-          {/* Deep Ambient Chromatic Glow Layer */}
-          <div className="qa-glow" />
-
-          {/* Dynamic Laser Sweep Micro-interaction */}
-          <div className="qa-shimmer" />
-        </div>
-      ))}
+        )
+      )}
     </div>
   );
 };
