@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./Hero.css";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import img1 from "../../assets/Hero/img1.png";
 import img2 from "../../assets/Hero/img2.png";
@@ -15,7 +16,9 @@ const slides = [
 const Hero = () => {
   const [index, setIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
+
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const goTo = useCallback(
     (next) => {
@@ -70,20 +73,22 @@ const Hero = () => {
         <h1 className="hero-heading">
           Discover the{" "}
           <span className="hero-accent">
-            {t("unexplored") || "unexplored"}
+            {t("unexplored") || "Unexplored"}
           </span>
         </h1>
 
         <p className="hero-subtitle">
-          {t("recommendations") ||
-            "Explore sacred places, cultural heritage, and unforgettable journeys."}
+          {t("travelGuide") ||
+            "Your guide to spiritual and cultural travel."}
         </p>
 
-        <button className="hero-cta" onClick={() => navigate("/explore")}>
+        <button
+          className="hero-cta"
+          onClick={() => navigate("/explore")}
+        >
           {t("explorePlaces") || "Explore Places"}
           <span className="hero-cta-arrow">→</span>
         </button>
-
 
       </div>
 
