@@ -94,7 +94,7 @@
   padding: 5px 14px;
   border-radius: 999px;
   letter-spacing: 0.01em;
-
+    transform: translateY(-25px);
 
 }
 
@@ -111,6 +111,7 @@
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-family: 'Poppins', sans-serif;
+    transform: translateY(-25px);
 
 }
 
@@ -126,6 +127,7 @@
   line-height: 1.5;
   font-weight: 400;
   max-width: 320px;
+    transform: translateY(-40px);
 
  
 }
@@ -151,6 +153,7 @@
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
+  transform: translateY(-35px);
 
 }
 
@@ -216,21 +219,10 @@
   }
 
   .hero-content {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-
-  padding: 0 40px;
-
-  max-width: 480px;
-
-  gap: 10px;
-
-}
+    padding: 0 28px;
+    max-width: 400px;
+    gap: 8px;
+  }
 
   .hero-heading {
     font-size: 2.2rem;
@@ -248,65 +240,109 @@
 /* ── Mobile (≤768px) ──
    Switch to top-to-bottom layout:
    image fills full card, gradient covers from left edge
-   to ~60% so content stays readable*/
+   to ~60% so content stays readable
+═══════════════════════════ */
 @media (max-width: 768px) {
-
   .hero {
-    height: 320px;
-    border-radius: 18px;
+    height: auto;           /* let content decide height */
+    min-height: 220px;
+    border-radius: 14px;
   }
 
+  /* On mobile the image is full-bleed underneath */
   .hero-slide {
-    background-position: center;
+    background-position: center center;
   }
 
+  /* Stronger left-to-right gradient on mobile so short width is still readable */
   .hero-gradient {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(4,8,20,0.25) 0%,
-        rgba(4,8,20,0.55) 45%,
-        rgba(4,8,20,0.95) 100%
-      );
+    background: linear-gradient(
+      90deg,
+      rgba(4, 8, 20, 0.97) 0%,
+      rgba(4, 8, 20, 0.92) 40%,
+      rgba(4, 8, 20, 0.55) 65%,
+      transparent 100%
+    );
   }
 
   .hero-content {
-    position: absolute;
-    inset: auto 0 0 0;
-
+    position: relative;       /* back in normal flow so height expands */
+    z-index: 2;
     max-width: 100%;
-
-    padding: 0 22px 58px;
-
-    transform: none;
-
-    justify-content: flex-end;
-  }
-
-  .hero-badge {
-    font-size: 0.68rem;
-    margin-bottom: 6px;
+    padding: 28px 20px 52px 20px;   /* bottom pad gives dots room */
+    gap: 8px;
   }
 
   .hero-heading {
-    font-size: 2rem;
-    line-height: 1.05;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
   }
 
   .hero-subtitle {
     font-size: 0.82rem;
-    max-width: 260px;
-    opacity: .9;
+    max-width: 240px;
   }
 
   .hero-cta {
-    margin-top: 8px;
-    height: 42px;
+    height: 40px;
+    font-size: 0.88rem;
+    padding: 0 18px;
+  }
+
+  /* Hide left arrow; keep only right */
+  .hero-arrow--left {
+    display: none;
+  }
+
+  .hero-arrow--right {
+    width: 38px;
+    height: 38px;
+    right: 14px;
+    font-size: 20px;
+  }
+
+  .hero-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  /* Dots at bottom-left */
+  .hero-dots {
+    position: absolute;
+    bottom: 14px;
+    left: 20px;
+  }
+}
+
+/* ── Small Mobile (≤480px) ── */
+@media (max-width: 480px) {
+  .hero {
+    min-height: 200px;
+    border-radius: 12px;
+  }
+
+  .hero-content {
+    padding: 24px 16px 48px 16px;
+    gap: 7px;
+  }
+
+  .hero-heading {
+    font-size: 1.5rem;
+  }
+
+  /* Hide subtitle on very small screens */
+  .hero-subtitle {
+    display: none;
+  }
+
+  .hero-cta {
+    height: 38px;
+    font-size: 0.84rem;
+    padding: 0 16px;
   }
 
   .hero-dots {
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
+    left: 16px;
+    bottom: 12px;
   }
 }
