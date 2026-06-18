@@ -76,8 +76,14 @@ const Hero = () => {
 
         <p className="hero-subtitle">
           {t("recommendations") ||
-            "AI-powered recommendations just for you."}
+            "Explore sacred places, cultural heritage, and unforgettable journeys."}
         </p>
+
+        <button className="hero-cta" onClick={() => navigate("/explore")}>
+          {t("explorePlaces") || "Explore Places"}
+          <span className="hero-cta-arrow">→</span>
+        </button>
+
 
       </div>
 
