@@ -219,9 +219,7 @@ const Navbar = ({ toggleSidebar }) => {
                   </div>
                   <div className="header-info">
                     <div className="header-name">{username}</div>
-                    <div className="header-email">
-                      {user?.email || "user@sarathi.com"}
-                    </div>
+                    
                   </div>
                 </div>
 
