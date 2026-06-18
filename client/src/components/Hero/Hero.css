@@ -1,14 +1,17 @@
 /* ═══════════════════════════════════════════════════════
-   Hero.css — Sarathi v4.4
+   Hero.css — Sarathi v4.5
    Left-panel text area · full image right · Poppins
+   Desktop fixed · Mobile preserved from v4.4
    ═══════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
-/* ── Wrapper ── */
+/* ══════════════════════════════════════
+   WRAPPER
+══════════════════════════════════════ */
 .hero {
   width: 100%;
-  height: 280px;
+  height: 300px;            /* slightly taller so button never clips */
   border-radius: 18px;
   overflow: hidden;
   position: relative;
@@ -18,9 +21,9 @@
   background: #040814;
 }
 
-/* ═══════════════════════════
+/* ══════════════════════════════════════
    SLIDES
-═══════════════════════════ */
+══════════════════════════════════════ */
 .hero-slides {
   position: absolute;
   inset: 0;
@@ -43,9 +46,9 @@
   transform: scale(1.02);
 }
 
-/* ═══════════════════════════
-   GRADIENT
-═══════════════════════════ */
+/* ══════════════════════════════════════
+   GRADIENT — dark left, clear right
+══════════════════════════════════════ */
 .hero-gradient {
   position: absolute;
   inset: 0;
@@ -61,20 +64,22 @@
   pointer-events: none;
 }
 
-/* ═══════════════════════════
-   CONTENT — desktop: absolute centred left panel
-═══════════════════════════ */
+/* ══════════════════════════════════════
+   CONTENT — desktop: absolute, left panel, vertically centred
+══════════════════════════════════════ */
 .hero-content {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  /* right is NOT set — width is controlled by max-width */
   z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 40px;
-  max-width: 480px;
+  padding: 0 44px;
+  max-width: 460px;
   gap: 10px;
-  /* NO translateY hacks — remove them entirely */
 }
 
 /* ── Badge ── */
@@ -93,7 +98,6 @@
   padding: 5px 14px;
   border-radius: 999px;
   letter-spacing: 0.01em;
-  /* No transform */
 }
 
 .hero-badge-icon {
@@ -103,13 +107,12 @@
 /* ── Heading ── */
 .hero-heading {
   margin: 0;
-  font-size: 2.8rem;
+  font-size: 2.6rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-family: 'Poppins', sans-serif;
-  /* No transform */
 }
 
 .hero-accent {
@@ -119,12 +122,11 @@
 /* ── Subtitle ── */
 .hero-subtitle {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: rgba(255, 255, 255, 0.68);
   line-height: 1.5;
   font-weight: 400;
-  max-width: 320px;
-  /* No transform */
+  max-width: 300px;
 }
 
 /* ── CTA Button ── */
@@ -135,20 +137,17 @@
   background: linear-gradient(135deg, #00d26a, #00a84f);
   color: #ffffff;
   border: none;
-  padding: 0 24px;
-  height: 44px;
+  padding: 0 22px;
+  height: 42px;
   border-radius: 12px;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
   width: fit-content;
-  box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-  /* No translateY hack — margin-top handles spacing */
   margin-top: 2px;
+  box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .hero-cta:hover {
@@ -165,9 +164,9 @@
   transform: translateX(4px);
 }
 
-/* ═══════════════════════════
+/* ══════════════════════════════════════
    ARROWS
-═══════════════════════════ */
+══════════════════════════════════════ */
 .hero-arrow {
   position: absolute;
   top: 50%;
@@ -199,9 +198,9 @@
 .hero-arrow--left  { left: 20px; }
 .hero-arrow--right { right: 20px; }
 
-/* ═══════════════════════════
-   DOTS
-═══════════════════════════ */
+/* ══════════════════════════════════════
+   DOTS — centred bottom
+══════════════════════════════════════ */
 .hero-dots {
   position: absolute;
   bottom: 18px;
@@ -231,53 +230,53 @@
   box-shadow: 0 0 10px rgba(0, 210, 106, 0.65);
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    RESPONSIVE
-═══════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════ */
 
 /* ── Tablet (769px – 1024px) ── */
 @media (max-width: 1024px) {
   .hero {
-    height: 240px;
+    height: 260px;
   }
 
   .hero-content {
     padding: 0 28px;
-    max-width: 400px;
+    max-width: 380px;
     gap: 8px;
   }
 
   .hero-heading {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
   .hero-subtitle {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
+    max-width: 260px;
+  }
+
+  .hero-cta {
+    height: 38px;
+    font-size: 0.86rem;
+    padding: 0 18px;
   }
 }
 
-/* ── Mobile (≤768px) ──
-   KEY FIX: content becomes position:relative so the card
-   height grows to fit it. No translateY hacks needed.
-═══════════════════════════ */
+/* ── Mobile (≤768px) ── */
 @media (max-width: 768px) {
   .hero {
     height: auto;
-    min-height: 0;           /* let content fully control height */
+    min-height: 0;
     border-radius: 14px;
     overflow: hidden;
   }
 
-  /* Image stays position:absolute and fills the card */
   .hero-slides {
     position: absolute;
     inset: 0;
-    /* height is inherited from .hero which is auto — the
-       slides div itself stretches via min-height below */
     min-height: 100%;
   }
 
-  /* Stronger gradient on narrow screens */
   .hero-gradient {
     background: linear-gradient(
       90deg,
@@ -288,16 +287,18 @@
     );
   }
 
-  /* Content drives card height — sits on top of image */
+  /* Content drives card height on mobile */
   .hero-content {
-    position: relative;    /* back in normal flow */
+    position: relative;
+    top: unset;
+    left: unset;
+    bottom: unset;
     inset: unset;
     z-index: 2;
     max-width: 100%;
-    /* Top/bottom padding + enough bottom room for dots */
     padding: 28px 20px 56px 20px;
     gap: 10px;
-    justify-content: flex-start;   /* start from top, no vertical centering */
+    justify-content: flex-start;
   }
 
   .hero-heading {
@@ -322,7 +323,6 @@
     padding: 4px 10px;
   }
 
-  /* Hide left arrow on mobile */
   .hero-arrow--left {
     display: none;
   }
@@ -334,7 +334,6 @@
     font-size: 20px;
   }
 
-  /* Dots: absolute inside the hero, bottom-left */
   .hero-dots {
     position: absolute;
     bottom: 16px;
