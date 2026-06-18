@@ -215,13 +215,8 @@ const RecommendedPlaces = ({ userLocation }) => {
           <div className="rp-title-wrapper">
             <span className="rp-title-accent" />
             <div className="rp-title-group">
-             <h2 className="rp-title">
-  {t("recommendedForYou", "Recommended For You")}
-</h2>
-
-<p className="rp-subtitle">
-  {t("placesWithin150Km", "Places Within 150 Km")}
-</p>
+              <h2 className="rp-title">Recommended For You</h2>
+              <p  className="rp-subtitle">Places Within 150 Km</p>
             </div>
           </div>
         </div>
