@@ -10,14 +10,19 @@
   background: radial-gradient(circle at 20% 0%, rgba(0, 255, 149, 0.13), transparent 40%), #020402;
 
   padding: 24px 16px;
+  box-sizing: border-box;
 
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 
-  border-right: 1px solid rgba(255,255,255,0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 
   z-index: 1200;
+
+  /* drawer animation baseline (no effect on desktop where left:0) */
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ===== LOGO ===== */
@@ -58,43 +63,36 @@
   border-radius: 12px;
 
   cursor: pointer;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
 
   transition: all 0.25s ease;
   position: relative;
 }
 
-/* ICON */
 .menu li svg {
   min-width: 18px;
 }
 
-/* HOVER */
 .menu li:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: white;
 }
 
-/* ACTIVE */
 .menu li.active {
   background: linear-gradient(135deg, #00ff88, #00ff5e);
   color: black;
   font-weight: 500;
-
-  box-shadow: 0 8px 20px rgba(0,255,120,0.25);
+  box-shadow: 0 8px 20px rgba(0, 255, 120, 0.25);
 }
 
-/* ACTIVE LEFT BAR */
 .menu li.active::before {
   content: "";
   position: absolute;
   left: -6px;
   top: 50%;
   transform: translateY(-50%);
-
   width: 4px;
   height: 60%;
-
   background: #00ff88;
   border-radius: 4px;
 }
@@ -104,19 +102,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 16px;
 }
 
-/* LOGOUT */
 .logout {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 3rem;
-
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: 0.2s;
 }
@@ -125,9 +120,8 @@
   color: #4ade80;
 }
 
-/* SETTINGS */
 .settings-icon {
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: 0.2s;
   margin-bottom: 3rem;
@@ -137,24 +131,6 @@
   color: #4ade80;
 }
 
-/* ===================================================== */
-/* ================= MOBILE ============================= */
-/* ===================================================== */
-
-@media (max-width: 768px) {
-
-  .sidebar {
-    left: -100%;
-    transition: left 0.3s ease;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-}
-
-/* ===== TEMPLE EMOJI ICON ===== */
 .menu-emoji-icon {
   font-size: 16px;
   min-width: 18px;
@@ -162,4 +138,20 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+/* ===================================================== */
+/* ================= MOBILE DRAWER ===================== */
+/* ===================================================== */
+
+@media (max-width: 768px) {
+  /* Off-canvas using transform (GPU-accelerated, no layout reflow) */
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  }
 }
