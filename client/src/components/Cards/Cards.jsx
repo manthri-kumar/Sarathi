@@ -103,6 +103,7 @@ const Cards = ({ openChat }) => {
   {chipLabel}
 </div>
 
+
           {/* Bottom action chip */}
           <div className="qa-chip">{chipLabel}</div>
 
