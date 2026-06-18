@@ -86,7 +86,7 @@ const Cards = ({ openChat }) => {
             tabIndex={0}
             onKeyDown={(e) => e.key === "Enter" && handleClick(key)}
           >
-            {/* Optimized Header Area */}
+            {/* Tightly Nested Header Row Structure */}
             <div className="qa-header-row">
               <div className="qa-orb">
                 <Icon size={18} strokeWidth={2.2} />
@@ -97,12 +97,12 @@ const Cards = ({ openChat }) => {
               </h3>
             </div>
 
-            {/* Premium Foot Metadata Tag Row */}
+            {/* Bottom Chip Element Container */}
             <div className="qa-footer-row">
               <div className="qa-chip">{chipLabel}</div>
             </div>
 
-            {/* Layered Color Lighting and Sweep Effects */}
+            {/* Lighting Effects Elements */}
             <div className="qa-glow" />
             <div className="qa-shimmer" />
           </div>
