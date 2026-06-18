@@ -9,19 +9,21 @@ const cardData = [
     key: "location",
     colorClass: "card--blue",
     Icon: MapPin,
-    chipLabel: "Get local suggestions",
+    chipLabel: "Use GPS",
     titleKey: "addLocation",
     subtitleKey: "localSuggestions",
     defaultTitle: "Add Your Current Location",
+    defaultSubtitle: "Get local suggestions",
   },
   {
     key: "budget",
     colorClass: "card--green",
     Icon: Backpack,
-    chipLabel: "Find the best deals for your trip",
+    chipLabel: "Best Deals",
     titleKey: "budgetTrip",
     subtitleKey: "findDeals",
     defaultTitle: "Plan a Trip in Budget",
+    defaultSubtitle: "Find best deals",
   },
   {
     key: "chat",
@@ -31,16 +33,17 @@ const cardData = [
     titleKey: "chatSarathi",
     subtitleKey: "aiAssistant",
     defaultTitle: "Chat with Sarathi",
+    defaultSubtitle: "AI Assistant",
   },
   {
     key: "planner",
     colorClass: "card--orange",
     Icon: Sun,
-    chipLabel: "Build itinerary",
+    chipLabel: "Build Day",
     titleKey: "planDay",
     subtitleKey: "buildItinerary",
     defaultTitle: "Plan Your Day",
- 
+    defaultSubtitle: "Build itinerary",
   },
 ];
 
@@ -80,27 +83,14 @@ const Cards = ({ openChat }) => {
             <div className="qa-orb">
               <Icon size={22} strokeWidth={1.8} />
             </div>
+            <span className="qa-arrow">→</span>
           </div>
 
           {/* Text */}
-          <div className="qa-header">
-  <div className="qa-left">
-    <div className="qa-orb">
-      <Icon size={20} strokeWidth={2} />
-    </div>
-
-    <h3 className="qa-title">
-      {t(titleKey) || defaultTitle}
-    </h3>
-  </div>
-
- 
-</div>
-
-<div className="qa-chip">
-  {chipLabel}
-</div>
-
+          <div className="qa-text">
+            <h3 className="qa-title">{t(titleKey) || defaultTitle}</h3>
+            <p className="qa-subtitle">{t(subtitleKey) || defaultSubtitle}</p>
+          </div>
 
           {/* Bottom action chip */}
           <div className="qa-chip">{chipLabel}</div>
