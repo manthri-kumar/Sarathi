@@ -135,7 +135,7 @@ const Dashboard = () => {
         {/* Dynamic Typography Greeting Hub */}
         <div className="greeting">
           <h2>
-            {t("hello,")} {userName}
+            {t("Hello,")} {userName}
           </h2>
           <p>
             {city ? (
