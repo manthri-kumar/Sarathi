@@ -21,6 +21,8 @@ const cardData = [
     titleKey: "budgetTrip",
     defaultTitle: "Plan a Trip in Budget",
   },
+
+  
   {
     key: "chat",
     colorClass: "card--purple",
