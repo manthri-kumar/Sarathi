@@ -30,12 +30,13 @@
 
   /* Premium Linear/Vercel Dark Surface */
   background:
-   linear-gradient(
+    linear-gradient(
       180deg,
-      rgba(255,255,255,0.03) 0%,
-      rgba(255,255,255,0.01) 100%
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.01) 100%
     ),
-    #090b12;  border: 1px solid rgba(255, 255, 255, 0.05);
+    #090b12;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 
@@ -62,124 +63,66 @@
 /* ══════════════════════════════════
    1. PREMIUM TOP ACCENT LINE
 ══════════════════════════════════ */
-
-.qa-card::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  border-radius:inherit;
-  opacity:.55;
-  z-index:0;
+.qa-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.55;
+  z-index: 0;
+  transition: opacity 0.3s ease;
 }
-.card--blue::after{
+
+.card--blue::after {
   background:
-    radial-gradient(
-      circle at top left,
-      rgba(59,130,246,.28),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(59,130,246,.08),
-      transparent 60%
-    );
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.28), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.08), transparent 60%);
 }
-.card--green::after{
+.card--green::after {
   background:
-    radial-gradient(
-      circle at top left,
-      rgba(16,185,129,.28),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(16,185,129,.08),
-      transparent 60%
-    );
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.28), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.08), transparent 60%);
 }
-.card--purple::after{
+.card--purple::after {
   background:
-    radial-gradient(
-      circle at top left,
-      rgba(139,92,246,.28),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(139,92,246,.08),
-      transparent 60%
-    );
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.28), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.08), transparent 60%);
 }
-.card--orange::after{
+.card--orange::after {
   background:
-    radial-gradient(
-      circle at top left,
-      rgba(249,115,22,.28),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(249,115,22,.08),
-      transparent 60%
-    );
-}
-.qa-card::before{
-  content:"";
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:2px;
-  z-index:5;
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.28), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.08), transparent 60%);
 }
 
-.card--blue::before{
-  background:linear-gradient(
-    90deg,
-    #60a5fa,
-    #2563eb
-  );
-  box-shadow:0 0 14px #2563eb;
+.qa-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 5;
+  transition: box-shadow 0.25s ease;
 }
 
-.card--green::before{
-  background:linear-gradient(
-    90deg,
-    #34d399,
-    #10b981
-  );
-  box-shadow:0 0 14px #10b981;
+.card--blue::before {
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+}
+.card--green::before {
+  background: linear-gradient(90deg, #34d399, #10b981);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+.card--purple::before {
+  background: linear-gradient(90deg, #a78bfa, #8b5cf6);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+.card--orange::before {
+  background: linear-gradient(90deg, #fb923c, #f97316);
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.6);
 }
 
-.card--purple::before{
-  background:linear-gradient(
-    90deg,
-    #a78bfa,
-    #8b5cf6
-  );
-  box-shadow:0 0 14px #8b5cf6;
-}
-
-.card--orange::before{
-  background:linear-gradient(
-    90deg,
-    #fb923c,
-    #f97316
-  );
-  box-shadow:0 0 14px #f97316;
-}
-.qa-card:hover{
-  transform:translateY(-4px);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 18px 40px rgba(0,0,0,.45);
-}
-
-.qa-card:hover::after{
-  opacity:.9;
-}
 /* ══════════════════════════════════
    2. INTERNAL GRADIENT GLOW
 ══════════════════════════════════ */
@@ -210,9 +153,9 @@
   background: linear-gradient(
     95deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.03) 45%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.03) 55%,
+    rgba(255, 255, 255, 0.02) 45%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 55%,
     transparent 100%
   );
   transform: skewX(-20deg);
@@ -221,31 +164,23 @@
 }
 
 /* ══════════════════════════════════
-   HEADER ROW (Icon Container + Title + Arrow)
+   HEADER ROW (Fixed Icon to Text Gap)
 ══════════════════════════════════ */
 .qa-header-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start; /* Changed from space-between to tighten spacing */
   width: 100%;
-  gap: 12px;
+  gap: 12px; /* Precision workspace micro-gap layout */
   position: relative;
   z-index: 3;
 }
 
-.qa-title-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
 /* ── Floating Premium Icon Container ── */
 .qa-orb {
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
+  width: 38px; /* Slightly refined premium scale down */
+  height: 38px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,24 +205,15 @@
 /* ── Title ── */
 .qa-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px; /* Cleaned up layout proportionality sizing */
   font-weight: 600;
   color: rgba(255, 255, 255, 0.95);
   line-height: 1.2;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.0102em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* ── Premium Micro-engineered Arrow ── */
-.qa-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.25);
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.25s ease;
-  flex-shrink: 0;
+  flex: 1;
 }
 
 /* ══════════════════════════════════
@@ -305,10 +231,10 @@
 .qa-chip {
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 15px;
-  border-radius: 8px;
-  font-size: 13px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: -0.005em;
   background: rgba(255, 255, 255, 0.04);
@@ -331,11 +257,13 @@
 ══════════════════════════════════ */
 .qa-card:hover {
   transform: translateY(-4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
-.qa-card:hover::before {
-  opacity: 1;
-  filter: drop-shadow(0 0 4px currentColor);
+.qa-card:hover::after {
+  opacity: 0.9;
 }
 
 .qa-card:hover .qa-glow {
@@ -346,88 +274,39 @@
   animation: qa-shimmer-sweep 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.qa-card:hover .qa-arrow {
-  color: rgba(255, 255, 255, 0.85);
-  transform: translateX(4px);
-}
-
 .qa-card:hover .qa-orb {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Dynamic Per-Color Brand Injectors on Hover ── */
 .card--blue:hover {
   border-color: rgba(59, 132, 246, 0.35);
-  color: rgba(59, 132, 246, 1);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    0 12px 32px -4px rgba(59, 132, 246, 0.18),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 32px -4px rgba(59, 132, 246, 0.15), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
-.card--blue:hover .qa-orb {
-  border-color: rgba(59, 132, 246, 0.4);
-  box-shadow: 0 0 16px rgba(59, 132, 246, 0.25);
-}
-.card--blue:hover .qa-chip {
-  background: rgba(59, 132, 246, 0.1);
-  border-color: rgba(59, 132, 246, 0.2);
-  color: #93c5fd;
-}
+.card--blue:hover .qa-orb { border-color: rgba(59, 132, 246, 0.4); box-shadow: 0 0 12px rgba(59, 132, 246, 0.2); }
+.card--blue:hover .qa-chip { background: rgba(59, 132, 246, 0.1); border-color: rgba(59, 132, 246, 0.2); color: #93c5fd; }
 
 .card--green:hover {
   border-color: rgba(16, 185, 129, 0.35);
-  color: rgba(16, 185, 129, 1);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    0 12px 32px -4px rgba(16, 185, 129, 0.18),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 32px -4px rgba(16, 185, 129, 0.15), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
-.card--green:hover .qa-orb {
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
-}
-.card--green:hover .qa-chip {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.2);
-  color: #6ee7b7;
-}
+.card--green:hover .qa-orb { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); }
+.card--green:hover .qa-chip { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
 
 .card--purple:hover {
   border-color: rgba(139, 92, 246, 0.35);
-  color: rgba(139, 92, 246, 1);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    0 12px 32px -4px rgba(139, 92, 246, 0.18),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 32px -4px rgba(139, 92, 246, 0.15), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
-.card--purple:hover .qa-orb {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.25);
-}
-.card--purple:hover .qa-chip {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: rgba(139, 92, 246, 0.2);
-  color: #c4b5fd;
-}
+.card--purple:hover .qa-orb { border-color: rgba(139, 92, 246, 0.4); box-shadow: 0 0 12px rgba(139, 92, 246, 0.2); }
+.card--purple:hover .qa-chip { background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
 
 .card--orange:hover {
   border-color: rgba(249, 115, 22, 0.35);
-  color: rgba(249, 115, 22, 1);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    0 12px 32px -4px rgba(249, 115, 22, 0.18),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 32px -4px rgba(249, 115, 22, 0.15), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
-.card--orange:hover .qa-orb {
-  border-color: rgba(249, 115, 22, 0.4);
-  box-shadow: 0 0 16px rgba(249, 115, 22, 0.25);
-}
-.card--orange:hover .qa-chip {
-  background: rgba(249, 115, 22, 0.1);
-  border-color: rgba(249, 115, 22, 0.2);
-  color: #fdb874;
-}
+.card--orange:hover .qa-orb { border-color: rgba(249, 115, 22, 0.4); box-shadow: 0 0 12px rgba(249, 115, 22, 0.2); }
+.card--orange:hover .qa-chip { background: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.2); color: #fdb874; }
 
 @keyframes qa-shimmer-sweep {
   from { left: -150%; }
@@ -464,7 +343,7 @@
     padding: 14px;
     border-radius: 14px;
   }
-  .qa-glow, .qa-card::before {
+  .qa-glow {
     border-radius: 14px;
   }
   .qa-orb {
