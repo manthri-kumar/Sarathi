@@ -94,6 +94,7 @@
   padding: 5px 14px;
   border-radius: 999px;
   letter-spacing: 0.01em;
+  margin-bottom: 3px;
 }
 
 .hero-badge-icon {
@@ -109,6 +110,7 @@
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-family: 'Poppins', sans-serif;
+  marigin-bottom: 2px;
 }
 
 .hero-accent {
@@ -123,6 +125,7 @@
   line-height: 1.5;
   font-weight: 400;
   max-width: 320px;
+  margin-bottom: 2px;
 }
 
 /* ── CTA Button ── */
