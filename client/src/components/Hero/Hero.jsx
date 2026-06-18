@@ -76,10 +76,7 @@ const Hero = () => {
           {t("recommendations") || "AI-powered recommendations just for you."}
         </p>
 
-        <button className="hero-cta" onClick={() => navigate("/explore")}>
-          {t("explorePlaces") || "Explore Places"}
-          <span className="hero-cta-arrow">→</span>
-        </button>
+        
 
       </div>
 
