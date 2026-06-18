@@ -10,7 +10,7 @@ import Profile from "./pages/Profile";
 import DayPlanner from "./pages/DayPlanner";
 import TripPlanner from "./pages/TripPlanner";
 import TempleExplorer from "./pages/TempleExplorer";
-import TempleDetailsPage from "./components/temple/TempleDetailsPage";
+import TempleDetailsPage from "./components/temple/TempleDetailsPage"; // ✅ ADD THIS
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -28,20 +28,27 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+
         <Route path="/" element={<PublicRoute><AuthPage /></PublicRoute>} />
 
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
+        <Route path="/explore"   element={<ProtectedRoute><Explore /></ProtectedRoute>} />
         <Route path="/itinerary" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
-        <Route path="/saved" element={<ProtectedRoute><Saved /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/day-planner" element={<ProtectedRoute><DayPlanner /></ProtectedRoute>} />
+        <Route path="/saved"     element={<ProtectedRoute><Saved /></ProtectedRoute>} />
+        <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/day-planner"  element={<ProtectedRoute><DayPlanner /></ProtectedRoute>} />
         <Route path="/trip-planner" element={<ProtectedRoute><TripPlanner /></ProtectedRoute>} />
 
         <Route path="/my-trips" element={<MyTrips />} />
 
-        <Route path="/temples" element={<ProtectedRoute><TempleExplorer /></ProtectedRoute>} />
-        <Route path="/temples/:placeId" element={<ProtectedRoute><TempleDetailsPage /></ProtectedRoute>} />
+        {/* Temple routes */}
+        <Route path="/temples" element={
+          <ProtectedRoute><TempleExplorer /></ProtectedRoute>
+        } />
+        <Route path="/temples/:placeId" element={          // ✅ THIS WAS MISSING
+          <ProtectedRoute><TempleDetailsPage /></ProtectedRoute>
+        } />
+
       </Routes>
     </BrowserRouter>
   );

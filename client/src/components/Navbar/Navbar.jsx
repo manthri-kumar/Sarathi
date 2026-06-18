@@ -341,6 +341,8 @@ const Navbar = ({ toggleSidebar }) => {
               </div>
             )}
           </div>
+
+
           <button
             className="bell-icon"
             title="Notifications"
