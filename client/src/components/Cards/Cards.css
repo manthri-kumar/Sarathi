@@ -29,8 +29,13 @@
   box-sizing: border-box;
 
   /* Premium Linear/Vercel Dark Surface */
-  background: radial-gradient(120% 120% at 50% 10%, rgba(20, 20, 25, 0.7) 0%, rgba(10, 10, 12, 0.9) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background:
+   linear-gradient(
+      180deg,
+      rgba(255,255,255,0.03) 0%,
+      rgba(255,255,255,0.01) 100%
+    ),
+    #090b12;  border: 1px solid rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 
@@ -57,6 +62,68 @@
 /* ══════════════════════════════════
    1. PREMIUM TOP ACCENT LINE
 ══════════════════════════════════ */
+
+.qa-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:inherit;
+  opacity:.55;
+  z-index:0;
+}
+.card--blue::after{
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(59,130,246,.28),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(59,130,246,.08),
+      transparent 60%
+    );
+}
+.card--green::after{
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(16,185,129,.28),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(16,185,129,.08),
+      transparent 60%
+    );
+}
+.card--purple::after{
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(139,92,246,.28),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(139,92,246,.08),
+      transparent 60%
+    );
+}
+.card--orange::after{
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(249,115,22,.28),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(249,115,22,.08),
+      transparent 60%
+    );
+}
 .qa-card::before {
   content: "";
   position: absolute;
