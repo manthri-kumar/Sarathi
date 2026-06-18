@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   Cards.css — Sarathi Quick Actions  (Premium v2)
+   Cards.css — Sarathi Quick Actions (Premium v2 Elevate)
    Linear × Stripe × Apple Wallet aesthetic
    ═══════════════════════════════════════════════════════ */
 
@@ -19,392 +19,352 @@
 .qa-card {
   position: relative;
   height: 130px;
-  border-radius: 20px;
-  padding: 18px 20px 16px 20px;
+  border-radius: 16px;
+  padding: 20px;
   cursor: pointer;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  box-sizing: border-box;
 
-  /* Glass dark base */
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Premium Linear/Vercel Dark Surface */
+  background: radial-gradient(120% 120% at 50% 10%, rgba(20, 20, 25, 0.7) 0%, rgba(10, 10, 12, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 
-  /* Subtle inner shadow */
+  /* Deep physical layering + sharp top edge light */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 4px 24px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 4px 24px rgba(0, 0, 0, 0.4);
 
   transition:
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.32s ease,
-    border-color 0.25s ease;
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.24s ease,
+    box-shadow 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Prevent text selection on click */
   user-select: none;
   -webkit-user-select: none;
 }
 
-.qa-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
 .qa-card:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.4);
-  outline-offset: 3px;
+  outline: 2px solid rgba(255, 255, 255, 0.3);
+  outline-offset: 2px;
 }
 
 /* ══════════════════════════════════
-   TOP COLOR STRIP  (Stripe/Linear style)
-══════════════════════════════════ */
-.qa-strip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  border-radius: 20px 20px 0 0;
-  z-index: 3;
-  transition: height 0.25s ease;
-}
-
-.qa-card:hover .qa-strip {
-  height: 4px;
-}
-
-.card--blue  .qa-strip { background: #3b82f6; }
-.card--green .qa-strip { background: #10b981; }
-.card--purple .qa-strip { background: #8b5cf6; }
-.card--orange .qa-strip { background: #f97316; }
-
-/* ══════════════════════════════════
-   AMBIENT GLOW LAYER
+   AMBIENT GLOW LAYERS (Idle & Hover)
 ══════════════════════════════════ */
 .qa-glow {
   position: absolute;
   inset: 0;
-  border-radius: 20px;
-  opacity: 0.18;
+  border-radius: 16px;
+  opacity: 0.12;
   pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.35s ease;
+  z-index: 1;
+  transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.qa-card:hover .qa-glow {
-  opacity: 0.32;
-}
-
-.card--blue  .qa-glow { background: radial-gradient(ellipse at 30% 0%, #3b82f6 0%, transparent 70%); }
-.card--green .qa-glow { background: radial-gradient(ellipse at 30% 0%, #10b981 0%, transparent 70%); }
-.card--purple .qa-glow { background: radial-gradient(ellipse at 30% 0%, #8b5cf6 0%, transparent 70%); }
-.card--orange .qa-glow { background: radial-gradient(ellipse at 30% 0%, #f97316 0%, transparent 70%); }
+.card--blue   .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(59, 132, 246, 0.45) 0%, transparent 100%); }
+.card--green  .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(16, 185, 129, 0.45) 0%, transparent 100%); }
+.card--purple .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(139, 92, 246, 0.45) 0%, transparent 100%); }
+.card--orange .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(249, 115, 22, 0.45) 0%, transparent 100%); }
 
 /* ══════════════════════════════════
-   SHIMMER SWEEP
+   SHIMMER SWEEP INTERACTION
 ══════════════════════════════════ */
 .qa-shimmer {
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 60%;
+  left: -150%;
+  width: 100%;
   height: 100%;
   background: linear-gradient(
-    105deg,
+    95deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.055) 50%,
+    rgba(255, 255, 255, 0.03) 45%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 55%,
     transparent 100%
   );
-  transform: skewX(-15deg);
+  transform: skewX(-20deg);
   pointer-events: none;
   z-index: 2;
-  transition: left 0s;
-}
-
-.qa-card:hover .qa-shimmer {
-  animation: qa-shimmer-sweep 0.65s ease forwards;
-}
-
-@keyframes qa-shimmer-sweep {
-  from { left: -100%; }
-  to   { left: 160%; }
 }
 
 /* ══════════════════════════════════
-   TOP ROW  (orb + arrow)
+   HEADER ROW (Icon Container + Title + Arrow)
 ══════════════════════════════════ */
-.qa-top-row {
+.qa-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  gap: 12px;
   position: relative;
   z-index: 3;
 }
 
-/* ── Icon Orb ── */
+.qa-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Floating Premium Icon Container ── */
 .qa-orb {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  transition:
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s ease,
-    background 0.25s ease;
-}
-
-.qa-card:hover .qa-orb {
-  transform: scale(1.1) rotate(4deg);
-  background: rgba(255, 255, 255, 0.13);
-}
-
-/* Orb glow colour per card */
-.card--blue:hover  .qa-orb { box-shadow: 0 0 22px rgba(59,  130, 246, 0.55); }
-.card--green:hover .qa-orb { box-shadow: 0 0 22px rgba(16,  185, 129, 0.55); }
-.card--purple:hover .qa-orb { box-shadow: 0 0 22px rgba(139, 92,  246, 0.55); }
-.card--orange:hover .qa-orb { box-shadow: 0 0 22px rgba(249, 115,  22, 0.55); }
-
-/* ── Arrow ── */
-.qa-arrow {
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.35);
-  transition: transform 0.25s ease, color 0.25s ease;
-  line-height: 1;
-}
-
-.qa-card:hover .qa-arrow {
-  transform: translateX(5px);
-  color: rgba(255, 255, 255, 0.75);
-}
-
-/* ══════════════════════════════════
-   TEXT BLOCK
-══════════════════════════════════ */
-.qa-text {
+  flex-shrink: 0;
   position: relative;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: 
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.card--blue   .qa-orb { border: 1px solid rgba(59, 132, 246, 0.15); color: #60a5fa; }
+.card--green  .qa-orb { border: 1px solid rgba(16, 185, 129, 0.15); color: #34d399; }
+.card--purple .qa-orb { border: 1px solid rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.card--orange .qa-orb { border: 1px solid rgba(249, 115, 22, 0.15); color: #fb923c; }
+
+/* ── Title ── */
 .qa-title {
   margin: 0;
   font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1.25;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.2;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: transform 0.25s ease;
 }
 
-.qa-card:hover .qa-title {
-  transform: translateX(2px);
-}
-
-.qa-subtitle {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.58);
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ── Premium Micro-engineered Arrow ── */
+.qa-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.25);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.25s ease;
+  flex-shrink: 0;
 }
 
 /* ══════════════════════════════════
-   BOTTOM ACTION CHIP
+   CONTENT FOOTER ROW (Chip Container)
 ══════════════════════════════════ */
-.qa-chip {
+.qa-footer-row {
   position: relative;
   z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+}
+
+/* ── Premium Metadata Badges ── */
+.qa-chip {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  color: rgba(255, 255, 255, 0.65);
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.02em;
-  transition: background 0.2s ease, color 0.2s ease;
+  letter-spacing: -0.005em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: 
+    background-color 0.2s ease, 
+    color 0.2s ease, 
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.qa-card:hover .qa-chip {
-  background: rgba(255, 255, 255, 0.13);
-  color: rgba(255, 255, 255, 0.88);
-}
-
-/* Chip accent colour tint on hover */
-.card--blue:hover  .qa-chip { border-color: rgba(59,  130, 246, 0.35); }
-.card--green:hover .qa-chip { border-color: rgba(16,  185, 129, 0.35); }
-.card--purple:hover .qa-chip { border-color: rgba(139, 92,  246, 0.35); }
-.card--orange:hover .qa-chip { border-color: rgba(249, 115,  22, 0.35); }
+.card--blue   .qa-chip { color: rgba(147, 197, 253, 0.75); }
+.card--green  .qa-chip { color: rgba(110, 231, 183, 0.75); }
+.card--purple .qa-chip { color: rgba(196, 181, 253, 0.75); }
+.card--orange .qa-chip { color: rgba(253, 186, 116, 0.75); }
 
 /* ══════════════════════════════════
-   CARD-LEVEL HOVER GLOW (box-shadow)
+   GLOBAL SOPHISTICATED HOVER STATES
 ══════════════════════════════════ */
-.card--blue:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 40px rgba(59, 130, 246, 0.22),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+.qa-card:hover {
+  transform: translateY(-4px);
 }
 
-.card--green:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 40px rgba(16, 185, 129, 0.22),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+.qa-card:hover .qa-glow {
+  opacity: 0.35;
 }
 
-.card--purple:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 40px rgba(139, 92, 246, 0.22),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+.qa-card:hover .qa-shimmer {
+  animation: qa-shimmer-sweep 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.card--orange:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 40px rgba(249, 115, 22, 0.22),
-    0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* ══════════════════════════════════
-   ICON PULSE ANIMATION (every 5s)
-══════════════════════════════════ */
-@keyframes qa-pulse {
-  0%, 90%, 100% { transform: scale(1); }
-  95%            { transform: scale(1.12); }
-}
-
-.qa-orb {
-  animation: qa-pulse 5s ease-in-out infinite;
+.qa-card:hover .qa-arrow {
+  color: rgba(255, 255, 255, 0.85);
+  transform: translateX(3px);
 }
 
 .qa-card:hover .qa-orb {
-  /* Pause pulse on hover — hover transform takes over */
-  animation: none;
+  transform: translateY(-2px) scale(1.04);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Dynamic Per-Color Brand Injectors on Hover ── */
+.card--blue:hover {
+  border-color: rgba(59, 132, 246, 0.25);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 12px 32px -4px rgba(59, 132, 246, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.card--blue:hover .qa-orb {
+  border-color: rgba(59, 132, 246, 0.4);
+  box-shadow: 0 0 16px rgba(59, 132, 246, 0.25);
+}
+.card--blue:hover .qa-chip {
+  background: rgba(59, 132, 246, 0.1);
+  border-color: rgba(59, 132, 246, 0.2);
+  color: #93c5fd;
+}
+
+.card--green:hover {
+  border-color: rgba(16, 185, 129, 0.25);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 12px 32px -4px rgba(16, 185, 129, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.card--green:hover .qa-orb {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+}
+.card--green:hover .qa-chip {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.card--purple:hover {
+  border-color: rgba(139, 92, 246, 0.25);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 12px 32px -4px rgba(139, 92, 246, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.card--purple:hover .qa-orb {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.25);
+}
+.card--purple:hover .qa-chip {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+}
+
+.card--orange:hover {
+  border-color: rgba(249, 115, 22, 0.25);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 12px 32px -4px rgba(249, 115, 22, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.card--orange:hover .qa-orb {
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.25);
+}
+.card--orange:hover .qa-chip {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.2);
+  color: #fdb874;
+}
+
+@keyframes qa-shimmer-sweep {
+  from { left: -150%; }
+  to   { left: 150%; }
 }
 
 /* ═══════════════════════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════════════════════ */
+   RESPONSIVE DESIGN BREAKPOINTS
+   ═══════════════════════════════════════════════════════ */
 
-/* ── Tablet (769–1024px) ── */
+/* ── Tablet Breakpoint (769px - 1024px) ── */
 @media (max-width: 1024px) {
   .qa-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
-
   .qa-card {
     height: 120px;
-    padding: 16px 18px 14px 18px;
-    border-radius: 18px;
+    padding: 16px;
   }
-
-  .qa-strip {
-    border-radius: 18px 18px 0 0;
-  }
-
   .qa-title {
     font-size: 14px;
-    white-space: normal;
-  }
-
-  .qa-orb {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
   }
 }
 
-/* ── Mobile (≤768px) ── */
+/* ── Mobile Breakpoint (≤768px) ── */
 @media (max-width: 768px) {
   .qa-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-
   .qa-card {
-    height: 118px;
-    padding: 14px 16px 12px 16px;
-    border-radius: 16px;
-    border-color: rgba(255, 255, 255, 0.10);
+    height: 114px;
+    padding: 14px;
+    border-radius: 14px;
   }
-
-  .qa-strip {
-    border-radius: 16px 16px 0 0;
-    height: 3px;
+  .qa-glow {
+    border-radius: 14px;
   }
-
   .qa-orb {
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
   }
-
   .qa-title {
     font-size: 13.5px;
-    white-space: normal;
-    line-height: 1.3;
   }
-
-  .qa-subtitle {
-    font-size: 11.5px;
-    white-space: normal;
-  }
-
   .qa-chip {
+    height: 22px;
+    padding: 0 8px;
     font-size: 10.5px;
-    padding: 3px 9px;
+    border-radius: 5px;
   }
-
-  .qa-arrow {
-    font-size: 0.9rem;
-  }
-
-  /* Reduce hover lift on touch screens */
   .qa-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
   }
 }
 
-/* ── Small mobile (≤400px) ── */
+/* ── Ultra Compact Micro-Mobile (≤400px) ── */
 @media (max-width: 400px) {
   .qa-grid {
     gap: 10px;
   }
-
   .qa-card {
-    height: 110px;
-    padding: 12px 14px 10px 14px;
+    height: 106px;
+    padding: 12px;
   }
-
   .qa-title {
     font-size: 13px;
   }
-
-  .qa-subtitle {
-    font-size: 11px;
+  .qa-orb {
+    width: 28px;
+    height: 28px;
   }
 }
