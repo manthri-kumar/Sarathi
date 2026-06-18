@@ -34,7 +34,7 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 
-  /* Deep physical layering + sharp top edge light */
+  /* Deep physical layering + sharp top edge light highlight */
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
     0 1px 2px rgba(0, 0, 0, 0.4),
@@ -55,7 +55,35 @@
 }
 
 /* ══════════════════════════════════
-   AMBIENT GLOW LAYERS (Idle & Hover)
+   1. PREMIUM TOP ACCENT LINE
+══════════════════════════════════ */
+.qa-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 4;
+  opacity: 0.65;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.card--blue::before { 
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0) 0%, rgba(59, 130, 246, 1) 50%, rgba(59, 130, 246, 0) 100%); 
+}
+.card--green::before { 
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 1) 50%, rgba(16, 185, 129, 0) 100%); 
+}
+.card--purple::before { 
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0) 0%, rgba(139, 92, 246, 1) 50%, rgba(139, 92, 246, 0) 100%); 
+}
+.card--orange::before { 
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0) 0%, rgba(249, 115, 22, 1) 50%, rgba(249, 115, 22, 0) 100%); 
+}
+
+/* ══════════════════════════════════
+   2. INTERNAL GRADIENT GLOW
 ══════════════════════════════════ */
 .qa-glow {
   position: absolute;
@@ -67,10 +95,10 @@
   transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.card--blue   .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(59, 132, 246, 0.45) 0%, transparent 100%); }
-.card--green  .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(16, 185, 129, 0.45) 0%, transparent 100%); }
-.card--purple .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(139, 92, 246, 0.45) 0%, transparent 100%); }
-.card--orange .qa-glow { background: radial-gradient(60% 60% at 10% 20%, rgba(249, 115, 22, 0.45) 0%, transparent 100%); }
+.card--blue   .qa-glow { background: radial-gradient(circle at top left, rgba(59, 132, 246, 0.22) 0%, transparent 60%); }
+.card--green  .qa-glow { background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.22) 0%, transparent 60%); }
+.card--purple .qa-glow { background: radial-gradient(circle at top left, rgba(139, 92, 246, 0.22) 0%, transparent 60%); }
+.card--orange .qa-glow { background: radial-gradient(circle at top left, rgba(249, 115, 22, 0.22) 0%, transparent 60%); }
 
 /* ══════════════════════════════════
    SHIMMER SWEEP INTERACTION
@@ -207,6 +235,11 @@
   transform: translateY(-4px);
 }
 
+.qa-card:hover::before {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
 .qa-card:hover .qa-glow {
   opacity: 0.35;
 }
@@ -217,17 +250,18 @@
 
 .qa-card:hover .qa-arrow {
   color: rgba(255, 255, 255, 0.85);
-  transform: translateX(3px);
+  transform: translateX(4px);
 }
 
 .qa-card:hover .qa-orb {
-  transform: translateY(-2px) scale(1.04);
+  transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Dynamic Per-Color Brand Injectors on Hover ── */
 .card--blue:hover {
-  border-color: rgba(59, 132, 246, 0.25);
+  border-color: rgba(59, 132, 246, 0.35);
+  color: rgba(59, 132, 246, 1);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     0 12px 32px -4px rgba(59, 132, 246, 0.18),
@@ -244,7 +278,8 @@
 }
 
 .card--green:hover {
-  border-color: rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: rgba(16, 185, 129, 1);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     0 12px 32px -4px rgba(16, 185, 129, 0.18),
@@ -261,7 +296,8 @@
 }
 
 .card--purple:hover {
-  border-color: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: rgba(139, 92, 246, 1);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     0 12px 32px -4px rgba(139, 92, 246, 0.18),
@@ -278,7 +314,8 @@
 }
 
 .card--orange:hover {
-  border-color: rgba(249, 115, 22, 0.25);
+  border-color: rgba(249, 115, 22, 0.35);
+  color: rgba(249, 115, 22, 1);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     0 12px 32px -4px rgba(249, 115, 22, 0.18),
@@ -329,7 +366,7 @@
     padding: 14px;
     border-radius: 14px;
   }
-  .qa-glow {
+  .qa-glow, .qa-card::before {
     border-radius: 14px;
   }
   .qa-orb {
