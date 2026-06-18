@@ -153,7 +153,7 @@
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
-  transform: translateY(-30px);
+  transform: translateY(-35px);
 
 }
 
@@ -177,7 +177,7 @@
    DOTS
 ═══════════════════════════ */
 .hero-dots {
-  position: center;
+  position: absolute;
   bottom: 16px;
   left: 40px;           /* align with left content, not centred */
   z-index: 3;
