@@ -178,11 +178,16 @@
 ═══════════════════════════ */
 .hero-dots {
   position: absolute;
-  bottom: 16px;
-  z-index: 3;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+
+  z-index: 20;
 }
 
 .hero-dot {
