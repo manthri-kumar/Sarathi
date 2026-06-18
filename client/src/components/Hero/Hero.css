@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════════
-   Hero.css — Sarathi v4.5
+   Hero.css — Sarathi v4.6
    Left-panel text area · full image right · Poppins
-   Desktop fixed · Mobile preserved from v4.4
    ═══════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
@@ -11,14 +10,24 @@
 ══════════════════════════════════════ */
 .hero {
   width: 100%;
-  height: 300px;            /* slightly taller so button never clips */
+  height: 340px;
   border-radius: 18px;
-  overflow: hidden;
+  overflow: visible;        /* KEY: don't clip content */
   position: relative;
   margin-top: 20px;
   font-family: 'Poppins', sans-serif;
   box-shadow: 0 2px 40px rgba(0, 0, 0, 0.45);
   background: #040814;
+}
+
+/* Inner clip mask — clips image+gradient but NOT the content */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  z-index: 0;
 }
 
 /* ══════════════════════════════════════
@@ -27,6 +36,9 @@
 .hero-slides {
   position: absolute;
   inset: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  z-index: 0;
 }
 
 .hero-slide {
@@ -52,6 +64,7 @@
 .hero-gradient {
   position: absolute;
   inset: 0;
+  border-radius: 18px;
   background: linear-gradient(
     90deg,
     rgba(4, 8, 20, 0.97) 0%,
@@ -65,21 +78,22 @@
 }
 
 /* ══════════════════════════════════════
-   CONTENT — desktop: absolute, left panel, vertically centred
+   CONTENT — sits over image, left panel
 ══════════════════════════════════════ */
 .hero-content {
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
-  /* right is NOT set — width is controlled by max-width */
   z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 44px;
-  max-width: 460px;
-  gap: 10px;
+  padding: 24px 44px;
+  max-width: 440px;
+  gap: 8px;
+  /* overflow visible so button is never cut */
+  overflow: visible;
 }
 
 /* ── Badge ── */
@@ -93,26 +107,28 @@
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: rgba(255, 255, 255, 0.82);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  padding: 5px 14px;
+  padding: 4px 12px;
   border-radius: 999px;
   letter-spacing: 0.01em;
+  flex-shrink: 0;
 }
 
 .hero-badge-icon {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 /* ── Heading ── */
 .hero-heading {
   margin: 0;
-  font-size: 2.6rem;
+  font-size: 2.4rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-family: 'Poppins', sans-serif;
+  flex-shrink: 0;
 }
 
 .hero-accent {
@@ -122,11 +138,12 @@
 /* ── Subtitle ── */
 .hero-subtitle {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.68);
-  line-height: 1.5;
+  line-height: 1.4;
   font-weight: 400;
-  max-width: 300px;
+  max-width: 280px;
+  flex-shrink: 0;
 }
 
 /* ── CTA Button ── */
@@ -137,15 +154,15 @@
   background: linear-gradient(135deg, #00d26a, #00a84f);
   color: #ffffff;
   border: none;
-  padding: 0 22px;
-  height: 42px;
-  border-radius: 12px;
-  font-size: 0.92rem;
+  padding: 0 20px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 0.88rem;
   font-weight: 600;
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
   width: fit-content;
-  margin-top: 2px;
+  flex-shrink: 0;
   box-shadow: 0 4px 20px rgba(0, 210, 106, 0.35);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -172,15 +189,15 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #ffffff;
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -195,15 +212,15 @@
   transform: translateY(-50%) scale(1.1);
 }
 
-.hero-arrow--left  { left: 20px; }
-.hero-arrow--right { right: 20px; }
+.hero-arrow--left  { left: 18px; }
+.hero-arrow--right { right: 18px; }
 
 /* ══════════════════════════════════════
-   DOTS — centred bottom
+   DOTS
 ══════════════════════════════════════ */
 .hero-dots {
   position: absolute;
-  bottom: 18px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
@@ -213,8 +230,8 @@
 }
 
 .hero-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.28);
   border: none;
@@ -224,10 +241,10 @@
 }
 
 .hero-dot.active {
-  width: 22px;
+  width: 20px;
   border-radius: 4px;
   background: #00d26a;
-  box-shadow: 0 0 10px rgba(0, 210, 106, 0.65);
+  box-shadow: 0 0 8px rgba(0, 210, 106, 0.65);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -237,28 +254,28 @@
 /* ── Tablet (769px – 1024px) ── */
 @media (max-width: 1024px) {
   .hero {
-    height: 260px;
+    height: 280px;
   }
 
   .hero-content {
-    padding: 0 28px;
-    max-width: 380px;
-    gap: 8px;
+    padding: 20px 28px;
+    max-width: 360px;
+    gap: 7px;
   }
 
   .hero-heading {
-    font-size: 2rem;
+    font-size: 1.9rem;
   }
 
   .hero-subtitle {
-    font-size: 0.84rem;
-    max-width: 260px;
+    font-size: 0.8rem;
+    max-width: 240px;
   }
 
   .hero-cta {
-    height: 38px;
-    font-size: 0.86rem;
-    padding: 0 18px;
+    height: 36px;
+    font-size: 0.84rem;
+    padding: 0 16px;
   }
 }
 
@@ -268,16 +285,18 @@
     height: auto;
     min-height: 0;
     border-radius: 14px;
-    overflow: hidden;
+    overflow: hidden;        /* back to hidden on mobile — no clipping issue */
   }
 
   .hero-slides {
     position: absolute;
     inset: 0;
+    border-radius: 14px;
     min-height: 100%;
   }
 
   .hero-gradient {
+    border-radius: 14px;
     background: linear-gradient(
       90deg,
       rgba(4, 8, 20, 0.97) 0%,
@@ -287,18 +306,17 @@
     );
   }
 
-  /* Content drives card height on mobile */
   .hero-content {
     position: relative;
     top: unset;
     left: unset;
     bottom: unset;
-    inset: unset;
     z-index: 2;
     max-width: 100%;
     padding: 28px 20px 56px 20px;
     gap: 10px;
     justify-content: flex-start;
+    overflow: visible;
   }
 
   .hero-heading {
@@ -315,7 +333,6 @@
     height: 40px;
     font-size: 0.88rem;
     padding: 0 18px;
-    margin-top: 4px;
   }
 
   .hero-badge {
@@ -328,8 +345,8 @@
   }
 
   .hero-arrow--right {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     right: 14px;
     font-size: 20px;
   }
@@ -345,6 +362,14 @@
 /* ── Small Mobile (≤480px) ── */
 @media (max-width: 480px) {
   .hero {
+    border-radius: 12px;
+  }
+
+  .hero-slides {
+    border-radius: 12px;
+  }
+
+  .hero-gradient {
     border-radius: 12px;
   }
 
