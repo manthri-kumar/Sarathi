@@ -29,11 +29,17 @@ a {
 
 .dashboard {
   display: flex;
+  min-height: 100vh;
+  width: 100%;
 }
 
+/* Single, flex-based definition.
+   The sidebar reserves its own width as an in-flow flex child,
+   so NO margin-left / calc() offset here. */
 .main-content {
-  margin-left: 260px;
-  width: calc(100% - 260px);
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
   min-height: 100vh;
   padding: 30px 40px;
 }
@@ -42,72 +48,9 @@ a {
   margin-bottom: 24px;
 }
 
-/* ===================================================== */
-/* ================= SIDEBAR =========================== */
-/* ===================================================== */
-
-.sidebar {
-  width: 250px;
-  height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  padding: 24px 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background:
-    radial-gradient(circle at 20% 0%,
-      rgba(0,255,149,0.12),
-      transparent 40%),
-    #020402;
-  border-right: 1px solid rgba(255,255,255,0.05);
-  z-index: 1200;
-}
-
-.sidebar-logo h2 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.sidebar-logo p {
-  margin-top: 5px;
-  font-size: 13px;
-  color: #9ca3af;
-}
-
-.sidebar-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sidebar-menu a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  color: #cbd5e1;
-  transition: all .3s ease;
-}
-
-.sidebar-menu a:hover {
-  background: rgba(255,255,255,0.06);
-  color: white;
-}
-
-.sidebar-menu a.active {
-  background: linear-gradient(
-    135deg,
-    #00ff95,
-    #22c55e
-  );
-  color: black;
-  font-weight: 600;
-  box-shadow: 0 10px 25px rgba(34,197,94,0.25);
-}
+/* NOTE: The .sidebar block was REMOVED from this file.
+   All sidebar styling now lives exclusively in Sidebar.css
+   to prevent the position:fixed override that caused the overlap. */
 
 /* ===================================================== */
 /* ================= SEARCH BAR ======================== */
@@ -140,7 +83,7 @@ a {
 }
 
 /* ===================================================== */
-/* ================= GREETINGS (Premium Desktop Upgrades) */
+/* ================= GREETINGS ========================= */
 /* ===================================================== */
 
 .greeting {
@@ -151,7 +94,7 @@ a {
 
 .greeting h2 {
   margin: 0;
-  font-size: 33px; /* Premium desktop presence */
+  font-size: 33px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #ffffff;
@@ -160,7 +103,7 @@ a {
 
 .greeting p {
   margin: 0;
-  font-size: 16px; /* Desktop visibility */
+  font-size: 16px;
   color: #9ca3af;
   font-weight: 500;
 }
@@ -295,25 +238,6 @@ a {
   font-size: 13px;
 }
 
-
-.app-layout {
-  display: flex;
-  min-height: 100vh;
-  width: 100%;
-}
-
-.main-content {
-  flex: 1;
-  min-width: 0;
-  overflow-x: hidden;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    width: 100%;
-  }
-}
-
 /* ===================================================== */
 /* ================= OVERLAY =========================== */
 /* ===================================================== */
@@ -328,10 +252,8 @@ a {
   z-index: 1000;
 }
 
-
-
 /* ===================================================== */
-/* ================= RESPONSIVE MEDIA BREAKPOINTS ===== */
+/* ================= RESPONSIVE MEDIA BREAKPOINTS ====== */
 /* ===================================================== */
 
 @media (max-width: 1024px) {
@@ -339,29 +261,20 @@ a {
     grid-template-columns: 1fr;
   }
   .greeting h2 {
-    font-size: 32px; /* Smooth transition scales */
+    font-size: 32px;
   }
 }
 
 @media (max-width: 768px) {
+  /* Sidebar drawer behavior is handled entirely in Sidebar.css.
+     Here we only reset the content padding for small screens. */
   .main-content {
-    margin-left: 0;
     width: 100%;
     padding: 20px;
   }
 
-  .sidebar {
-    left: -100%;
-    transition: .3s;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-  /* Maintaining screen accuracy layout from screenshot */
   .greeting h2 {
-    font-size: 26px; 
+    font-size: 26px;
   }
 
   .greeting p {
@@ -390,4 +303,3 @@ a {
     font-size: 24px;
   }
 }
-
