@@ -95,6 +95,7 @@
   border-radius: 999px;
   letter-spacing: 0.01em;
     transform: translateY(-25px);
+    padding-left: 20px;
 
 }
 
@@ -128,7 +129,8 @@
   line-height: 1.5;
   font-weight: 400;
   max-width: 320px;
-    transform: translateY(-25px);
+    transform: translateY(-30px);
+    padding-left: 20px;
 
  
 }
