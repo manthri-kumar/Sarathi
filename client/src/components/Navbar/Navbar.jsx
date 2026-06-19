@@ -367,6 +367,7 @@ const Navbar = ({ toggleSidebar }) => {
 
 
           <NotificationDropdown
+          
             isOpen={showNotificationDropdown}
       
             onClose={() => setShowNotificationDropdown(false)}
