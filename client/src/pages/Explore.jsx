@@ -5,7 +5,7 @@ import PlacesSection from "../components/PlacesSection/PlacesSection";
 
 import { useTranslation } from "react-i18next";
 
-import "../styles/layout.css";
+import "../styles/Explore.css";
 
 const Explore = () => {
 
