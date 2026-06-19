@@ -1,4 +1,5 @@
 // client/src/hooks/useExploreSearch.js
+
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
@@ -10,40 +11,63 @@ export function useExploreSearch() {
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState(null);
-  // { city, lat, lng } once a city is chosen; Explore reacts to this.
+
+  // Selected city
   const [selectedCity, setSelectedCity] = useState(null);
 
   const debounceRef = useRef(null);
   const abortRef = useRef(null);
 
-  // Debounced suggestions.
+  /* ==================================
+     CITY SUGGESTIONS
+  ================================== */
+
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
     const q = query.trim();
+
     if (q.length < 2) {
       setSuggestions([]);
       setSuggestLoading(false);
-      return undefined;
+      return;
     }
 
     setSuggestLoading(true);
+
     debounceRef.current = setTimeout(async () => {
-      if (abortRef.current) abortRef.current.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
       try {
+        if (abortRef.current) {
+          abortRef.current.abort();
+        }
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         const res = await fetch(
-          `${API_BASE}/api/search/suggest?q=${encodeURIComponent(q)}`,
-          { signal: controller.signal }
+          `${API_BASE}/api/geocode/suggest?q=${encodeURIComponent(q)}`,
+          {
+            signal: controller.signal,
+          }
         );
-        if (!res.ok) throw new Error(`suggest ${res.status}`);
+
+        if (!res.ok) {
+          throw new Error(`Suggest Error ${res.status}`);
+        }
+
         const data = await res.json();
-        setSuggestions(data.suggestions || []);
+
+        // Backend returns array directly
+        setSuggestions(Array.isArray(data) ? data : []);
+
         setError(null);
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError("Could not load suggestions");
+          console.error("Suggestion Error:", err);
           setSuggestions([]);
+          setError("Could not load suggestions");
         }
       } finally {
         setSuggestLoading(false);
@@ -51,35 +75,59 @@ export function useExploreSearch() {
     }, DEBOUNCE_MS);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
     };
   }, [query]);
 
-  // Resolve a city name / prediction to coordinates and select it.
+  /* ==================================
+     RESOLVE CITY -> LAT LNG
+  ================================== */
+
   const resolveAndSelect = useCallback(async (rawText) => {
-    const q = (rawText ?? "").toString().trim();
+    const q = String(rawText || "").trim();
+
     if (!q) return;
+
     setResolving(true);
     setError(null);
+
     try {
       const res = await fetch(
-        `${API_BASE}/api/search/location?q=${encodeURIComponent(q)}`
+        `${API_BASE}/api/geocode/location?q=${encodeURIComponent(q)}`
       );
+
       if (res.status === 404) {
         setError("Location not found");
         return;
       }
-      if (!res.ok) throw new Error(`location ${res.status}`);
+
+      if (!res.ok) {
+        throw new Error(`Location Error ${res.status}`);
+      }
+
       const data = await res.json();
-      setSelectedCity({ city: data.city || q, lat: data.lat, lng: data.lng });
-      setQuery(data.city || q);
+
+      setSelectedCity({
+        city: data.city,
+        lat: data.lat,
+        lng: data.lng,
+      });
+
+      setQuery(data.city);
       setSuggestions([]);
     } catch (err) {
+      console.error("Location Error:", err);
       setError("Search failed. Try again.");
     } finally {
       setResolving(false);
     }
   }, []);
+
+  /* ==================================
+     CLEAR
+  ================================== */
 
   const clearSearch = useCallback(() => {
     setQuery("");
@@ -90,11 +138,15 @@ export function useExploreSearch() {
   return {
     query,
     setQuery,
+
     suggestions,
     suggestLoading,
+
     resolving,
     error,
+
     selectedCity,
+
     resolveAndSelect,
     clearSearch,
   };
