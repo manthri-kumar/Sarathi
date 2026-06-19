@@ -28,7 +28,7 @@ const Explore = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
 
-  
+
   /* 👉 Swipe support */
   const touchStartX = useRef(0);
 
@@ -88,7 +88,9 @@ const Explore = () => {
         setHotels(data.hotels || []);
 
         const components = geoData.results[0]?.address_components || [];
+        
         setLocationName(getLocationName(components));
+
 
         setLocationLoaded(true);
         localStorage.setItem("locationSelected", "true");
