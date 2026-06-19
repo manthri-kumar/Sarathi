@@ -5,6 +5,7 @@ import {
   Search,
   Bell,
   Languages,
+  Mail,
   User,
   Luggage,
   Heart,
@@ -17,10 +18,11 @@ import { useNavigate } from "react-router-dom";
 
 
 // Import new dropdown components
+import InboxDropdown from "./InboxDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 
 const Navbar = ({ toggleSidebar }) => {
-
+  
   const { i18n } = useTranslation();
 
   const navigate = useNavigate();
@@ -185,7 +187,23 @@ const Navbar = ({ toggleSidebar }) => {
           </div>
 
           {/* Mail Icon - NEW */}
-          
+          <div className="mail-wrapper">
+            <button
+              className="mail-icon"
+              onClick={() => setShowInboxDropdown(!showInboxDropdown)}
+              title="Messages"
+              aria-label="Open AI Inbox"
+            >
+              <Mail size={18} />
+              <span className="notification-dot"></span>
+            </button>
+
+            {/* Inbox Dropdown */}
+            <InboxDropdown
+              isOpen={showInboxDropdown}
+              onClose={() => setShowInboxDropdown(false)}
+            />
+          </div>
 
           {/* Notification Bell - NEW */}
           <div className="bell-wrapper">
@@ -350,7 +368,20 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
+          <button
+            className="mail-icon"
+            onClick={() => setShowInboxDropdown(!showInboxDropdown)}
+            title="Messages"
+            aria-label="Open AI Inbox"
+          >
+            <Mail size={18} />
+            <span className="notification-dot"></span>
+          </button>
 
+          <InboxDropdown
+            isOpen={showInboxDropdown}
+            onClose={() => setShowInboxDropdown(false)}
+          />
 
           <button
             className="bell-icon"
@@ -358,24 +389,17 @@ const Navbar = ({ toggleSidebar }) => {
             title="Notifications"
             aria-label="Open Notifications"
           >
-            
             <Bell size={18} />
-            
             <span className="notification-dot"></span>
-
           </button>
-
 
           <NotificationDropdown
             isOpen={showNotificationDropdown}
-      
             onClose={() => setShowNotificationDropdown(false)}
           />
 
           <div className="profile-wrapper" ref={profileMenuRef}>
             <button
-
-
               className="nav-avatar"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               aria-label="Profile menu"
