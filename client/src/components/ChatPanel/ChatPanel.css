@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   ChatPanel.css  —  Sarathi AI Chat  (Production)
+   ENHANCED ChatPanel.css — Sarathi Premium Travel AI
 ═══════════════════════════════════════════════════ */
 
 /* ── Panel Shell ──────────────────────────────────── */
@@ -201,118 +201,117 @@
   30%            { transform: translateY(-7px); opacity: 1; }
 }
 
-/* ── Suggestion Pills (base styles, used inside collapse) ── */
-.chat-suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 6px 12px 10px;
-}
+/* ════════════════════════════════════════════════════
+   WEATHER CARD
+════════════════════════════════════════════════════ */
 
-.chat-sug-pill {
-  background: #0a1a0e;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  color: #6aad7a;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  text-align: left;
-  line-height: 1.3;
-  transition: all 0.15s;
-}
-.chat-sug-pill:hover {
-  background: #0f2318;
-  border-color: #22c55e;
-  color: #e8f5e9;
-}
-
-/* ── Footer ───────────────────────────────────────── */
-.chat-footer {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  background: #07110a;
-  border-top: 1px solid rgba(34, 197, 94, 0.1);
-}
-
-/* ── Quick Actions (general / non-temple mode) ────── */
-.quick-actions {
-  display: flex;
-  gap: 6px;
-  padding: 10px 12px 6px;
-  border-bottom: 1px solid rgba(34, 197, 94, 0.07);
-}
-
-.quick-actions button {
-  flex: 1;
-  padding: 7px 6px;
-  background: #0a1a0e;
-  color: #6aad7a;
-  border: 1px solid rgba(34, 197, 94, 0.15);
-  border-radius: 8px;
-  font-size: 0.76rem;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-}
-.quick-actions button:hover {
-  background: #0f2318;
-  border-color: #22c55e;
-  color: #e8f5e9;
-}
-
-/* ── Input Row ────────────────────────────────────── */
-.chat-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px 12px;
-}
-
-.chat-input-field {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 14px;
-  background: #0f2318;
+.weather-card {
+  background: linear-gradient(135deg, #0a1a0e 0%, #0f2318 100%);
   border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 12px;
-  color: #e8f5e9;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  font-family: inherit;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
 }
-.chat-input-field::placeholder { color: #3d6b47; }
-.chat-input-field:focus {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
-}
-.chat-input-field:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.chat-send-btn {
-  width: 40px;
-  height: 40px;
-  background: #22c55e;
-  color: #000;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.05rem;
-  cursor: pointer;
+.weather-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-weight: 700;
-  transition: background 0.15s, transform 0.1s;
+  gap: 12px;
 }
-.chat-send-btn:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
-.chat-send-btn:active:not(:disabled) { transform: scale(0.95); }
-.chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ── Place Cards ──────────────────────────────────── */
+.weather-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.weather-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.weather-title h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e8f5e9;
+  margin: 0;
+}
+
+.weather-title p {
+  font-size: 0.75rem;
+  color: #6aad7a;
+  margin: 2px 0 0 0;
+}
+
+.weather-temp {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #22c55e;
+  line-height: 1;
+}
+
+.weather-details {
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid rgba(34, 197, 94, 0.1);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.1);
+  padding: 8px 0;
+}
+
+.weather-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weather-stat span {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.weather-stat p {
+  font-size: 0.78rem;
+  color: #d4e8d6;
+  margin: 0;
+  font-weight: 500;
+}
+
+.weather-forecast {
+  display: flex;
+  gap: 8px;
+}
+
+.forecast-day {
+  flex: 1;
+  background: rgba(34, 197, 94, 0.05);
+  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.1);
+}
+
+.forecast-day span {
+  font-size: 0.7rem;
+  color: #6aad7a;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.forecast-day p {
+  font-size: 0.75rem;
+  color: #e8f5e9;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ════════════════════════════════════════════════════
+   PLACE CARDS
+════════════════════════════════════════════════════ */
+
 .chat-cards {
   display: flex;
   flex-direction: column;
@@ -327,6 +326,12 @@
   border: 1px solid rgba(34, 197, 94, 0.15);
   border-radius: 12px;
   overflow: hidden;
+  transition: all 0.2s;
+}
+
+.chat-card:hover {
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
 }
 
 .chat-card img {
@@ -357,7 +362,6 @@
 
 .card-content p     { font-size: 0.75rem; color: #6aad7a; margin: 0; }
 .card-content .subtitle { color: #3d6b47; font-size: 0.72rem; }
-.card-content .desc { font-size: 0.72rem; color: #3d6b47; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
 .card-content button {
   margin-top: 4px;
@@ -370,10 +374,14 @@
   font-weight: 600;
   cursor: pointer;
   align-self: flex-start;
+  transition: background 0.15s;
 }
 .card-content button:hover { background: #16a34a; }
 
-/* ── Itinerary ────────────────────────────────────── */
+/* ════════════════════════════════════════════════════
+   ITINERARY CARDS
+════════════════════════════════════════════════════ */
+
 .itinerary-box { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
 
 .budget-card {
@@ -430,6 +438,20 @@
 .mini-card p   { font-size: 0.78rem; color: #e8f5e9; font-weight: 500; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-card small { font-size: 0.7rem; color: #3d6b47; }
 
+.navigate-btn {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #22c55e;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.navigate-btn:hover { background: #16a34a; }
+
 /* ── Budget Warning ───────────────────────────────── */
 .budget-warning-card {
   background: rgba(239, 68, 68, 0.06);
@@ -462,25 +484,77 @@
 .budget-short   { font-size: 0.82rem; font-weight: 700; color: #f87171; text-align: right; padding-top: 2px; }
 
 .budget-actions { display: flex; gap: 6px; }
-.budget-actions button { flex: 1; padding: 7px 8px; border: none; border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; }
+.budget-actions button { flex: 1; padding: 7px 8px; border: none; border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
 .budget-actions button:first-child { background: #22c55e; color: #000; }
 .budget-actions button:last-child  { background: rgba(255,255,255,0.06); color: #e8f5e9; border: 1px solid rgba(255,255,255,0.1); }
 .budget-actions button:hover { opacity: 0.85; }
 
-/* ═══════════════════════════════════════════════════
-   PERSISTENT COLLAPSIBLE QUICK ACTIONS
-   (Temple mode only — never unmounted from DOM)
-═══════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════
+   PREMIUM QUICK ACTIONS (Horizontal Scroll)
+════════════════════════════════════════════════════ */
 
-/* ── Outer wrapper, sits above the input row ─────── */
+.premium-actions-wrap {
+  padding: 8px 0;
+  border-top: 1px solid rgba(34, 197, 94, 0.1);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.1);
+}
+
+.premium-actions-scroll {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.premium-actions-scroll::-webkit-scrollbar { height: 2px; }
+.premium-actions-scroll::-webkit-scrollbar-track { background: transparent; }
+.premium-actions-scroll::-webkit-scrollbar-thumb { background: rgba(34, 197, 94, 0.2); border-radius: 1px; }
+
+.premium-action-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 10px;
+  color: #6aad7a;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.premium-action-chip:hover {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #e8f5e9;
+}
+
+.chip-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.chip-label {
+  font-size: 0.7rem;
+}
+
+/* ════════════════════════════════════════════════════
+   TEMPLE QUICK ACTIONS (Collapsible)
+════════════════════════════════════════════════════ */
+
 .chat-quick-actions-wrap {
   display: flex;
   flex-direction: column;
   border-top: 1px solid rgba(34, 197, 94, 0.1);
-  /* No overflow:hidden here — we need the toggle row always visible */
 }
 
-/* ── Toggle row — always rendered, always visible ── */
 .chat-quick-toggle {
   display: flex;
   align-items: center;
@@ -489,87 +563,141 @@
   padding: 8px 14px;
   background: transparent;
   border: none;
-  border-bottom: 1px solid transparent; /* avoids layout shift */
   cursor: pointer;
   color: #4caf50;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.03em;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
   text-align: left;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.chat-quick-toggle:hover {
-  background: rgba(34, 197, 94, 0.05);
-}
+.chat-quick-toggle:hover { background: rgba(34, 197, 94, 0.05); }
 
-/* Show a subtle separator under the toggle only when collapsed */
-.chat-quick-actions-wrap:has(.chat-suggestions-collapse.collapsed) .chat-quick-toggle {
-  border-bottom-color: rgba(34, 197, 94, 0.08);
-}
+.chat-quick-toggle-label { opacity: 0.85; user-select: none; }
 
-.chat-quick-toggle-label {
-  opacity: 0.85;
-  user-select: none;
-}
-
-/* ── Animated arrow ──────────────────────────────── */
-/* Default state (collapsed): arrow points DOWN  ▼  */
-/* Open state:                arrow points UP    ▲  */
 .chat-quick-toggle-arrow {
   font-size: 0.6rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: rotate(180deg); /* ▲ rotated 180° = ▼ when collapsed */
+  transform: rotate(180deg);
   color: #6aad7a;
   flex-shrink: 0;
   line-height: 1;
 }
 
-.chat-quick-toggle-arrow.open {
-  transform: rotate(0deg); /* back to ▲ when expanded */
-}
+.chat-quick-toggle-arrow.open { transform: rotate(0deg); }
 
-/* ── Animated collapse / expand container ────────── */
 .chat-suggestions-collapse {
   overflow: hidden;
-
-  /* Animate height via max-height trick */
   transition:
     max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     opacity    0.25s ease,
     transform  0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
   transform-origin: top center;
 }
 
-/* EXPANDED — fully visible */
 .chat-suggestions-collapse.expanded {
-  max-height: 260px; /* tall enough for 5 pills at ~42px each + padding */
+  max-height: 260px;
   opacity: 1;
   transform: scaleY(1);
 }
 
-/* COLLAPSED — zero height, invisible, non-interactive */
 .chat-suggestions-collapse.collapsed {
   max-height: 0;
   opacity: 0;
   transform: scaleY(0.95);
-  pointer-events: none; /* prevent clicks on hidden pills */
+  pointer-events: none;
 }
 
-/* ── Pills container inside collapse ─────────────── */
-/* Override the base .chat-suggestions padding to fit our wrapper */
-.chat-suggestions-collapse .chat-suggestions {
+.chat-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   padding: 6px 12px 10px;
-  border-top: none;
 }
 
-/* ── Responsive ───────────────────────────────────── */
+.chat-sug-pill {
+  background: #0a1a0e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #6aad7a;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-align: left;
+  line-height: 1.3;
+  transition: all 0.15s;
+}
+.chat-sug-pill:hover {
+  background: #0f2318;
+  border-color: #22c55e;
+  color: #e8f5e9;
+}
+
+/* ── Footer ───────────────────────────────────────── */
+.chat-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #07110a;
+  border-top: 1px solid rgba(34, 197, 94, 0.1);
+}
+
+/* ── Input Row ────────────────────────────────────── */
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.chat-input-field {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  background: #0f2318;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  color: #e8f5e9;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+.chat-input-field::placeholder { color: #3d6b47; }
+.chat-input-field:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+.chat-input-field:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.chat-send-btn {
+  width: 40px;
+  height: 40px;
+  background: #22c55e;
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  transition: background 0.15s, transform 0.1s;
+}
+.chat-send-btn:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
+.chat-send-btn:active:not(:disabled) { transform: scale(0.95); }
+.chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ──Responsive ───────────────────────────────────── */
 @media (max-width: 768px) {
   .chat-panel {
     position: fixed !important;
@@ -584,14 +712,10 @@
     z-index: 9999;
   }
 
-  .chat-suggestions-collapse.expanded {
-    max-height: 300px; /* more breathing room on mobile */
-  }
-
-  .chat-quick-toggle {
-    padding: 9px 14px;
-    font-size: 0.8rem;
-  }
+  .weather-card { max-width: 95%; }
+  .chat-cards { max-width: 95%; }
+  .itinerary-box { max-width: 95%; }
+  .budget-warning-card { max-width: 95%; }
 }
 
 @media (min-width: 769px) {

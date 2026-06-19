@@ -14,20 +14,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`,
           sender: "bot",
         }
-      : { text: "Hi 👋 I'm Sarathi AI. Ask me anything!", sender: "bot" };
+      : { text: "Hi 👋 I'm Sarathi AI. Ask me anything about travel, temples, food, weather, and more!", sender: "bot" };
 
-  const [messages,        setMessages]        = useState([getInitialMessage()]);
-  const [input,           setInput]           = useState("");
-  const [typing,          setTyping]          = useState(false);
-  const [showQuickActions, setShowQuickActions] = useState(true); // ← NEW
+  const [messages, setMessages] = useState([getInitialMessage()]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const chatEndRef = useRef(null);
 
-  // Reset when switching temple
   useEffect(() => {
     setMessages([getInitialMessage()]);
     setInput("");
-    setShowQuickActions(true); // reset to expanded for new temple
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setShowQuickActions(true);
   }, [templeContext?.name]);
 
   useEffect(() => {
@@ -49,7 +47,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     const msg = (text || input).trim();
     if (!msg || typing) return;
 
-    // Auto-collapse quick actions on the user's first message
     setMessages((prev) => {
       if (prev.filter((m) => m.sender === "user").length === 0) {
         setShowQuickActions(false);
@@ -61,32 +58,28 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
     try {
       const endpoint = isTempleMode
-        ? `${API_BASE}/api/temples/chat`
+        ? `${API_BASE}/api/chat/temples`
         : `${API_BASE}/api/chat`;
 
       const payload = isTempleMode
         ? {
-            message:    msg,
+            message: msg,
             templeName: templeContext.name,
-            address:    templeContext.address || "",
-            rating:     templeContext.rating   || null,
-            openNow:    templeContext.openNow  ?? null,
-            deity:      templeContext.deity    || null,
-            enriched:   templeContext.enriched || null,
+            address: templeContext.address || "",
           }
         : {
             message: msg,
-            lat:     localStorage.getItem("lat"),
-            lng:     localStorage.getItem("lng"),
-            city:    localStorage.getItem("city"),
+            lat: localStorage.getItem("lat"),
+            lng: localStorage.getItem("lng"),
+            city: localStorage.getItem("city"),
           };
 
       console.log("[CHAT] →", endpoint, payload);
 
       const res = await fetch(endpoint, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
 
       console.log("[CHAT] HTTP", res.status);
@@ -106,22 +99,42 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         );
       }
 
-      console.log("[CHAT] ✓ Reply:", data.reply?.substring(0, 80));
+      console.log("[CHAT] ✓ Reply");
       setTyping(false);
 
       if (isTempleMode) {
         setMessages((prev) => [
           ...prev,
           {
-            text:   data.reply || "I couldn't retrieve a response. Please try again.",
+            text: data.reply || "I couldn't retrieve a response. Please try again.",
             sender: "bot",
           },
         ]);
       } else {
-        setMessages((prev) => [
-          ...prev,
-          { ...data, sender: "bot", text: data.reply || "" },
-        ]);
+        // Handle rich responses
+        if (data.type === "weather") {
+          setMessages((prev) => [...prev, { ...data, sender: "bot" }]);
+        } else if (data.type === "places") {
+          setMessages((prev) => [
+            ...prev,
+            { type: "places", data: data.data, sender: "bot" },
+          ]);
+        } else if (data.type === "itinerary") {
+          setMessages((prev) => [
+            ...prev,
+            { type: "itinerary", budget: data.budget, data: data.data, sender: "bot" },
+          ]);
+        } else if (data.type === "budgetExceeded") {
+          setMessages((prev) => [
+            ...prev,
+            { type: "budgetExceeded", budgetData: data.budgetData, sender: "bot" },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { text: data.reply || "", sender: "bot" },
+          ]);
+        }
       }
     } catch (err) {
       console.error("[CHAT] ✗ Error:", err.message);
@@ -130,17 +143,10 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       let userFacingError = err.message;
       if (
         err.message.includes("Failed to fetch") ||
-        err.message.includes("NetworkError") ||
-        err.message.includes("ECONNREFUSED")
+        err.message.includes("NetworkError")
       ) {
         userFacingError =
-          "Unable to reach the server. Please check your connection or try again in a moment.";
-      } else if (err.message.includes("503") || err.message.includes("502")) {
-        userFacingError =
-          "The AI service is temporarily unavailable. Please try again shortly.";
-      } else if (err.message.includes("429")) {
-        userFacingError =
-          "Too many requests — the AI is busy. Please wait a few seconds and try again.";
+          "Unable to reach the server. Please check your connection.";
       }
 
       setMessages((prev) => [
@@ -157,6 +163,15 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     }
   };
 
+  const premiumActions = isTempleMode ? [] : [
+    { icon: "🛕", label: "Temples", action: "nearby temples" },
+    { icon: "🌦", label: "Weather", action: "weather forecast" },
+    { icon: "🗺", label: "2 Day Trip", action: "plan 2 day trip" },
+    { icon: "🍽", label: "Best Food", action: "best local food" },
+    { icon: "🏨", label: "Hotels", action: "hotels nearby" },
+    { icon: "🎉", label: "Festivals", action: "upcoming festivals" },
+  ];
+
   const templeSuggestions = [
     "What is special about this temple?",
     "What are the darshan timings?",
@@ -167,8 +182,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
   return (
     <div className="chat-panel">
-
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div className="chat-header">
         <div className="chat-header-left">
           <span className="chat-header-avatar">
@@ -192,17 +206,17 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         </button>
       </div>
 
-      {/* ── BODY ── */}
+      {/* BODY */}
       <div className="chat-body">
         {messages.map((msg, i) => (
           <div key={i} className={`chat-row ${msg.sender}`}>
-
             {msg.sender === "bot" && (
               <div className="chat-avatar">
                 {isTempleMode ? "🛕" : "✦"}
               </div>
             )}
 
+            {/* Text Message */}
             {(!msg.type || msg.type === undefined) && msg.text && (
               <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
                 {msg.text.split("\n").map((line, j) => (
@@ -215,9 +229,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                   <button
                     className="chat-retry-btn"
                     onClick={() => {
-                      const lastUser = [...messages].reverse().find(
-                        (m) => m.sender === "user"
-                      );
+                      const lastUser = [...messages]
+                        .reverse()
+                        .find((m) => m.sender === "user");
                       if (lastUser) sendMessage(lastUser.text);
                     }}
                   >
@@ -227,6 +241,45 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
+            {/* Weather Card */}
+            {msg.type === "weather" && msg.current && (
+              <div className="weather-card">
+                <div className="weather-header">
+                  <span className="weather-icon">{msg.current.icon}</span>
+                  <div className="weather-title">
+                    <h4>{msg.current.city}</h4>
+                    <p>{msg.current.condition}</p>
+                  </div>
+                  <div className="weather-temp">
+                    {msg.current.temp}°C
+                  </div>
+                </div>
+                <div className="weather-details">
+                  <div className="weather-stat">
+                    <span>💧</span>
+                    <p>{msg.current.humidity}%</p>
+                  </div>
+                  <div className="weather-stat">
+                    <span>💨</span>
+                    <p>{msg.current.windSpeed} km/h</p>
+                  </div>
+                </div>
+                {msg.forecast && (
+                  <div className="weather-forecast">
+                    <div className="forecast-day">
+                      <span>Today</span>
+                      <p>{msg.forecast.today.icon} {msg.forecast.today.high}° / {msg.forecast.today.low}°</p>
+                    </div>
+                    <div className="forecast-day">
+                      <span>Tomorrow</span>
+                      <p>{msg.forecast.tomorrow.icon} {msg.forecast.tomorrow.high}° / {msg.forecast.tomorrow.low}°</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Places Card */}
             {msg.type === "places" && (
               <div className="chat-cards">
                 {msg.data?.map((p, idx) => (
@@ -236,7 +289,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                       <h4>{p.name}</h4>
                       <p>⭐ {p.rating}</p>
                       <p className="subtitle">{p.bestTime}</p>
-                      <p className="desc">{p.description}</p>
                       <button onClick={() => navigateTo(p)}>Navigate</button>
                     </div>
                   </div>
@@ -244,18 +296,19 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
+            {/* Itinerary Card */}
             {msg.type === "itinerary" && (
               <div className="itinerary-box">
                 {msg.budget && (
                   <div className="budget-card">
                     <div className="budget-total">
                       <span>Total Budget</span>
-                      <strong>₹{msg.budget.total.toLocaleString()}</strong>
+                      <strong>₹{msg.budget.total?.toLocaleString()}</strong>
                     </div>
                     {[
-                      ["🏨 Hotel",      msg.budget.hotel],
-                      ["🍴 Food",       msg.budget.food],
-                      ["🚕 Transport",  msg.budget.transport],
+                      ["🏨 Hotel", msg.budget.hotel],
+                      ["🍴 Food", msg.budget.food],
+                      ["🚕 Transport", msg.budget.transport],
                       ["🎟 Activities", msg.budget.activities],
                     ].map(([label, val]) => (
                       <div key={label} className="budget-row">
@@ -273,10 +326,10 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                         <img src={item.place?.image} alt="" />
                         <div>
                           <p>{item.place?.name}</p>
-                          <small>{item.bestTime}</small>
+                          <small>{item.time}</small>
                           <button
                             onClick={() => navigateTo(item.place)}
-                            style={{ marginTop:"5px", padding:"5px 10px", background:"#22c55e", border:"none", borderRadius:"6px", cursor:"pointer" }}
+                            className="navigate-btn"
                           >
                             Navigate
                           </button>
@@ -288,6 +341,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
+            {/* Budget Exceeded Card */}
             {msg.type === "budgetExceeded" && (
               <div className="budget-warning-card">
                 <h3>⚠️ Budget Exceeded</h3>
@@ -318,7 +372,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 </div>
               </div>
             )}
-
           </div>
         ))}
 
@@ -334,19 +387,36 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         <div ref={chatEndRef} />
       </div>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <div className="chat-footer">
+        {/* Premium Quick Actions */}
+        {!isTempleMode && showQuickActions && (
+          <div className="premium-actions-wrap">
+            <div className="premium-actions-scroll">
+              {premiumActions.map((action, i) => (
+                <button
+                  key={i}
+                  className="premium-action-chip"
+                  onClick={() => {
+                    setShowQuickActions(false);
+                    sendMessage(action.action);
+                  }}
+                >
+                  <span className="chip-icon">{action.icon}</span>
+                  <span className="chip-label">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* ── Temple mode: persistent collapsible quick actions ── */}
+        {/* Temple Quick Actions */}
         {isTempleMode && (
           <div className="chat-quick-actions-wrap">
-
-            {/* Toggle row — always visible, even when collapsed */}
             <button
               className="chat-quick-toggle"
               onClick={() => setShowQuickActions((prev) => !prev)}
               aria-expanded={showQuickActions}
-              aria-label="Toggle quick questions"
             >
               <span className="chat-quick-toggle-label">
                 💬 Quick Questions
@@ -358,7 +428,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </span>
             </button>
 
-            {/* Animated collapse container — never unmounted */}
             <div
               className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
               aria-hidden={!showQuickActions}
@@ -379,19 +448,10 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 ))}
               </div>
             </div>
-
           </div>
         )}
 
-        {/* ── General mode: quick action buttons (unchanged) ── */}
-        {!isTempleMode && (
-          <div className="quick-actions">
-            <button onClick={() => sendMessage("plan trip")}>✈️ Trip</button>
-            <button onClick={() => sendMessage("places near me")}>📍 Nearby</button>
-            <button onClick={() => sendMessage("food near me")}>🍽 Food</button>
-          </div>
-        )}
-
+        {/* Input Row */}
         <div className="chat-input-row">
           <input
             value={input}
@@ -415,7 +475,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           </button>
         </div>
       </div>
-
     </div>
   );
 };
