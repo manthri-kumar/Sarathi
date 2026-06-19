@@ -23,8 +23,12 @@ const InboxDropdown = ({ isOpen, onClose }) => {
       createdAt: new Date(Date.now() - 2 * 60000),
     },
     {
+
+    
       id: "msg_2",
+
       icon: "🛕",
+
       title: "Tirumala Brahmotsavam starts in 5 days",
       description: "Get ready for one of the year's most important temple festivals",
       category: "spiritual_alerts",
@@ -49,6 +53,7 @@ const InboxDropdown = ({ isOpen, onClose }) => {
       description: "Price drop alert: ₹8,500 → ₹4,200. Limited seats available.",
       category: "travel_updates",
       isRead: true,
+      
       timestamp: "6 hours ago",
       createdAt: new Date(Date.now() - 6 * 60 * 60000),
     },
@@ -322,7 +327,7 @@ const MessageCard = ({
       )}
     </div>
   );
-  
+
 };
 
 export default InboxDropdown;

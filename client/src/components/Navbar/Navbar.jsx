@@ -22,12 +22,16 @@ import InboxDropdown from "./InboxDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 
 const Navbar = ({ toggleSidebar }) => {
+  
   const { i18n } = useTranslation();
+
   const navigate = useNavigate();
+
 
   const [showLanguages, setShowLanguages] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
+
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [search, setSearch] = useState("");
 
