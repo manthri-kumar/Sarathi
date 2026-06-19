@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, Search, Settings, Check } from "lucide-react";
 import "./NotificationDropdown.css";
 
-const NotificationDropdown = ({ isOpen, onClose }) => {
+const mockNotifications  = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -11,7 +11,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Mock data - Replace with actual API calls
-  const mockNotifications = [
+  const NotificationDropdown  = [
     {
       id: "notif_1",
       icon: "🛕",

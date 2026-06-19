@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, Search, Archive, Pin, Trash2, Settings } from "lucide-react";
 import "./InboxDropdown.css";
 
-const InboxDropdown = ({ isOpen, onClose }) => {
+const mockMessages  = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -11,7 +11,7 @@ const InboxDropdown = ({ isOpen, onClose }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Mock data - Replace with actual API calls
-  const mockMessages = [
+  const InboxDropdown  = [
     {
       id: "msg_1",
       icon: "🧠",
@@ -53,7 +53,7 @@ const InboxDropdown = ({ isOpen, onClose }) => {
       description: "Price drop alert: ₹8,500 → ₹4,200. Limited seats available.",
       category: "travel_updates",
       isRead: true,
-      
+
       timestamp: "6 hours ago",
       createdAt: new Date(Date.now() - 6 * 60 * 60000),
     },
