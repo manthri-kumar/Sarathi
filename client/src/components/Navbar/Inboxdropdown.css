@@ -1,0 +1,633 @@
+/* ================= INBOX DROPDOWN CSS ================= */
+
+/* ============================================================ */
+/* INBOX DROPDOWN - PREMIUM STYLING (Matches Profile)          */
+/* ============================================================ */
+
+.inbox-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 56px;
+  width: 360px;
+  max-height: 520px;
+  background: rgba(8, 17, 31, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 16px;
+  overflow: hidden;
+  z-index: 9999;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  animation: slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================ */
+/* INBOX HEADER                                                */
+/* ============================================================ */
+
+.inbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+
+.inbox-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inbox-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.inbox-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: #22c55e;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 50%;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+  }
+}
+
+.inbox-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.inbox-close-btn:hover {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  transform: rotate(90deg);
+}
+
+/* ============================================================ */
+/* INBOX SEARCH BAR                                            */
+/* ============================================================ */
+
+.inbox-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(34, 197, 94, 0.1);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.inbox-search:focus-within {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(34, 197, 94, 0.25);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.search-icon {
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: none !important;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: #64748b;
+}
+
+.search-input:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+/* ============================================================ */
+/* INBOX CATEGORY TABS                                         */
+/* ============================================================ */
+
+.inbox-categories {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar */
+.inbox-categories::-webkit-scrollbar {
+  height: 0;
+}
+
+.category-tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.category-tab:hover {
+  background: rgba(34, 197, 94, 0.08);
+  color: #22c55e;
+}
+
+.category-tab.active {
+  color: #22c55e;
+}
+
+.category-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  background: #22c55e;
+  border-radius: 1px;
+}
+
+/* ============================================================ */
+/* INBOX MESSAGES LIST                                         */
+/* ============================================================ */
+
+.inbox-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inbox-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inbox-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inbox-messages::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.3);
+  border-radius: 3px;
+}
+
+.inbox-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.5);
+}
+
+.inbox-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* ============================================================ */
+/* MESSAGE CARD                                                */
+/* ============================================================ */
+
+.message-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0 8px;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.message-card:hover {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.15);
+}
+
+.message-card.read {
+  opacity: 0.7;
+}
+
+.message-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.message-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.message-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1;
+}
+
+.unread-dot {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  flex-shrink: 0;
+}
+
+/* ============================================================ */
+/* MESSAGE ACTIONS (Hover Menu)                                */
+/* ============================================================ */
+
+.message-actions {
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.action-btn:hover {
+  background: rgba(34, 197, 94, 0.35);
+  transform: scale(1.1);
+}
+
+.action-btn.delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================================ */
+/* SKELETON LOADERS                                            */
+/* ============================================================ */
+
+.message-skeleton {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0 8px;
+  border-radius: 12px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.15);
+  flex-shrink: 0;
+}
+
+.skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-title {
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.15);
+  width: 70%;
+}
+
+.skeleton-desc {
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.1);
+  width: 90%;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ============================================================ */
+/* INBOX FOOTER                                                */
+/* ============================================================ */
+
+.inbox-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.footer-btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.footer-btn.primary {
+  background: #22c55e;
+  color: white;
+  flex: 2;
+}
+
+.footer-btn.primary:hover {
+  background: #16a34a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(34, 197, 94, 0.3);
+}
+
+.footer-btn.secondary {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.footer-btn.secondary:hover {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.footer-btn.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.footer-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* ============================================================ */
+/* RESPONSIVE DESIGN                                           */
+/* ============================================================ */
+
+@media (max-width: 768px) {
+  .inbox-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 80vh;
+    border-radius: 20px 20px 0 0;
+    right: auto;
+  }
+
+  .inbox-messages {
+    max-height: calc(80vh - 200px);
+  }
+
+  .message-actions {
+    position: static;
+    transform: none;
+    right: auto;
+    top: auto;
+    margin-left: auto;
+  }
+
+  .inbox-categories {
+    padding: 8px 12px;
+  }
+
+  .category-tab {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .footer-btn {
+    min-width: 60px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .inbox-dropdown {
+    max-height: 85vh;
+  }
+
+  .inbox-title {
+    font-size: 14px;
+  }
+
+  .message-title {
+    font-size: 12px;
+  }
+
+  .message-desc {
+    font-size: 11px;
+  }
+
+  .footer-btn {
+    flex: 1;
+    min-width: auto;
+    padding: 8px 10px;
+  }
+
+  .footer-btn.primary {
+    flex: 1;
+  }
+}
+
+/* ============================================================ */
+/* MAIL ICON STYLING (Keep Consistent)                         */
+/* ============================================================ */
+
+.mail-wrapper {
+  position: relative;
+}
+
+.mail-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(34, 197, 94, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+.mail-icon:hover {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  transform: translateY(-2px);
+  border-color: rgba(34, 197, 94, 0.25);
+  box-shadow: 0 8px 16px rgba(34, 197, 94, 0.1);
+}
+
+.mail-icon:active {
+  transform: translateY(0);
+}
+
+.mail-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================================ */
+/* RESPONSIVE ADJUSTMENTS FOR MOBILE BREAKPOINT                */
+/* ============================================================ */
+
+@media (max-width: 768px) {
+  .mail-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .mail-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
