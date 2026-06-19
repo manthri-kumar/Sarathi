@@ -22,6 +22,8 @@ const TABS = [
   { id: "travel",    label: "Travel Guide", icon: "🗺️" },
 ];
 
+const [historyData,    setHistoryData]    = useState(null);   
+const [historyLoading, setHistoryLoading] = useState(false);  
 /* ─── Error Boundary ──────────────────────────────── */
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -315,6 +317,44 @@ function TempleDetailsPageInner() {
   );
 }
 
+/* ── History (Wikipedia) — runs once googleData.name is ready ── */   // ← ADD BLOCK
+useEffect(() => {
+  if (!googleData?.name) return;
+
+  console.log("[HISTORY] Fetching for:", googleData.name);
+  setHistoryLoading(true);
+  setHistoryData(null);
+
+  axios
+    .get(`${API_BASE}/api/temples/history`, {
+      params: { name: googleData.name, address: googleData.address || "" },
+      timeout: 20000,
+    })
+    .then((res) => {
+      console.log("[HISTORY] Frontend response:", res.data);
+      setHistoryData(res.data || null);
+      console.log("[HISTORY] Render success:", !!res.data?.history);
+    })
+    .catch((e) => {
+      console.error("[HISTORY] Failed:", e.message);
+      setHistoryData(null);
+    })
+    .finally(() => setHistoryLoading(false));
+}, [googleData?.name, googleData?.address]);
+
+// ... in the Content section, REPLACE the history tab block with: ──── // ← CHANGE
+{activeTab === "history" && (
+  <HistoryTab
+    history={historyData?.history}
+    image={historyData?.image}
+    source={historyData?.source}
+    lastUpdated={historyData?.lastUpdated}
+    officialWebsite={googleData.website}
+    loading={historyLoading}
+    templeName={googleData.name}
+  />
+)}
+
 function LoadingSkeleton() {
   return (
     <div className="tdp-skeleton">
@@ -326,6 +366,7 @@ function LoadingSkeleton() {
     </div>
   );
 }
+
 
 function ErrorState({ message, onBack }) {
   return (

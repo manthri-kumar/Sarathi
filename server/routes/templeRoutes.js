@@ -1,3 +1,4 @@
+// server/routes/templeRoutes.js
 "use strict";
 
 const express  = require("express");
@@ -9,6 +10,7 @@ const {
   searchTemples,
   getTempleDetails,
   getEnrichedTemple,
+  getTempleHistory,
   getTempleVideos,
   getNearbyServicePlaces,
   templeChat,
@@ -18,10 +20,10 @@ router.get("/nearby",            getNearbyTemples);
 router.get("/search",            searchTemples);
 router.get("/details/:placeId",  getTempleDetails);
 router.get("/enriched",          getEnrichedTemple);
+router.get("/history/:placeId",  getTempleHistory);
 router.get("/videos",            getTempleVideos);
 router.get("/nearby-services",   getNearbyServicePlaces);
 
-// Groq health check
 router.get("/test-groq", async (req, res) => {
   try {
     const answer = await askGroq("What is Tirupati Temple famous for?");
@@ -32,7 +34,6 @@ router.get("/test-groq", async (req, res) => {
   }
 });
 
-// Temple chat — log middleware then controller
 router.post("/chat", (req, res, next) => {
   console.log("[ROUTE] POST /api/temples/chat hit ✓", {
     templeName: req.body?.templeName,
