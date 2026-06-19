@@ -5,6 +5,8 @@ const express  = require("express");
 const dotenv   = require("dotenv");
 const cors     = require("cors");
 const connectDB = require("./config/db");
+const geocodeRoutes = require("./routes/geocode");
+
 
 dotenv.config();
 connectDB();
@@ -22,6 +24,8 @@ app.use("/api/trips",        require("./routes/triproutes"));
 app.use("/api/saved",        require("./routes/savedRoutes"));
 app.use("/api/trip-planner", require("./routes/tripPlanner"));
 app.use("/api/day-planner",  require("./routes/dayPlannerRoutes"));
+app.use("/api/geocode", geocodeRoutes);
+
 app.use(
   "/api/recommendations",
   require("./routes/recommendationRoutes")
