@@ -1,108 +1,108 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { X, Search, Settings, Check } from "lucide-react";
 import "./NotificationDropdown.css";
 
+/* =========================================================
+   MOCK DATA (OUTSIDE COMPONENT)
+========================================================= */
+const mockNotifications = [
+  {
+    id: "notif_1",
+    icon: "🛕",
+    category: "temple",
+    priority: "high",
+    title: "Temple Closes in 2 Hours",
+    message: "Tirumala Venkateswara closes at 6 PM. Avoid rush hour.",
+    isRead: false,
+    timestamp: "15 minutes ago",
+    actionUrl: "/temples/tirumala",
+    actionLabel: "View Temple",
+    createdAt: new Date(Date.now() - 15 * 60000),
+  },
+  {
+    id: "notif_2",
+    icon: "🌧",
+    category: "weather",
+    priority: "high",
+    title: "Heavy Rain Alert - Kochi",
+    message:
+      "Your planned temple visit may be affected. Plan covered temples.",
+    isRead: false,
+    timestamp: "45 minutes ago",
+    actionUrl: "/weather/kochi",
+    actionLabel: "View Weather",
+    createdAt: new Date(Date.now() - 45 * 60000),
+  },
+  {
+    id: "notif_3",
+    icon: "🎉",
+    category: "events",
+    priority: "medium",
+    title: "Festival Begins Tomorrow",
+    message: "Diwali celebrations start tomorrow across all temples.",
+    isRead: false,
+    timestamp: "2 hours ago",
+    actionUrl: "/events/diwali",
+    actionLabel: "View Festival",
+    createdAt: new Date(Date.now() - 2 * 60 * 60000),
+  },
+  {
+    id: "notif_4",
+    icon: "✈️",
+    category: "travel",
+    priority: "medium",
+    title: "New Destination Discovered",
+    message: "A new spiritual site discovered 45 km from you.",
+    isRead: true,
+    timestamp: "5 hours ago",
+    actionUrl: "/explore",
+    actionLabel: "Explore",
+    createdAt: new Date(Date.now() - 5 * 60 * 60000),
+  },
+  {
+    id: "notif_5",
+    icon: "🧠",
+    category: "ai",
+    priority: "low",
+    title: "Day Planner Ready",
+    message:
+      "Your personalized day plan for tomorrow is ready to review.",
+    isRead: true,
+    timestamp: "8 hours ago",
+    actionUrl: "/day-planner",
+    actionLabel: "View Plan",
+    createdAt: new Date(Date.now() - 8 * 60 * 60000),
+  },
+];
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 const NotificationDropdown = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
+
   const [notifications, setNotifications] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Mock data - Replace with actual API calls
-  const mockNotifications = [
-    {
-      id: "notif_1",
-      icon: "🛕",
-      category: "temple",
-      priority: "high",
-      title: "Temple Closes in 2 Hours",
-      message: "Tirumala Venkateswara closes at 6 PM. Avoid rush hour.",
-      isRead: false,
-      timestamp: "15 minutes ago",
-      actionUrl: "/temples/tirumala",
-      actionLabel: "View Temple",
-      createdAt: new Date(Date.now() - 15 * 60000),
-    },
-    {
-      id: "notif_2",
-      icon: "🌧",
-      category: "weather",
-      priority: "high",
-      title: "Heavy Rain Alert - Kochi",
-      message: "Your planned temple visit may be affected. Plan covered temples.",
-      isRead: false,
-      timestamp: "45 minutes ago",
-      actionUrl: "/weather/kochi",
-      actionLabel: "View Weather",
-      createdAt: new Date(Date.now() - 45 * 60000),
-    },
-    {
-      id: "notif_3",
-      icon: "🎉",
-      category: "events",
-      priority: "medium",
-      title: "Festival Begins Tomorrow",
-      message: "Diwali celebrations start tomorrow across all temples.",
-      isRead: false,
-      timestamp: "2 hours ago",
-      actionUrl: "/events/diwali",
-      actionLabel: "View Festival",
-      createdAt: new Date(Date.now() - 2 * 60 * 60000),
-    },
-    {
-      id: "notif_4",
-      icon: "✈️",
-      category: "travel",
-      priority: "medium",
-      title: "New Destination Discovered",
-      message: "A new spiritual site discovered 45 km from you.",
-      isRead: true,
-      timestamp: "5 hours ago",
-      actionUrl: "/explore",
-      actionLabel: "Explore",
-      createdAt: new Date(Date.now() - 5 * 60 * 60000),
-    },
-    {
-      id: "notif_5",
-      icon: "🧠",
-      category: "ai",
-      priority: "low",
-      title: "Day Planner Ready",
-      message: "Your personalized day plan for tomorrow is ready to review.",
-      isRead: true,
-      timestamp: "8 hours ago",
-      actionUrl: "/day-planner",
-      actionLabel: "View Plan",
-      createdAt: new Date(Date.now() - 8 * 60 * 60000),
-    },
-  ];
-
-  const categories = [
-    { id: "all", label: "All", color: "#22c55e" },
-    { id: "travel", label: "Travel", color: "#3b82f6" },
-    { id: "temple", label: "Temple", color: "#f59e0b" },
-    { id: "weather", label: "Weather", color: "#06b6d4" },
-    { id: "events", label: "Events", color: "#8b5cf6" },
-    { id: "ai", label: "AI", color: "#22c55e" },
-  ];
-
-  // Load notifications from localStorage on mount
+  // Load notifications
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setNotifications(mockNotifications);
-        const unread = mockNotifications.filter((n) => !n.isRead).length;
-        setUnreadCount(unread);
+
+      const timer = setTimeout(() => {
+        setNotifications([...mockNotifications]);
+        setUnreadCount(
+          mockNotifications.filter((n) => !n.isRead).length
+        );
         setIsLoading(false);
       }, 300);
+
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
