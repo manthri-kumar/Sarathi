@@ -289,7 +289,7 @@ const DestinationModal = ({ onClose }) => {
         {/* PREDICTIONS */}
         {query.trim() && (
           <ul className="dest-predictions">
-            {!searching && predictions.length === 0 && (
+            {!searching && (!predictions || predictions.length === 0) && (
               <li className="dest-predictions__empty">
                 {t("noResults") || "No matches found."}
               </li>
