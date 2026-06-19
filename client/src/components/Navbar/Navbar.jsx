@@ -5,7 +5,6 @@ import {
   Search,
   Bell,
   Languages,
-  Mail,
   User,
   Luggage,
   Heart,
@@ -168,17 +167,6 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
-          {/* Mail Icon (UI enhancement kept) */}
-          <div className="mail-wrapper">
-            <button
-              className="mail-icon"
-              onClick={() => navigate("/messages")}
-              title="Messages"
-            >
-              <Mail size={18} />
-              <span className="notification-dot"></span>
-            </button>
-          </div>
 
           {/* Notification Bell */}
           <div className="bell-wrapper">
