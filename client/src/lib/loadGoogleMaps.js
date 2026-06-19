@@ -97,6 +97,4 @@ export function toSelectedCity(label, lat, lng) {
     lat,
     lng,
   };
-}git add .
-git commit -m "fix google maps loader"
-git push origin main
+}
