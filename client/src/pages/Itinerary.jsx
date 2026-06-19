@@ -537,6 +537,9 @@ const Itinerary = () => {
       </div>
     </div>
   );
+  
 };
+
+
 
 export default Itinerary;
