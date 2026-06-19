@@ -48,10 +48,9 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: calc(100vw - 220px);
   padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
+  overflow-x: hidden;
 }
 
 .itinerary-container {
@@ -156,8 +155,10 @@ body {
 /* ===== GRID SYSTEM (DESKTOP) ===== */
 .workspace-grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 30px;
+  grid-template-columns:
+      minmax(0, 1fr)
+      minmax(420px, 500px);
+  gap: 24px;
   align-items: start;
 }
 
@@ -600,15 +601,62 @@ body {
    LAPTOP (1280px - 1439px)
 ===================================================== */
 
-@media (min-width: 1280px) and (max-width: 1439px) {
+@media (min-width:768px) and (max-width:1023px){
 
-  .workspace-grid {
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 24px;
+  .workspace-grid{
+
+      grid-template-columns:
+          minmax(0,1fr)
+          minmax(320px,400px);
+
+      gap:18px;
   }
 
-  .panel-card-container {
-    max-height: 750px;
+  .planner-panel{
+      display:flex !important;
+  }
+}
+
+@media (min-width:1024px) and (max-width:1366px){
+
+  .workspace-grid{
+
+      grid-template-columns:
+          minmax(0,1fr)
+          minmax(360px,420px);
+
+      gap:20px;
+  }
+
+  .panel-card-container{
+      min-width:0;
+  }
+}
+
+.navbar,
+.search-wrapper-card,
+.header-meta,
+.itinerary-container{
+    width:100%;
+    max-width:100%;
+}
+
+@media (max-width:1024px){
+
+  .sidebar{
+      position:fixed;
+      z-index:1000;
+      left:-220px;
+      transition:.3s;
+  }
+
+  .sidebar.open{
+      left:0;
+  }
+
+  .main-viewport{
+      width:100%;
+      margin-left:0;
   }
 }
 
