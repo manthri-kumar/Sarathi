@@ -875,6 +875,78 @@ body {
   }
 }
 
+/* ==========================================
+   MOBILE FIX
+========================================== */
+
+@media (max-width: 768px){
+
+  .dashboard-layout{
+    padding-left:0 !important;
+  }
+
+  .main-viewport{
+    width:100% !important;
+    padding:16px !important;
+    margin-left:0 !important;
+  }
+
+  .itinerary-container{
+    width:100%;
+  }
+
+  .header-meta{
+    margin-top:20px;
+  }
+
+  .primary-title{
+    font-size:2rem;
+    line-height:1.2;
+    flex-wrap:wrap;
+  }
+
+  .search-wrapper-card{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .search-wrapper-card input{
+    min-width:0;
+    flex:1;
+  }
+
+  .premium-search-btn{
+    flex-shrink:0;
+  }
+
+  .panel-card-container{
+    width:100%;
+    padding:16px;
+  }
+
+  .card-main-row{
+    flex-wrap:wrap;
+  }
+
+  .place-thumb{
+    width:60px;
+    height:60px;
+  }
+
+  .place-details-box{
+    flex:1;
+    min-width:0;
+  }
+
+  .place-details-box h3{
+    white-space:normal;
+    overflow:visible;
+    text-overflow:unset;
+  }
+}
+
 /* =====================================================
    GLOBAL FIXES
 ===================================================== */
