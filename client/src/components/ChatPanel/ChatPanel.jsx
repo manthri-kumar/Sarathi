@@ -14,10 +14,8 @@ import {
 } from "lucide-react";
 import "./ChatPanel.css";
 import {
-  HotelCard,
   TempleCard,
   FoodCard,
-  WeatherCard,
   ItineraryCard,
   BudgetExceededCard,
 } from "../Cards/Cards";
