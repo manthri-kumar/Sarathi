@@ -2,7 +2,77 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, Search, Archive, Pin, Trash2, Settings } from "lucide-react";
 import "./InboxDropdown.css";
 
-const mockMessages  = ({ isOpen, onClose }) => {
+// ============================================================
+// MOCK DATA - DEFINED OUTSIDE COMPONENT
+// ============================================================
+
+const mockMessages = [
+  {
+    id: "msg_1",
+    icon: "🧠",
+    title: "Sarathi created a 3-day Hyderabad itinerary",
+    description: "Your AI-generated trip includes temples, cultural sites, and hidden gems",
+    category: "ai_recommendations",
+    isRead: false,
+    timestamp: "2 minutes ago",
+    createdAt: new Date(Date.now() - 2 * 60000),
+  },
+  {
+    id: "msg_2",
+    icon: "🛕",
+    title: "Tirumala Brahmotsavam starts in 5 days",
+    description: "Get ready for one of the year's most important temple festivals",
+    category: "spiritual_alerts",
+    isRead: false,
+    timestamp: "1 hour ago",
+    createdAt: new Date(Date.now() - 60 * 60000),
+  },
+  {
+    id: "msg_3",
+    icon: "🌧",
+    title: "Rain expected during your Kerala trip",
+    description: "Heavy rainfall expected next week. Plan indoor activities.",
+    category: "travel_updates",
+    isRead: true,
+    timestamp: "3 hours ago",
+    createdAt: new Date(Date.now() - 3 * 60 * 60000),
+  },
+  {
+    id: "msg_4",
+    icon: "💰",
+    title: "Flights to Hyderabad are now cheaper",
+    description: "Price drop alert: ₹8,500 → ₹4,200. Limited seats available.",
+    category: "travel_updates",
+    isRead: true,
+    timestamp: "6 hours ago",
+    createdAt: new Date(Date.now() - 6 * 60 * 60000),
+  },
+  {
+    id: "msg_5",
+    icon: "❤️",
+    title: "New temple added near Visakhapatnam",
+    description: "Discover Sri Veerabhadra Temple with stunning riverside location",
+    category: "saved_places",
+    isRead: true,
+    timestamp: "1 day ago",
+    createdAt: new Date(Date.now() - 24 * 60 * 60000),
+  },
+];
+
+const categories = [
+  { id: "all", label: "All" },
+  { id: "travel_updates", label: "Travel Updates" },
+  { id: "spiritual_alerts", label: "Spiritual Alerts" },
+  { id: "festival_reminders", label: "Festival Reminders" },
+  { id: "ai_recommendations", label: "AI Recommendations" },
+  { id: "saved_places", label: "Saved Places" },
+];
+
+// ============================================================
+// INBOX DROPDOWN COMPONENT
+// ============================================================
+
+const InboxDropdown = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -10,89 +80,22 @@ const mockMessages  = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Mock data - Replace with actual API calls
-  const InboxDropdown  = [
-    {
-      id: "msg_1",
-      icon: "🧠",
-      title: "Sarathi created a 3-day Hyderabad itinerary",
-      description: "Your AI-generated trip includes temples, cultural sites, and hidden gems",
-      category: "ai_recommendations",
-      isRead: false,
-      timestamp: "2 minutes ago",
-      createdAt: new Date(Date.now() - 2 * 60000),
-    },
-    {
-
-    
-      id: "msg_2",
-
-      icon: "🛕",
-
-      title: "Tirumala Brahmotsavam starts in 5 days",
-      description: "Get ready for one of the year's most important temple festivals",
-      category: "spiritual_alerts",
-      isRead: false,
-      timestamp: "1 hour ago",
-      createdAt: new Date(Date.now() - 60 * 60000),
-    },
-    {
-      id: "msg_3",
-      icon: "🌧",
-      title: "Rain expected during your Kerala trip",
-      description: "Heavy rainfall expected next week. Plan indoor activities.",
-      category: "travel_updates",
-      isRead: true,
-      timestamp: "3 hours ago",
-      createdAt: new Date(Date.now() - 3 * 60 * 60000),
-    },
-    {
-      id: "msg_4",
-      icon: "💰",
-      title: "Flights to Hyderabad are now cheaper",
-      description: "Price drop alert: ₹8,500 → ₹4,200. Limited seats available.",
-      category: "travel_updates",
-      isRead: true,
-
-      timestamp: "6 hours ago",
-      createdAt: new Date(Date.now() - 6 * 60 * 60000),
-    },
-    {
-      id: "msg_5",
-      icon: "❤️",
-      title: "New temple added near Visakhapatnam",
-      description: "Discover Sri Veerabhadra Temple with stunning riverside location",
-      category: "saved_places",
-      isRead: true,
-      timestamp: "1 day ago",
-      createdAt: new Date(Date.now() - 24 * 60 * 60000),
-    },
-  ];
-
-  const categories = [
-    { id: "all", label: "All" },
-    { id: "travel_updates", label: "Travel Updates" },
-    { id: "spiritual_alerts", label: "Spiritual Alerts" },
-    { id: "festival_reminders", label: "Festival Reminders" },
-    { id: "ai_recommendations", label: "AI Recommendations" },
-    { id: "saved_places", label: "Saved Places" },
-  ];
-
-  // Load messages from localStorage on mount
+  // Load messages from mock data on mount or when opening
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setMessages(mockMessages);
+      // Simulate API call with 300ms delay
+      const timer = setTimeout(() => {
+        setMessages([...mockMessages]);
         const unread = mockMessages.filter((m) => !m.isRead).length;
         setUnreadCount(unread);
         setIsLoading(false);
       }, 300);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -142,20 +145,19 @@ const mockMessages  = ({ isOpen, onClose }) => {
   };
 
   const handlePinMessage = (id) => {
-    const message = messages.find((m) => m.id === id);
-    if (message) {
-      message.isPinned = !message.isPinned;
-      setMessages([...messages]);
-    }
+    const updatedMessages = messages.map((m) =>
+      m.id === id ? { ...m, isPinned: !m.isPinned } : m
+    );
+    setMessages(updatedMessages);
   };
 
   const handleMarkAsRead = (id) => {
-    const message = messages.find((m) => m.id === id);
-    if (message) {
-      message.isRead = !message.isRead;
-      setMessages([...messages]);
-      setUnreadCount(messages.filter((m) => !m.isRead).length);
-    }
+    const updatedMessages = messages.map((m) =>
+      m.id === id ? { ...m, isRead: !m.isRead } : m
+    );
+    setMessages(updatedMessages);
+    const newUnreadCount = updatedMessages.filter((m) => !m.isRead).length;
+    setUnreadCount(newUnreadCount);
   };
 
   const handleClearAll = () => {
@@ -253,7 +255,11 @@ const mockMessages  = ({ isOpen, onClose }) => {
         <button className="footer-btn secondary">
           <Settings size={14} /> Preferences
         </button>
-        <button className="footer-btn danger" onClick={handleClearAll}>
+        <button
+          className="footer-btn danger"
+          onClick={handleClearAll}
+          disabled={messages.length === 0}
+        >
           Clear All
         </button>
       </div>
@@ -261,7 +267,10 @@ const mockMessages  = ({ isOpen, onClose }) => {
   );
 };
 
-// MessageCard Component
+// ============================================================
+// MESSAGE CARD COMPONENT
+// ============================================================
+
 const MessageCard = ({
   message,
   onArchive,
@@ -327,7 +336,6 @@ const MessageCard = ({
       )}
     </div>
   );
-
 };
 
 export default InboxDropdown;
