@@ -176,23 +176,38 @@ router.get("/location", async (req, res) => {
       `?address=${encodeURIComponent(q)}` +
       `&key=${process.env.GOOGLE_GEO_KEY}`;
 
+    console.log("================================");
+    console.log("CITY SEARCH:", q);
+    console.log("URL:", url);
+
     const response = await fetch(url);
 
     const data = await response.json();
 
-    if (!data.results?.length) {
+    console.log("GOOGLE STATUS:", data.status);
+    console.log("GOOGLE RESPONSE:", JSON.stringify(data, null, 2));
+    console.log("================================");
+
+    if (
+      data.status !== "OK" ||
+      !data.results ||
+      data.results.length === 0
+    ) {
       return res.status(404).json({
         error: "Location not found",
+        googleStatus: data.status,
+        googleMessage: data.error_message || null,
       });
     }
 
     const result = data.results[0];
 
     return res.json({
-      city: q,
+      city: result.formatted_address,
       lat: result.geometry.location.lat,
       lng: result.geometry.location.lng,
     });
+
   } catch (err) {
     console.error("[location]", err);
 
