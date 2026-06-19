@@ -1,5 +1,6 @@
 /* ==========================================================================
-   💎 PREMIUM INTERFACE ARCHITECTURE DESIGN SYSTEMS
+   💎 PREMIUM INTERFACE — SARATHI ITINERARY PAGE
+   Layout bug fixed: replaced width: calc(100vw - 220px) with flex: 1 + min-width: 0
    ========================================================================== */
 
 :root {
@@ -24,13 +25,36 @@ body {
   margin: 0;
 }
 
-/* ===== APP LAYOUT CONFIG ===== */
+/* ==========================================================================
+   ✅ LAYOUT — ROOT FIX
+   Old: .main-viewport { width: calc(100vw - 220px) }  ← caused the overlap
+   New: flex row on parent + flex:1 min-width:0 on child ← correct
+   ========================================================================== */
+
 .dashboard-layout {
   display: flex;
+  flex-direction: row;        /* sidebar + content sit side by side */
   min-height: 100vh;
   position: relative;
   background-color: var(--bg-main);
   overflow-x: hidden;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;             /* never let sidebar compress */
+  position: relative;         /* stays in normal document flow on desktop */
+  z-index: 100;
+}
+
+.main-viewport {
+  flex: 1;                    /* fills all remaining width after sidebar */
+  min-width: 0;               /* prevents flex child overflow — critical */
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-x: hidden;
+  /* ❌ REMOVED: width: calc(100vw - 220px); — this was the root bug */
 }
 
 .backdrop-overlay {
@@ -44,20 +68,19 @@ body {
   z-index: 999;
 }
 
-.main-viewport {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  width: calc(100vw - 220px);
-  padding: 24px;
-  overflow-x: hidden;
-}
+/* ==========================================================================
+   PAGE CONTAINER
+   ========================================================================== */
 
 .itinerary-container {
   margin-top: 20px;
+  min-width: 0;
 }
 
-/* ===== HERO HEADERS ===== */
+/* ==========================================================================
+   HERO HEADER
+   ========================================================================== */
+
 .header-meta {
   margin-bottom: 24px;
 }
@@ -83,7 +106,10 @@ body {
   margin: 0;
 }
 
-/* ===== PREMIUM SEARCHBAR BAR ===== */
+/* ==========================================================================
+   SEARCH BAR
+   ========================================================================== */
+
 .search-wrapper-card {
   display: flex;
   background: var(--bg-surface);
@@ -94,6 +120,7 @@ body {
   gap: 12px;
   margin-bottom: 30px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  min-width: 0;
 }
 
 .input-group-icon {
@@ -101,11 +128,13 @@ body {
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .geo-icon {
   font-size: 18px;
   opacity: 0.8;
+  flex-shrink: 0;
 }
 
 .search-wrapper-card input {
@@ -115,11 +144,16 @@ body {
   color: var(--text-primary);
   font-size: 16px;
   width: 100%;
+  min-width: 0;
+}
+
+.search-wrapper-card input::placeholder {
+  color: var(--text-secondary);
 }
 
 .premium-search-btn {
   background: var(--accent-green);
-  color: #000000;
+  color: #000;
   font-weight: 700;
   font-size: 14px;
   padding: 12px 28px;
@@ -131,6 +165,7 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 100px;
+  flex-shrink: 0;
 }
 
 .premium-search-btn:hover {
@@ -138,12 +173,15 @@ body {
   transform: translateY(-1px);
 }
 
-/* ===== UI LOADING SPINNER ===== */
+/* ==========================================================================
+   SPINNER
+   ========================================================================== */
+
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-top-color: #000000;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #000;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -152,17 +190,22 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ===== GRID SYSTEM (DESKTOP) ===== */
+/* ==========================================================================
+   TWO-COLUMN WORKSPACE GRID
+   ========================================================================== */
+
 .workspace-grid {
   display: grid;
-  grid-template-columns:
-      minmax(0, 1fr)
-      minmax(420px, 500px);
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 500px);
   gap: 24px;
   align-items: start;
+  min-width: 0;
 }
 
-/* ===== COMPONENT WORKSPACE PANELS ===== */
+/* ==========================================================================
+   PANEL CARDS (shared by both columns)
+   ========================================================================== */
+
 .panel-card-container {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -172,6 +215,7 @@ body {
   flex-direction: column;
   max-height: 780px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  min-width: 0;
 }
 
 .panel-header {
@@ -192,6 +236,7 @@ body {
   background: rgba(255, 255, 255, 0.04);
   padding: 8px;
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .panel-header h2 {
@@ -206,7 +251,10 @@ body {
   margin: 0;
 }
 
-/* ===== RECOMMENDATION LIST ITEMS ===== */
+/* ==========================================================================
+   SCROLLABLE AREAS
+   ========================================================================== */
+
 .places-scroll-area,
 .planner-scroll-area {
   display: flex;
@@ -214,18 +262,24 @@ body {
   gap: 16px;
   overflow-y: auto;
   padding-right: 6px;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Custom Scrollbar Styles */
 .places-scroll-area::-webkit-scrollbar,
 .planner-scroll-area::-webkit-scrollbar {
   width: 6px;
 }
+
 .places-scroll-area::-webkit-scrollbar-thumb,
 .planner-scroll-area::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
 }
+
+/* ==========================================================================
+   PLACE CARDS (left panel)
+   ========================================================================== */
 
 .premium-place-card {
   background: var(--bg-surface-elevated);
@@ -233,6 +287,7 @@ body {
   border-radius: var(--radius-md);
   padding: 14px;
   transition: var(--transition-smooth);
+  flex-shrink: 0;
 }
 
 .premium-place-card:hover {
@@ -249,6 +304,7 @@ body {
   align-items: center;
   gap: 16px;
   position: relative;
+  min-width: 0;
 }
 
 .place-thumb {
@@ -257,10 +313,12 @@ body {
   object-fit: cover;
   border-radius: 10px;
   background: #1f2937;
+  flex-shrink: 0;
 }
 
 .place-details-box {
   flex: 1;
+  min-width: 0;
 }
 
 .place-details-box h3 {
@@ -268,6 +326,9 @@ body {
   font-weight: 600;
   margin: 0 0 6px 0;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .address-text {
@@ -275,12 +336,15 @@ body {
   color: var(--text-secondary);
   margin: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   line-height: 1.4;
 }
 
-/* ACTIONS PILL BUTTONS */
+/* ==========================================================================
+   ACTION PILL BUTTONS
+   ========================================================================== */
+
 .action-pill-btn {
   background: transparent;
   color: var(--accent-green);
@@ -291,6 +355,8 @@ body {
   border-radius: 20px;
   cursor: pointer;
   transition: var(--transition-smooth);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .action-pill-btn:hover {
@@ -304,51 +370,87 @@ body {
   border-color: rgba(34, 197, 94, 0.4);
 }
 
-/* ===== DESKTOP EXCLUSIVE CARDS ===== */
-.desktop-plan-card {
-  background: var(--bg-surface-elevated);
-  border-radius: var(--radius-md);
-  padding: 18px;
-  border: 1px solid var(--border-color);
+/* ==========================================================================
+   MOBILE CHEVRON (hidden on desktop)
+   ========================================================================== */
+
+.mobile-chevron {
+  display: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px;
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
 }
 
-.plan-card-top {
+.mobile-chevron.rotated {
+  transform: rotate(180deg);
+  color: var(--accent-green);
+}
+
+/* ==========================================================================
+   MOBILE ACCORDION FORM (inline, inside place card)
+   ========================================================================== */
+
+.mobile-inline-form {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.mobile-inline-form.is-expanded {
+  max-height: 400px;
+  opacity: 1;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 14px;
+}
+
+.form-header-mobile {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.plan-card-top h3 {
-  font-size: 16px;
+.form-header-mobile h4 {
+  flex: 1;
   margin: 0;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.card-delete-icon, .clear-all-btn {
+.mobile-remove-txt {
   background: transparent;
   border: none;
   color: #ef4444;
   cursor: pointer;
-  font-size: 16px;
-  opacity: 0.7;
-  transition: var(--transition-smooth);
+  font-size: 13px;
 }
 
-.card-delete-icon:hover, .clear-all-btn:hover {
-  opacity: 1;
-  transform: scale(1.15);
-}
-
-.desktop-form-grid {
+.inputs-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.desktop-form-grid input,
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-field label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
 .form-inner-wrapper input {
-  background: #030712 !important;
+  background: #030712;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px;
@@ -359,11 +461,10 @@ body {
   box-sizing: border-box;
 }
 
-.textarea-wrapper, .textarea-field {
+.textarea-field {
   position: relative;
 }
 
-.desktop-plan-card textarea,
 .form-inner-wrapper textarea {
   width: 100%;
   min-height: 70px;
@@ -378,7 +479,7 @@ body {
   box-sizing: border-box;
 }
 
-.counter-tag, .char-count {
+.char-count {
   position: absolute;
   right: 10px;
   bottom: 8px;
@@ -386,11 +487,109 @@ body {
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* ===== STICKY ACTIONS FOOTER AREA ===== */
+/* ==========================================================================
+   DESKTOP PLANNER CARDS (right panel)
+   ========================================================================== */
+
+.desktop-plan-card {
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.plan-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.plan-card-top h3 {
+  font-size: 16px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-delete-icon,
+.clear-all-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.7;
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+
+.card-delete-icon:hover,
+.clear-all-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.desktop-form-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.desktop-form-grid input {
+  background: #030712;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.textarea-wrapper {
+  position: relative;
+}
+
+.desktop-plan-card textarea {
+  width: 100%;
+  min-height: 70px;
+  background: #030712;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  color: #fff;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.counter-tag {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ==========================================================================
+   FINALIZE BUTTON FOOTER
+   ========================================================================== */
+
 .action-footer-sticky {
   margin-top: auto;
   padding-top: 20px;
   border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .finalize-submit-btn {
@@ -421,37 +620,10 @@ body {
   margin: 10px 0 0 0;
 }
 
-/* ===== MOBILE INTERACTIVE ACCORDION FORMS ===== */
-.mobile-inline-form {
-  max-height: 0;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0;
-}
+/* ==========================================================================
+   EMPTY STATES
+   ========================================================================== */
 
-.mobile-inline-form.is-expanded {
-  max-height: 400px;
-  opacity: 1;
-  margin-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 14px;
-}
-
-.mobile-chevron {
-  display: none;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 8px;
-  transition: var(--transition-smooth);
-}
-
-.mobile-chevron.rotated {
-  transform: rotate(180deg);
-  color: var(--accent-green);
-}
-
-/* ===== EMPTY STATE OVERRIDE ===== */
 .empty-state-view {
   text-align: center;
   padding: 80px 20px;
@@ -474,12 +646,47 @@ body {
   color: var(--text-secondary);
 }
 
-/* ===== PREMIUM FINAL OUTPUT SUMMARY SCREEN ===== */
+.empty-state-view-fallback {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon-cloud {
+  font-size: 36px;
+  margin-bottom: 14px;
+  opacity: 0.5;
+}
+
+.empty-state-view-fallback p {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+}
+
+.empty-state-view-fallback span {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   FINAL SUMMARY VIEW
+   ========================================================================== */
+
 .premium-final-view {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 30px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s ease both;
 }
 
 .final-view-header {
@@ -488,7 +695,14 @@ body {
 
 .final-view-header h2 {
   font-size: 24px;
+  font-weight: 800;
   margin: 0 0 6px 0;
+}
+
+.final-view-header p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .summary-cards-stack {
@@ -509,12 +723,16 @@ body {
   font-size: 12px;
   color: var(--accent-green);
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .summary-body h3 {
   margin: 0 0 8px 0;
   font-size: 18px;
+  font-weight: 700;
 }
 
 .budget-tag {
@@ -524,18 +742,21 @@ body {
   border-radius: 6px;
   font-size: 13px;
   color: var(--accent-green);
+  font-weight: 600;
 }
 
 .notes-block-view {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 10px 0 0 0;
+  line-height: 1.5;
 }
 
 .final-actions-row {
   display: flex;
   justify-content: flex-end;
   gap: 14px;
+  flex-wrap: wrap;
 }
 
 .btn-secondary-dark {
@@ -547,6 +768,7 @@ body {
   border-radius: 10px;
   cursor: pointer;
   transition: var(--transition-smooth);
+  font-size: 14px;
 }
 
 .btn-secondary-dark:hover {
@@ -562,24 +784,47 @@ body {
   border-radius: 10px;
   cursor: pointer;
   transition: var(--transition-smooth);
+  font-size: 14px;
 }
 
 .btn-primary-action:hover {
   background: var(--accent-green-hover);
 }
+
 /* ==========================================================================
-   RESPONSIVE BREAKPOINT SYSTEM
+   DATE / TIME PICKER DARK ICON FIX
    ========================================================================== */
 
-/* =====================================================
-   LARGE DESKTOP (1440px+)
-===================================================== */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.5);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   GLOBAL RESETS
+   ========================================================================== */
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.workspace-grid,
+.panel-card-container,
+.search-wrapper-card,
+.place-details-box,
+.itinerary-container {
+  min-width: 0;
+}
+
+/* ==========================================================================
+   RESPONSIVE — LARGE DESKTOP (1440px+)
+   ========================================================================== */
 
 @media (min-width: 1440px) {
-
   .main-viewport {
     padding: 32px;
-    max-width: 1800px;
   }
 
   .workspace-grid {
@@ -596,13 +841,11 @@ body {
   }
 }
 
-/* =====================================================
-   DESKTOP & LAPTOP
-   1024px - 1439px
-===================================================== */
+/* ==========================================================================
+   RESPONSIVE — DESKTOP & LAPTOP (1024px–1439px)
+   ========================================================================== */
 
 @media (min-width: 1024px) and (max-width: 1439px) {
-
   .main-viewport {
     padding: 24px;
   }
@@ -620,24 +863,31 @@ body {
   .planner-panel {
     display: flex !important;
   }
-
-  .search-wrapper-card,
-  .itinerary-container,
-  .header-meta {
-    width: 100%;
-  }
 }
 
-/* =====================================================
-   TABLET LANDSCAPE
-   768px - 1023px
-===================================================== */
+/* ==========================================================================
+   RESPONSIVE — TABLET LANDSCAPE (768px–1023px)
+   Sidebar becomes fixed off-canvas; content fills full width
+   ========================================================================== */
 
 @media (min-width: 768px) and (max-width: 1023px) {
+  /* Pull sidebar out of flow so main-viewport fills 100% */
+  .sidebar {
+    position: fixed;
+    left: -220px;
+    top: 0;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+  }
 
+  .sidebar.open {
+    left: 0;
+  }
+
+  /* main-viewport already has flex:1 so it fills the row naturally */
   .main-viewport {
     padding: 18px;
-    width: 100%;
   }
 
   .workspace-grid {
@@ -670,26 +920,25 @@ body {
   .desktop-form-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
 
+/* ==========================================================================
+   RESPONSIVE — TABLET PORTRAIT (600px–767px)
+   ========================================================================== */
+
+@media (min-width: 600px) and (max-width: 767px) {
   .sidebar {
     position: fixed;
     left: -220px;
     top: 0;
+    height: 100vh;
     z-index: 1000;
-    transition: .3s ease;
+    transition: left 0.3s ease;
   }
 
   .sidebar.open {
     left: 0;
   }
-}
-
-/* =====================================================
-   TABLET PORTRAIT
-   600px - 767px
-===================================================== */
-
-@media (min-width: 600px) and (max-width: 767px) {
 
   .main-viewport {
     padding: 16px;
@@ -732,26 +981,26 @@ body {
   .final-actions-row button {
     width: 100%;
   }
+}
 
+/* ==========================================================================
+   RESPONSIVE — MOBILE (<600px)
+   Sidebar off-canvas; planner panel hidden; accordion form active
+   ========================================================================== */
+
+@media (max-width: 599px) {
   .sidebar {
     position: fixed;
     left: -220px;
     top: 0;
+    height: 100vh;
     z-index: 1000;
-    transition: .3s ease;
+    transition: left 0.3s ease;
   }
 
   .sidebar.open {
     left: 0;
   }
-}
-
-/* =====================================================
-   MOBILE
-   <600px
-===================================================== */
-
-@media (max-width: 599px) {
 
   .main-viewport {
     padding: 14px;
@@ -771,6 +1020,7 @@ body {
     gap: 16px;
   }
 
+  /* Desktop planner panel hidden on mobile — accordion form used instead */
   .planner-panel {
     display: none !important;
   }
@@ -809,6 +1059,7 @@ body {
     font-size: 11px;
   }
 
+  /* Show mobile chevron toggle on mobile only */
   .mobile-chevron {
     display: block;
   }
@@ -823,25 +1074,14 @@ body {
   }
 
   .premium-search-btn {
-    min-width: 90px;
+    min-width: 80px;
     padding: 10px 14px;
     font-size: 13px;
   }
 
   .inputs-row {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 12px;
-  }
-
-  .input-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .input-field label {
-    font-size: 11px;
-    color: var(--text-secondary);
   }
 
   .final-actions-row {
@@ -861,42 +1101,7 @@ body {
     padding: 14px;
   }
 
-  .sidebar {
-    position: fixed;
-    left: -220px;
-    top: 0;
-    z-index: 1000;
-    transition: .3s ease;
+  .summary-body h3 {
+    font-size: 16px;
   }
-
-  .sidebar.open {
-    left: 0;
-  }
-}
-
-/* =====================================================
-   GLOBAL FIXES
-===================================================== */
-
-img {
-  max-width: 100%;
-  display: block;
-}
-
-.workspace-grid,
-.panel-card-container,
-.search-wrapper-card,
-.place-details-box {
-  min-width: 0;
-}
-
-.place-details-box h3 {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.5);
 }
