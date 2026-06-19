@@ -27,6 +27,8 @@ const Explore = () => {
   /* ✅ SIDEBAR STATE (🔥 FIX) */
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+
+  
   /* 👉 Swipe support */
   const touchStartX = useRef(0);
 
