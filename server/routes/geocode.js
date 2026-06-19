@@ -78,6 +78,7 @@ router.get("/reverse", async (req, res) => {
 
   if (!process.env.GOOGLE_GEO_KEY) {
     return res.status(500).json({
+      
       error: "GOOGLE_GEO_KEY not configured",
     });
   }
