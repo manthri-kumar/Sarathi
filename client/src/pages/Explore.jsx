@@ -272,3 +272,5 @@ const Explore = () => {
     </div>
   );
 }
+
+export default Explore;
