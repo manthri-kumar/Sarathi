@@ -1,6 +1,5 @@
-import { Router } from "express";
-
-const router = Router();
+const express = require("express");
+const router = express.Router();
 
 /* =========================
 CACHE
@@ -11,27 +10,27 @@ const TTL_MS = 24 * 60 * 60 * 1000;
 const MAX = 5000;
 
 function cacheGet(key) {
-const hit = cache.get(key);
+  const hit = cache.get(key);
 
-if (!hit) return undefined;
+  if (!hit) return undefined;
 
-if (hit.expiresAt <= Date.now()) {
-cache.delete(key);
-return undefined;
-}
+  if (hit.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return undefined;
+  }
 
-return hit.value;
+  return hit.value;
 }
 
 function cacheSet(key, value) {
-if (cache.size >= MAX) {
-cache.delete(cache.keys().next().value);
-}
+  if (cache.size >= MAX) {
+    cache.delete(cache.keys().next().value);
+  }
 
-cache.set(key, {
-value,
-expiresAt: Date.now() + TTL_MS
-});
+  cache.set(key, {
+    value,
+    expiresAt: Date.now() + TTL_MS,
+  });
 }
 
 /* =========================
@@ -44,23 +43,23 @@ const WINDOW = 5 * 60 * 1000;
 const LIMIT = 60;
 
 function rateLimited(ip) {
-const now = Date.now();
+  const now = Date.now();
 
-const rec = hits.get(ip) || {
-count: 0,
-reset: now + WINDOW
-};
+  const rec = hits.get(ip) || {
+    count: 0,
+    reset: now + WINDOW,
+  };
 
-if (now > rec.reset) {
-rec.count = 0;
-rec.reset = now + WINDOW;
-}
+  if (now > rec.reset) {
+    rec.count = 0;
+    rec.reset = now + WINDOW;
+  }
 
-rec.count += 1;
+  rec.count += 1;
 
-hits.set(ip, rec);
+  hits.set(ip, rec);
 
-return rec.count > LIMIT;
+  return rec.count > LIMIT;
 }
 
 /* =========================
@@ -68,64 +67,58 @@ REVERSE GEOCODE
 ========================= */
 
 router.get("/reverse", async (req, res) => {
-const lat = Number(req.query.lat);
-const lng = Number(req.query.lng);
+  const lat = Number(req.query.lat);
+  const lng = Number(req.query.lng);
 
-if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-return res.status(400).json({
-error: "lat and lng are required numbers"
-});
-}
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({
+      error: "lat and lng are required numbers",
+    });
+  }
 
-if (!process.env.GOOGLE_GEO_KEY) {
-return res.status(500).json({
-error: "GOOGLE_GEO_KEY not configured"
-});
-}
+  if (!process.env.GOOGLE_GEO_KEY) {
+    return res.status(500).json({
+      error: "GOOGLE_GEO_KEY not configured",
+    });
+  }
 
-const ip =
-req.headers["x-forwarded-for"]?.split(",")[0] ||
-req.ip;
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.ip;
 
-if (rateLimited(ip)) {
-return res.status(429).json({
-error: "Too many requests"
-});
-}
+  if (rateLimited(ip)) {
+    return res.status(429).json({
+      error: "Too many requests",
+    });
+  }
 
-const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
 
-const cached = cacheGet(key);
+  const cached = cacheGet(key);
 
-if (cached) {
-return res.json(cached);
-}
+  if (cached) {
+    return res.json(cached);
+  }
 
-try {
-const url =
-"https://maps.googleapis.com/maps/api/geocode/json" +
-`?latlng=${lat},${lng}&key=${process.env.GOOGLE_GEO_KEY}`;
+  try {
+    const url =
+      "https://maps.googleapis.com/maps/api/geocode/json" +
+      `?latlng=${lat},${lng}&key=${process.env.GOOGLE_GEO_KEY}`;
 
-```
-const response = await fetch(url);
+    const response = await fetch(url);
 
-const data = await response.json();
+    const data = await response.json();
 
-cacheSet(key, data);
+    cacheSet(key, data);
 
-return res.json(data);
-```
+    return res.json(data);
+  } catch (err) {
+    console.error("[reverse]", err);
 
-} catch (err) {
-console.error("[reverse]", err);
-
-```
-return res.status(500).json({
-  error: "Reverse geocode failed"
-});
-```
-
-}
+    return res.status(500).json({
+      error: "Reverse geocode failed",
+    });
+  }
 });
 
 /* =========================
@@ -133,41 +126,35 @@ CITY SEARCH SUGGESTIONS
 ========================= */
 
 router.get("/suggest", async (req, res) => {
-const q = req.query.q;
+  const q = req.query.q;
 
-if (!q || q.length < 2) {
-return res.json([]);
-}
+  if (!q || q.length < 2) {
+    return res.json([]);
+  }
 
-try {
-const url =
-"https://maps.googleapis.com/maps/api/place/autocomplete/json" +
-`?input=${encodeURIComponent(q)}` +
-`&types=(cities)` +
-`&key=${process.env.GOOGLE_GEO_KEY}`;
+  try {
+    const url =
+      "https://maps.googleapis.com/maps/api/place/autocomplete/json" +
+      `?input=${encodeURIComponent(q)}` +
+      `&types=(cities)` +
+      `&key=${process.env.GOOGLE_GEO_KEY}`;
 
-```
-const response = await fetch(url);
+    const response = await fetch(url);
 
-const data = await response.json();
+    const data = await response.json();
 
-const suggestions =
-  data.predictions?.map((item) => ({
-    placeId: item.place_id,
-    description: item.description
-  })) || [];
+    const suggestions =
+      data.predictions?.map((item) => ({
+        placeId: item.place_id,
+        description: item.description,
+      })) || [];
 
-return res.json(suggestions);
-```
+    return res.json(suggestions);
+  } catch (err) {
+    console.error("[suggest]", err);
 
-} catch (err) {
-console.error("[suggest]", err);
-
-```
-return res.status(500).json([]);
-```
-
-}
+    return res.status(500).json([]);
+  }
 });
 
 /* =========================
@@ -175,50 +162,44 @@ CITY -> LAT LNG
 ========================= */
 
 router.get("/location", async (req, res) => {
-const q = req.query.q;
+  const q = req.query.q;
 
-if (!q) {
-return res.status(400).json({
-error: "Query required"
-});
-}
+  if (!q) {
+    return res.status(400).json({
+      error: "Query required",
+    });
+  }
 
-try {
-const url =
-"https://maps.googleapis.com/maps/api/geocode/json" +
-`?address=${encodeURIComponent(q)}` +
-`&key=${process.env.GOOGLE_GEO_KEY}`;
+  try {
+    const url =
+      "https://maps.googleapis.com/maps/api/geocode/json" +
+      `?address=${encodeURIComponent(q)}` +
+      `&key=${process.env.GOOGLE_GEO_KEY}`;
 
-```
-const response = await fetch(url);
+    const response = await fetch(url);
 
-const data = await response.json();
+    const data = await response.json();
 
-if (!data.results?.length) {
-  return res.status(404).json({
-    error: "Location not found"
-  });
-}
+    if (!data.results?.length) {
+      return res.status(404).json({
+        error: "Location not found",
+      });
+    }
 
-const result = data.results[0];
+    const result = data.results[0];
 
-return res.json({
-  city: q,
-  lat: result.geometry.location.lat,
-  lng: result.geometry.location.lng
-});
-```
+    return res.json({
+      city: q,
+      lat: result.geometry.location.lat,
+      lng: result.geometry.location.lng,
+    });
+  } catch (err) {
+    console.error("[location]", err);
 
-} catch (err) {
-console.error("[location]", err);
-
-```
-return res.status(500).json({
-  error: "Failed to resolve city"
-});
-```
-
-}
+    return res.status(500).json({
+      error: "Failed to resolve city",
+    });
+  }
 });
 
-export default router;
+module.exports = router;
