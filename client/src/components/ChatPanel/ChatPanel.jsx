@@ -1,104 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Sparkles,
-  Send,
-  Mic,
-  MapPin,
-  X,
-  Hotel,
-  Landmark,
-  UtensilsCrossed,
-  CloudSun,
-  Map as MapIcon,
-} from "lucide-react";
 import "./ChatPanel.css";
-
-
-const listStagger = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.08,
-    },
-  },
-};
-
-const itemIn = {
-  hidden: {
-    opacity: 0,
-    y: 12,
-  },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-    },
-  },
-};
 
 const API_BASE =
   process.env.REACT_APP_API_URL ||
   "https://sarathi-backend-7u0y.onrender.com";
-
-// ── light formatter: **bold**, # / ## headings, - / • bullets ──
-function renderRichText(text) {
-  const lines = text.split("\n");
-  const out = [];
-  let bullets = null;
-
-  const flush = () => {
-    if (bullets) {
-      out.push(
-        <ul key={`ul-${out.length}`} className="sa-md-list">
-          {bullets.map((b, i) => (
-            <li key={i}>{inline(b)}</li>
-          ))}
-        </ul>
-      );
-      bullets = null;
-    }
-  };
-
-  const inline = (s) => {
-    const parts = s.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((p, i) =>
-      /^\*\*[^*]+\*\*$/.test(p) ? (
-        <strong key={i}>{p.slice(2, -2)}</strong>
-      ) : (
-        <React.Fragment key={i}>{p}</React.Fragment>
-      )
-    );
-  };
-
-  lines.forEach((line, idx) => {
-    const trimmed = line.trim();
-    if (/^#{1,3}\s/.test(trimmed)) {
-      flush();
-      const level = trimmed.match(/^#+/)[0].length;
-      const content = trimmed.replace(/^#+\s/, "");
-      out.push(
-        <div key={`h-${idx}`} className={`sa-md-h sa-md-h${level}`}>
-          {inline(content)}
-        </div>
-      );
-    } else if (/^(-|•)\s/.test(trimmed)) {
-      if (!bullets) bullets = [];
-      bullets.push(trimmed.replace(/^(-|•)\s/, ""));
-    } else {
-      flush();
-      out.push(
-        <React.Fragment key={`p-${idx}`}>
-          {inline(line)}
-          {idx < lines.length - 1 && <br />}
-        </React.Fragment>
-      );
-    }
-  });
-  flush();
-  return out;
-}
 
 const ChatPanel = ({ closeChat, templeContext = null }) => {
   const isTempleMode = !!templeContext;
@@ -115,24 +20,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
   const [input,           setInput]           = useState("");
   const [typing,          setTyping]          = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true); // ← NEW
-  const [listening,       setListening]       = useState(false);
   const chatEndRef = useRef(null);
-
-  // ── derived (UI only) ──
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
-  })();
-  const firstName =
-    (user?.username || user?.name || "").split(" ")[0] || "traveller";
-  const city = localStorage.getItem("city") || "";
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good Morning";
-    if (h < 17) return "Good Afternoon";
-    return "Good Evening";
-  })();
-  const hasUserMessages = messages.some((m) => m.sender === "user");
-  const showHero = !isTempleMode && !hasUserMessages;
 
   // Reset when switching temple
   useEffect(() => {
@@ -269,52 +157,12 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     }
   };
 
-  // ── Voice input (Web Speech API, degrades silently if unsupported) ──
-  const startVoice = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.lang = "en-IN";
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-    setListening(true);
-    rec.onresult = (e) => setInput(e.results[0][0].transcript);
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    rec.start();
-  };
-
-  // ── Re-share current location (writes lat/lng to localStorage) ──
-  const shareLocation = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      localStorage.setItem("lat", pos.coords.latitude);
-      localStorage.setItem("lng", pos.coords.longitude);
-    });
-  };
-
   const templeSuggestions = [
     "What is special about this temple?",
     "What are the darshan timings?",
     "What festivals are celebrated here?",
     "Who is the presiding deity?",
     "How to reach this temple?",
-  ];
-
-  const quickStart = [
-    { icon: Hotel,            label: "Hotels Nearby",     q: "hotels near me" },
-    { icon: Landmark,         label: "Temples Nearby",    q: "temples near me" },
-    { icon: UtensilsCrossed,  label: "Best Local Food",   q: "food near me" },
-    { icon: CloudSun,         label: "Weekend Weather",   q: "weekend weather" },
-    { icon: MapIcon,          label: "Plan 2-Day Trip",   q: "plan a 2 day trip" },
-  ];
-
-  const dock = [
-    { icon: Hotel,           label: "Hotels",  q: "hotels near me" },
-    { icon: Landmark,        label: "Temples", q: "temples near me" },
-    { icon: UtensilsCrossed, label: "Food",    q: "food near me" },
-    { icon: CloudSun,        label: "Weather", q: "weather today" },
-    { icon: MapIcon,         label: "Plan",    q: "plan trip" },
   ];
 
   return (
@@ -324,108 +172,45 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       <div className="chat-header">
         <div className="chat-header-left">
           <span className="chat-header-avatar">
-            <span className="sa-orb">{isTempleMode ? "🛕" : <Sparkles size={16} />}</span>
+            {isTempleMode ? "🛕" : "🤖"}
           </span>
           <div className="chat-header-info">
             <h3 className="chat-header-title">
               {isTempleMode ? "Temple Guide" : "Sarathi AI"}
             </h3>
-            {isTempleMode ? (
+            {isTempleMode && (
               <span className="chat-header-subtitle">
                 {templeContext.name.length > 34
                   ? templeContext.name.substring(0, 34) + "…"
                   : templeContext.name}
               </span>
-            ) : (
-              <span className="chat-header-status">
-                <span className="sa-status-dot" /> Online
-                {city && (
-                  <>
-                    <span className="sa-dot-sep">•</span>
-                    <MapPin size={11} /> {city}
-                  </>
-                )}
-              </span>
             )}
           </div>
         </div>
         <button className="chat-close-btn" onClick={closeChat} aria-label="Close">
-          <X size={16} />
+          ✕
         </button>
       </div>
 
       {/* ── BODY ── */}
       <div className="chat-body">
-
-        {/* Hero + quick-start (general mode, fresh chat) */}
-        <AnimatePresence>
-          {showHero && (
-            <motion.div
-              className="sa-hero"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="sa-hero-glow" />
-              <div className="sa-hero-head">
-                <Sparkles size={18} className="sa-hero-spark" />
-                <h2>{greeting}, {firstName}</h2>
-              </div>
-              <p className="sa-hero-sub">I can help you with</p>
-              <div className="sa-hero-tags">
-                <span>🛕 Temples</span>
-                <span>🏨 Hotels</span>
-                <span>🍽 Food</span>
-                <span>🗺 Trips</span>
-                <span>🌤 Weather</span>
-              </div>
-
-              <motion.div
-                className="sa-quickstart"
-                variants={listStagger}
-                initial="hidden"
-                animate="show"
-              >
-                {quickStart.map((c) => {
-                  const Icon = c.icon;
-                  return (
-                    <motion.button
-                      key={c.label}
-                      variants={itemIn}
-                      className="sa-qs-card"
-                      onClick={() => sendMessage(c.q)}
-                      whileHover={{ y: -3 }}
-                      whileTap={{ scale: 0.97 }}
-                    >
-                      <span className="sa-qs-icon"><Icon size={18} /></span>
-                      <span className="sa-qs-label">{c.label}</span>
-                    </motion.button>
-                  );
-                })}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Conversation */}
         {messages.map((msg, i) => (
-          <motion.div
-            key={i}
-            className={`chat-row ${msg.sender}`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <div key={i} className={`chat-row ${msg.sender}`}>
+
             {msg.sender === "bot" && (
               <div className="chat-avatar">
-                {isTempleMode ? "🛕" : <Sparkles size={14} />}
+                {isTempleMode ? "🛕" : "✦"}
               </div>
             )}
 
             {(!msg.type || msg.type === undefined) && msg.text && (
               <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
-                {renderRichText(msg.text)}
+                {msg.text.split("\n").map((line, j) => (
+                  <React.Fragment key={j}>
+                    {line}
+                    {j < msg.text.split("\n").length - 1 && <br />}
+                  </React.Fragment>
+                ))}
                 {msg.isError && (
                   <button
                     className="chat-retry-btn"
@@ -443,69 +228,103 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             )}
 
             {msg.type === "places" && (
-              <motion.div
-                className="sa-card-list"
-                variants={listStagger}
-                initial="hidden"
-                animate="show"
-              >
+              <div className="chat-cards">
                 {msg.data?.map((p, idx) => (
-                  <PlaceCard key={idx} place={p} onNavigate={navigateTo} />
+                  <div key={idx} className="chat-card">
+                    <img src={p.image} alt={p.name} />
+                    <div className="card-content">
+                      <h4>{p.name}</h4>
+                      <p>⭐ {p.rating}</p>
+                      <p className="subtitle">{p.bestTime}</p>
+                      <p className="desc">{p.description}</p>
+                      <button onClick={() => navigateTo(p)}>Navigate</button>
+                    </div>
+                  </div>
                 ))}
-              </motion.div>
-            )}
-
-            {msg.type === "hotels" && (
-              <motion.div className="sa-card-list" variants={listStagger} initial="hidden" animate="show">
-                {msg.data?.map((h, idx) => (
-                  <HotelCard key={idx} hotel={h} onNavigate={navigateTo} />
-                ))}
-              </motion.div>
-            )}
-
-            {msg.type === "temples" && (
-              <motion.div className="sa-card-list" variants={listStagger} initial="hidden" animate="show">
-                {msg.data?.map((tpl, idx) => (
-                  <TempleCard key={idx} temple={tpl} onNavigate={navigateTo} />
-                ))}
-              </motion.div>
-            )}
-
-            {msg.type === "food" && (
-              <motion.div className="sa-card-list" variants={listStagger} initial="hidden" animate="show">
-                {msg.data?.map((f, idx) => (
-                  <FoodCard key={idx} food={f} onNavigate={navigateTo} />
-                ))}
-              </motion.div>
-            )}
-
-            {msg.type === "weather" && (
-              <div className="sa-card-list">
-                <WeatherCard weather={msg.data || msg.weather || {}} />
               </div>
             )}
 
             {msg.type === "itinerary" && (
-              <ItineraryCard
-                budget={msg.budget}
-                days={msg.data}
-                onNavigate={navigateTo}
-              />
+              <div className="itinerary-box">
+                {msg.budget && (
+                  <div className="budget-card">
+                    <div className="budget-total">
+                      <span>Total Budget</span>
+                      <strong>₹{msg.budget.total.toLocaleString()}</strong>
+                    </div>
+                    {[
+                      ["🏨 Hotel",      msg.budget.hotel],
+                      ["🍴 Food",       msg.budget.food],
+                      ["🚕 Transport",  msg.budget.transport],
+                      ["🎟 Activities", msg.budget.activities],
+                    ].map(([label, val]) => (
+                      <div key={label} className="budget-row">
+                        <span>{label}</span>
+                        <span>₹{val?.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {msg.data?.map((day, idx) => (
+                  <div key={idx} className="day-card">
+                    <h3>Day {day.day}</h3>
+                    {day.schedule?.map((item, jdx) => (
+                      <div key={jdx} className="mini-card">
+                        <img src={item.place?.image} alt="" />
+                        <div>
+                          <p>{item.place?.name}</p>
+                          <small>{item.bestTime}</small>
+                          <button
+                            onClick={() => navigateTo(item.place)}
+                            style={{ marginTop:"5px", padding:"5px 10px", background:"#22c55e", border:"none", borderRadius:"6px", cursor:"pointer" }}
+                          >
+                            Navigate
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             )}
 
             {msg.type === "budgetExceeded" && (
-              <BudgetExceededCard
-                data={msg.budgetData}
-                onUpdateBudget={() => sendMessage("update budget")}
-                onChangePlan={() => sendMessage("change plan")}
-              />
+              <div className="budget-warning-card">
+                <h3>⚠️ Budget Exceeded</h3>
+                <p>The estimated trip cost exceeds your budget.</p>
+                <div className="budget-breakdown">
+                  <div className="budget-line"><strong>🏨 Hotel</strong></div>
+                  <div className="budget-subline">₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days × {msg.budgetData.roomsNeeded} rooms</div>
+                  <div className="budget-value">₹{msg.budgetData.hotelCost?.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-line"><strong>🍽 Food</strong></div>
+                  <div className="budget-subline">₹{msg.budgetData.foodRate} × {msg.budgetData.travellers} travelers × {msg.budgetData.days} days</div>
+                  <div className="budget-value">₹{msg.budgetData.foodCost?.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-line"><strong>🚆 Transport</strong></div>
+                  <div className="budget-subline">₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}</div>
+                  <div className="budget-value">₹{msg.budgetData.transportCost?.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-line"><strong>🎟 Activities</strong></div>
+                  <div className="budget-value">₹{msg.budgetData.activitiesCost?.toLocaleString()}</div>
+                  <hr />
+                  <div className="budget-total">Budget: ₹{msg.budgetData.budget?.toLocaleString()}</div>
+                  <div className="budget-total">Required: ₹{msg.budgetData.totalCost?.toLocaleString()}</div>
+                  <div className="budget-short">Need Extra: ₹{msg.budgetData.shortBy?.toLocaleString()}</div>
+                </div>
+                <div className="budget-actions">
+                  <button onClick={() => sendMessage("update budget")}>Update Budget</button>
+                  <button onClick={() => sendMessage("change plan")}>Change Plan</button>
+                </div>
+              </div>
             )}
-          </motion.div>
+
+          </div>
         ))}
 
         {typing && (
           <div className="chat-row bot">
-            <div className="chat-avatar">{isTempleMode ? "🛕" : <Sparkles size={14} />}</div>
+            <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>
             <div className="chat-typing">
               <span /><span /><span />
             </div>
@@ -518,19 +337,28 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       {/* ── FOOTER ── */}
       <div className="chat-footer">
 
-        {/* Temple mode: persistent collapsible quick actions */}
+        {/* ── Temple mode: persistent collapsible quick actions ── */}
         {isTempleMode && (
           <div className="chat-quick-actions-wrap">
+
+            {/* Toggle row — always visible, even when collapsed */}
             <button
               className="chat-quick-toggle"
               onClick={() => setShowQuickActions((prev) => !prev)}
               aria-expanded={showQuickActions}
               aria-label="Toggle quick questions"
             >
-              <span className="chat-quick-toggle-label">💬 Quick Questions</span>
-              <span className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}>▲</span>
+              <span className="chat-quick-toggle-label">
+                💬 Quick Questions
+              </span>
+              <span
+                className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}
+              >
+                ▲
+              </span>
             </button>
 
+            {/* Animated collapse container — never unmounted */}
             <div
               className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
               aria-hidden={!showQuickActions}
@@ -551,39 +379,20 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 ))}
               </div>
             </div>
+
           </div>
         )}
 
-        {/* General mode: floating glass action dock */}
+        {/* ── General mode: quick action buttons (unchanged) ── */}
         {!isTempleMode && (
-          <div className="sa-dock">
-            {dock.map((d) => {
-              const Icon = d.icon;
-              return (
-                <button
-                  key={d.label}
-                  className="sa-dock-btn"
-                  onClick={() => sendMessage(d.q)}
-                  title={d.label}
-                >
-                  <Icon size={15} />
-                  <span>{d.label}</span>
-                </button>
-              );
-            })}
+          <div className="quick-actions">
+            <button onClick={() => sendMessage("plan trip")}>✈️ Trip</button>
+            <button onClick={() => sendMessage("places near me")}>📍 Nearby</button>
+            <button onClick={() => sendMessage("food near me")}>🍽 Food</button>
           </div>
         )}
 
-        {/* ChatGPT-style input dock */}
         <div className="chat-input-row">
-          <button
-            className="sa-input-icon"
-            onClick={shareLocation}
-            title="Share location"
-            aria-label="Share location"
-          >
-            <MapPin size={17} />
-          </button>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -591,29 +400,22 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             placeholder={
               isTempleMode
                 ? `Ask about ${templeContext.name.length > 22 ? templeContext.name.substring(0, 22) + "…" : templeContext.name}…`
-                : "Ask Sarathi about temples, hotels, food, weather, or trips..."
+                : "Ask Sarathi anything…"
             }
             disabled={typing}
             className="chat-input-field"
           />
-          <button
-            className={`sa-input-icon ${listening ? "sa-listening" : ""}`}
-            onClick={startVoice}
-            title="Voice input"
-            aria-label="Voice input"
-          >
-            <Mic size={17} />
-          </button>
           <button
             className="chat-send-btn"
             onClick={() => sendMessage()}
             disabled={typing || !input.trim()}
             aria-label="Send"
           >
-            <Send size={16} />
+            ➤
           </button>
         </div>
       </div>
+
     </div>
   );
 };
