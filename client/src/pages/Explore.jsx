@@ -260,6 +260,7 @@ const Explore = () => {
 
       </div>
 
+
     </div>
   );
 }
