@@ -1,21 +1,15 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef,useCallback} from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
 
 import { useTranslation } from "react-i18next";
-import { useExploreSearchContext } from "./ExploreSearchContext";
 
-import "./Explore.css";
-
-const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
+import "../styles/Explore.css";
 
 const Explore = () => {
 
   const { t } = useTranslation();
-
-  // Shared search state (Navbar writes the selected city, Explore reacts).
-  const { selectedCity } = useExploreSearchContext();
 
   const [places, setPlaces] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
@@ -65,16 +59,7 @@ const Explore = () => {
     return "Your Location";
   };
 
-  /* 🔥 SHARED FETCH — places/restaurants/hotels for given coords */
-  const fetchPlacesByCoords = useCallback(async (lat, lng) => {
-    const res = await fetch(`${API_BASE}/api/places?lat=${lat}&lng=${lng}`);
-    const data = await res.json();
-    setPlaces(data.places || []);
-    setRestaurants(data.restaurants || []);
-    setHotels(data.hotels || []);
-  }, []);
-
-  /* 🔥 FETCH DATA (current GPS location) */
+  /* 🔥 FETCH DATA */
   const fetchData = useCallback(() => {
     if (!navigator.geolocation) return;
 
@@ -85,13 +70,22 @@ const Explore = () => {
       const lng = pos.coords.longitude;
 
       try {
-        const [, geoRes] = await Promise.all([
-          fetchPlacesByCoords(lat, lng),
-          fetch(`${API_BASE}/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+        const [placesRes, geoRes] = await Promise.all([
+          fetch(
+  `https://sarathi-backend-7u0y.onrender.com/api/places?lat=${lat}&lng=${lng}`),
+          fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
+          )
         ]);
 
+        const data = await placesRes.json();
         const geoData = await geoRes.json();
-        const components = geoData.results?.[0]?.address_components || [];
+
+        setPlaces(data.places || []);
+        setRestaurants(data.restaurants || []);
+        setHotels(data.hotels || []);
+
+        const components = geoData.results[0]?.address_components || [];
         setLocationName(getLocationName(components));
 
         setLocationLoaded(true);
@@ -103,37 +97,13 @@ const Explore = () => {
 
       setLoading(false);
     });
-  }, [fetchPlacesByCoords]);
+  }, []);
 
-  useEffect(() => {
-    if (locationLoaded) {
-      fetchData();
-    }
-  }, [locationLoaded, fetchData]);
-
-  /* 🔍 SEARCH — when a city is selected in the Navbar, refetch in place.
-     Preserves activeTab, no page reload. */
-  useEffect(() => {
-    if (!selectedCity) return;
-    let active = true;
-    (async () => {
-      setLoading(true);
-      try {
-        await fetchPlacesByCoords(selectedCity.lat, selectedCity.lng);
-        if (!active) return;
-        setLocationName(selectedCity.city);
-        setLocationLoaded(true);
-        localStorage.setItem("locationSelected", "true");
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [selectedCity, fetchPlacesByCoords]);
+useEffect(() => {
+  if (locationLoaded) {
+    fetchData();
+  }
+}, [locationLoaded, fetchData]);
 
   return (
     <div
@@ -259,7 +229,6 @@ const Explore = () => {
 )}
 
       </div>
-
 
     </div>
   );
