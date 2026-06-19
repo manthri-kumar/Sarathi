@@ -7,9 +7,6 @@ import { useTranslation } from "react-i18next";
 
 import "../styles/layout.css";
 
-// Single source for the backend origin (matches the existing places call).
-const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
-
 const Explore = () => {
 
   const { t } = useTranslation();
@@ -75,9 +72,9 @@ const Explore = () => {
       try {
         const [placesRes, geoRes] = await Promise.all([
           fetch(
-  `${API_BASE}/api/places?lat=${lat}&lng=${lng}`),
+  `https://sarathi-backend-7u0y.onrender.com/api/places?lat=${lat}&lng=${lng}`),
           fetch(
-            `${API_BASE}/api/geocode/reverse?lat=${lat}&lng=${lng}`
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
           )
         ]);
 
@@ -88,7 +85,7 @@ const Explore = () => {
         setRestaurants(data.restaurants || []);
         setHotels(data.hotels || []);
 
-        const components = geoData.results?.[0]?.address_components || [];
+        const components = geoData.results[0]?.address_components || [];
         setLocationName(getLocationName(components));
 
         setLocationLoaded(true);

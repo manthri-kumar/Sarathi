@@ -1,8 +1,10 @@
 /* ═══════════════════════════════════════════════════════════
    Explore.css — Sarathi
-   Prefix: exp-
-   All classes scoped to the Explore page only.
-   No overlap with: dashboard, main-content, overlay, tabs
+   Selectors match Explore.jsx exactly:
+   .dashboard · .main-content · .overlay · .location-header ·
+   .tabs / .tabs button / .active · .card.blue · loading <h3>
+   Everything is scoped under .dashboard to avoid global bleed.
+   Import in Explore.jsx:  import "../styles/Explore.css";
    ═══════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
@@ -11,7 +13,7 @@
    PAGE SHELL
 ════════════════════════════════ */
 
-.exp-page {
+.dashboard {
   display: flex;
   min-height: 100vh;
   background: #020617;
@@ -20,11 +22,20 @@
   overflow-x: hidden;
 }
 
+.dashboard .main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-y: auto;
+  padding: 0 28px 48px;
+}
+
 /* ════════════════════════════════
-   SIDEBAR OVERLAY (mobile)
+   MOBILE SIDEBAR OVERLAY
 ════════════════════════════════ */
 
-.exp-sidebar-overlay {
+.dashboard .overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -39,70 +50,36 @@
 }
 
 /* ════════════════════════════════
-   MAIN CONTENT AREA
+   LOCATION HEADER  (locationName + showingResults)
 ════════════════════════════════ */
 
-.exp-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  /* Sidebar takes ~220px on desktop — handled by layout.css or sidebar itself */
-  overflow-y: auto;
-  padding-bottom: 48px;
-}
-
-/* ════════════════════════════════
-   INNER WRAPPER
-════════════════════════════════ */
-
-.exp-section-wrapper {
-  padding: 0 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-/* ════════════════════════════════
-   LOCATION HEADER
-════════════════════════════════ */
-
-.exp-location-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 28px 0 20px 0;
+.dashboard .location-header {
+  padding: 28px 0 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: 24px;
 }
 
-.exp-location-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.exp-location-title {
+.dashboard .location-header h2 {
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.03em;
-  line-height: 1;
+  line-height: 1.1;
 }
 
-.exp-location-subtitle {
-  margin: 0;
+.dashboard .location-header p {
+  margin: 6px 0 0;
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.45);
   font-weight: 400;
 }
 
 /* ════════════════════════════════
-   TAB BAR
+   TAB BAR  (.tabs > button, active state)
 ════════════════════════════════ */
 
-.exp-tabs {
+.dashboard .tabs {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -114,7 +91,7 @@
   width: fit-content;
 }
 
-.exp-tab {
+.dashboard .tabs button {
   position: relative;
   padding: 9px 22px;
   border-radius: 10px;
@@ -125,16 +102,16 @@
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
   white-space: nowrap;
 }
 
-.exp-tab:hover:not(.exp-tab--active) {
+.dashboard .tabs button:hover:not(.active) {
   color: rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.exp-tab--active {
+.dashboard .tabs button.active {
   background: linear-gradient(135deg, #16a34a, #22c55e);
   color: #ffffff;
   font-weight: 600;
@@ -143,115 +120,65 @@
 }
 
 /* ════════════════════════════════
-   ENABLE LOCATION STATE
+   ENABLE-LOCATION CARD  (.card.blue)
 ════════════════════════════════ */
 
-.exp-enable-location {
-  padding: 40px 28px;
+.dashboard .card.blue {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 6px;
   max-width: 560px;
-}
-
-.exp-enable-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.02em;
-}
-
-.exp-enable-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
   padding: 22px 24px;
   border-radius: 18px;
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
   border: 1px solid rgba(59, 130, 246, 0.3);
   cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
   transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1),
               box-shadow 0.25s ease;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
   outline: none;
 }
 
-.exp-enable-card:hover,
-.exp-enable-card:focus-visible {
+.dashboard .card.blue:hover,
+.dashboard .card.blue:focus-visible {
   transform: translateY(-4px);
   box-shadow: 0 16px 36px rgba(37, 99, 235, 0.4),
               0 0 0 1px rgba(99, 165, 255, 0.2);
 }
 
-.exp-enable-card-icon {
-  font-size: 2rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.exp-enable-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.exp-enable-card-heading {
+.dashboard .card.blue h3 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
 }
 
-.exp-enable-card-sub {
+.dashboard .card.blue p {
   margin: 0;
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.exp-enable-card-arrow {
-  font-size: 1.3rem;
   color: rgba(255, 255, 255, 0.75);
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
 }
 
-.exp-enable-card:hover .exp-enable-card-arrow {
-  transform: translateX(4px);
+/* The wrapper around the enable card holds the "enableLocation" heading */
+.dashboard .main-content > div > h2 {
+  margin: 0 0 18px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
 }
 
 /* ════════════════════════════════
-   LOADING STATE
+   LOADING TEXT  (the <h3>{t("loading")}</h3>)
 ════════════════════════════════ */
 
-.exp-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 80px 28px;
-}
-
-.exp-loading-spinner {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 3px solid rgba(34, 197, 94, 0.15);
-  border-top-color: #22c55e;
-  animation: expSpin 0.75s linear infinite;
-}
-
-@keyframes expSpin {
-  to { transform: rotate(360deg); }
-}
-
-.exp-loading-text {
+.dashboard .main-content > h3 {
   margin: 0;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.45);
-  font-weight: 400;
+  padding: 80px 0;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ════════════════════════════════
@@ -260,20 +187,14 @@
 
 /* Tablet */
 @media (max-width: 1024px) {
-  .exp-section-wrapper {
-    padding: 0 20px;
-  }
+  .dashboard .main-content { padding: 0 20px 40px; }
+  .dashboard .location-header h2 { font-size: 1.6rem; }
 
-  .exp-location-title {
-    font-size: 1.6rem;
-  }
-
-  .exp-tabs {
+  .dashboard .tabs {
     width: 100%;
     justify-content: stretch;
   }
-
-  .exp-tab {
+  .dashboard .tabs button {
     flex: 1;
     text-align: center;
   }
@@ -281,56 +202,35 @@
 
 /* Mobile */
 @media (max-width: 640px) {
-  .exp-section-wrapper {
-    padding: 0 14px;
-  }
+  .dashboard .main-content { padding: 0 14px 32px; }
 
-  .exp-location-header {
-    padding: 20px 0 16px 0;
+  .dashboard .location-header {
+    padding: 20px 0 16px;
     margin-bottom: 18px;
   }
+  .dashboard .location-header h2 { font-size: 1.3rem; }
+  .dashboard .location-header p { font-size: 0.78rem; }
 
-  .exp-location-title {
-    font-size: 1.3rem;
-  }
-
-  .exp-location-subtitle {
-    font-size: 0.78rem;
-  }
-
-  .exp-tabs {
+  .dashboard .tabs {
     border-radius: 12px;
     padding: 5px;
     gap: 4px;
   }
-
-  .exp-tab {
+  .dashboard .tabs button {
     padding: 8px 14px;
     font-size: 0.78rem;
     border-radius: 8px;
   }
 
-  .exp-enable-location {
-    padding: 28px 14px;
-  }
-
-  .exp-enable-title {
-    font-size: 1.25rem;
-  }
-
-  .exp-enable-card {
-    padding: 18px 18px;
-    gap: 14px;
-  }
-
-  .exp-enable-card-icon {
-    font-size: 1.6rem;
+  .dashboard .card.blue {
+    padding: 18px;
+    border-radius: 16px;
   }
 }
 
 /* Tiny */
 @media (max-width: 380px) {
-  .exp-tab {
+  .dashboard .tabs button {
     padding: 7px 10px;
     font-size: 0.72rem;
   }
