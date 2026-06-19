@@ -18,12 +18,32 @@ import {
   TempleCard,
   FoodCard,
   WeatherCard,
-  PlaceCard,
   ItineraryCard,
   BudgetExceededCard,
-  listStagger,
-  itemIn,
-} from "../Cards/cards";
+} from "../Cards/Cards";
+
+const listStagger = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemIn = {
+  hidden: {
+    opacity: 0,
+    y: 12,
+  },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+    },
+  },
+};
 
 const API_BASE =
   process.env.REACT_APP_API_URL ||
