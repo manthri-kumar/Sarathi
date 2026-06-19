@@ -1,5 +1,3 @@
-// client/src/hooks/useExploreSearch.js
-
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
@@ -59,7 +57,7 @@ export function useExploreSearch() {
 
         const data = await res.json();
 
-        // Backend returns array directly
+        // Backend returns array with {placeId, description}
         setSuggestions(Array.isArray(data) ? data : []);
 
         setError(null);
@@ -83,6 +81,15 @@ export function useExploreSearch() {
 
   /* ==================================
      RESOLVE CITY -> LAT LNG
+     
+     PRODUCTION FIX:
+     - Accepts description text from UI
+     - Finds matching placeId from suggestions array
+     - Calls /place-details endpoint with placeId
+     - Uses GOOGLE_PLACES_KEY (already working)
+     - Avoids REQUEST_DENIED from Geocoding API
+     
+     No UI changes needed - hook handles placeId extraction
   ================================== */
 
   const resolveAndSelect = useCallback(async (rawText) => {
@@ -90,15 +97,29 @@ export function useExploreSearch() {
 
     if (!q) return;
 
+    // Find matching suggestion with placeId
+    const matchingSuggestion = suggestions.find(
+      (s) => s.description === q
+    );
+
+    if (!matchingSuggestion || !matchingSuggestion.placeId) {
+      setError("Invalid selection. Please select from the suggestions.");
+      return;
+    }
+
+    const placeId = matchingSuggestion.placeId;
+
     setResolving(true);
     setError(null);
 
     try {
       const res = await fetch(
-        `${API_BASE}/api/geocode/location?q=${encodeURIComponent(q)}`
+        `${API_BASE}/api/geocode/place-details?placeId=${encodeURIComponent(
+          placeId
+        )}`
       );
 
-      if (res.status === 404) {
+      if (res.status === 400) {
         setError("Location not found");
         return;
       }
@@ -118,12 +139,12 @@ export function useExploreSearch() {
       setQuery(data.city);
       setSuggestions([]);
     } catch (err) {
-      console.error("Location Error:", err);
+      console.error("Location Resolution Error:", err);
       setError("Search failed. Try again.");
     } finally {
       setResolving(false);
     }
-  }, []);
+  }, [suggestions]);
 
   /* ==================================
      CLEAR

@@ -159,7 +159,100 @@ router.get("/suggest", async (req, res) => {
 });
 
 /* =========================
-CITY -> LAT LNG
+PLACE DETAILS -> LAT LNG
+(Uses placeId from autocomplete - PRODUCTION FIX)
+Uses GOOGLE_PLACES_KEY (already confirmed working)
+Avoids REQUEST_DENIED from Geocoding API
+========================= */
+
+router.get("/place-details", async (req, res) => {
+  const placeId = req.query.placeId;
+
+  if (!placeId) {
+    return res.status(400).json({
+      error: "placeId required",
+    });
+  }
+
+  if (!process.env.GOOGLE_PLACES_KEY) {
+    return res.status(500).json({
+      error: "GOOGLE_PLACES_KEY not configured",
+    });
+  }
+
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.ip;
+
+  if (rateLimited(ip)) {
+    return res.status(429).json({
+      error: "Too many requests",
+    });
+  }
+
+  const key = `place-details-${placeId}`;
+
+  const cached = cacheGet(key);
+
+  if (cached) {
+    return res.json(cached);
+  }
+
+  try {
+    const url =
+      "https://maps.googleapis.com/maps/api/place/details/json" +
+      `?place_id=${encodeURIComponent(placeId)}` +
+      `&fields=formatted_address,geometry,name` +
+      `&key=${process.env.GOOGLE_PLACES_KEY}`;
+
+    console.log("================================");
+    console.log("PLACE DETAILS LOOKUP:", placeId);
+    console.log("URL:", url);
+
+    const response = await fetch(url);
+
+    const data = await response.json();
+
+    console.log("GOOGLE STATUS:", data.status);
+
+    if (data.status !== "OK") {
+      console.log("GOOGLE ERROR:", data.error_message || data.status);
+      return res.status(400).json({
+        error: "Place details not found",
+        googleStatus: data.status,
+        googleMessage: data.error_message || null,
+      });
+    }
+
+    const result = data.result;
+
+    const responseData = {
+      city: result.formatted_address,
+      lat: result.geometry.location.lat,
+      lng: result.geometry.location.lng,
+    };
+
+    console.log("RESOLVED:", responseData);
+    console.log("================================");
+
+    cacheSet(key, responseData);
+
+    return res.json(responseData);
+
+  } catch (err) {
+    console.error("[place-details]", err);
+
+    return res.status(500).json({
+      error: "Failed to get place details",
+    });
+  }
+});
+
+/* =========================
+CITY -> LAT LNG (LEGACY)
+Kept for backward compatibility
+Note: Returns REQUEST_DENIED if GOOGLE_GEO_KEY lacks Geocoding permissions
+Consider using /place-details endpoint with placeId instead
 ========================= */
 
 router.get("/location", async (req, res) => {
