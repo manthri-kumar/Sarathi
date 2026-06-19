@@ -1,4 +1,3 @@
-
 // client/src/context/ExploreSearchContext.jsx
 import React, { createContext, useContext } from "react";
 import { useExploreSearch } from "../hooks/useExploreSearch";

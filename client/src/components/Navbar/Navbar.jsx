@@ -14,18 +14,34 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 
 // Import new dropdown components
 import InboxDropdown from "./InboxDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 
+// Explore search context (drives city search only on the Explore route)
+import { useExploreSearchContext } from "../../pages/ExploreSearchContext";
+
 const Navbar = ({ toggleSidebar }) => {
   
   const { i18n } = useTranslation();
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Active only on the Explore route; elsewhere the bar keeps its feature search.
+  const onExplore = location.pathname.startsWith("/explore");
+
+  const {
+    query,
+    setQuery,
+    suggestions,
+    resolveAndSelect,
+  } = useExploreSearchContext();
+
+  const [activeIdx, setActiveIdx] = useState(-1);
 
 
   const [showLanguages, setShowLanguages] = useState(false);
@@ -88,6 +104,41 @@ const Navbar = ({ toggleSidebar }) => {
     setShowProfileMenu(false);
   };
 
+  // ---- Search bar bindings: city search on Explore, feature search elsewhere
+  const searchValue = onExplore ? query : search;
+
+  const onSearchChange = (e) => {
+    const v = e.target.value;
+    if (onExplore) {
+      setQuery(v);
+      setActiveIdx(-1);
+    } else {
+      setSearch(v);
+    }
+  };
+
+  const onSearchKeyDown = (e) => {
+    if (!onExplore) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, -1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const pick =
+        activeIdx >= 0 ? suggestions[activeIdx]?.description : query;
+      resolveAndSelect(pick);
+      setActiveIdx(-1);
+    }
+  };
+
+  const onSuggestionClick = (description) => {
+    resolveAndSelect(description);
+    setActiveIdx(-1);
+  };
+
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -118,24 +169,39 @@ const Navbar = ({ toggleSidebar }) => {
         <div className="search-wrapper">
           <Search size={18} />
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search Features..."
+            value={searchValue}
+            onChange={onSearchChange}
+            onKeyDown={onSearchKeyDown}
+            placeholder={onExplore ? "Search city..." : "Search Features..."}
           />
 
-          {filteredItems.length > 0 && (
-            <div className="search-dropdown">
-              {filteredItems.map((item) => (
-                <div
-                  key={item.route}
-                  className="search-item"
-                  onClick={() => handleNavigate(item.route)}
-                >
-                  {item.name}
+          {onExplore
+            ? suggestions.length > 0 && (
+                <div className="search-dropdown">
+                  {suggestions.map((s, i) => (
+                    <div
+                      key={s.placeId}
+                      className={`search-item ${i === activeIdx ? "active" : ""}`}
+                      onClick={() => onSuggestionClick(s.description)}
+                    >
+                      {s.description}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )
+            : filteredItems.length > 0 && (
+                <div className="search-dropdown">
+                  {filteredItems.map((item) => (
+                    <div
+                      key={item.route}
+                      className="search-item"
+                      onClick={() => handleNavigate(item.route)}
+                    >
+                      {item.name}
+                    </div>
+                  ))}
+                </div>
+              )}
         </div>
 
         <div className="nav-right">
@@ -451,24 +517,39 @@ const Navbar = ({ toggleSidebar }) => {
         <Search size={18} />
         <input
           type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search Features..."
+          value={searchValue}
+          onChange={onSearchChange}
+          onKeyDown={onSearchKeyDown}
+          placeholder={onExplore ? "Search city..." : "Search Features..."}
         />
 
-        {filteredItems.length > 0 && (
-          <div className="search-dropdown">
-            {filteredItems.map((item) => (
-              <div
-                key={item.route}
-                className="search-item"
-                onClick={() => handleNavigate(item.route)}
-              >
-                {item.name}
+        {onExplore
+          ? suggestions.length > 0 && (
+              <div className="search-dropdown">
+                {suggestions.map((s, i) => (
+                  <div
+                    key={s.placeId}
+                    className={`search-item ${i === activeIdx ? "active" : ""}`}
+                    onClick={() => onSuggestionClick(s.description)}
+                  >
+                    {s.description}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )
+          : filteredItems.length > 0 && (
+              <div className="search-dropdown">
+                {filteredItems.map((item) => (
+                  <div
+                    key={item.route}
+                    className="search-item"
+                    onClick={() => handleNavigate(item.route)}
+                  >
+                    {item.name}
+                  </div>
+                ))}
+              </div>
+            )}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar/Navbar";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
 
 import { useTranslation } from "react-i18next";
-import { useExploreSearchContext } from "../context/ExploreSearchContext";
+import { useExploreSearchContext } from "./ExploreSearchContext";
 
 import "./Explore.css";
 
