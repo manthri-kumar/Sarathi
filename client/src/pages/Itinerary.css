@@ -568,72 +568,263 @@ body {
 }
 
 /* ==========================================================================
-   📱 ADAPTIVE MEDIA BREAKPOINTS (MOBILE, TABLET, LAPTOP)
+   RESPONSIVE BREAKPOINT SYSTEM
    ========================================================================== */
 
-/* Tablet & Intermediate Views (1024px and downward) */
-@media (max-width: 1024px) {
-  .workspace-grid {
-    grid-template-columns: 1fr; /* Switch to single columnar layout workspace cascade */
-    gap: 24px;
+/* =====================================================
+   LARGE DESKTOP (1440px+)
+===================================================== */
+
+@media (min-width: 1440px) {
+
+  .main-viewport {
+    max-width: 1700px;
+    padding: 32px;
   }
-  
+
+  .workspace-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 32px;
+  }
+
   .panel-card-container {
-    max-height: 600px;
+    max-height: 850px;
+  }
+
+  .primary-title {
+    font-size: 38px;
   }
 }
 
-/* Phone Layout Overhaul Engine (768px and downward) */
-@media (max-width: 768px) {
+/* =====================================================
+   LAPTOP (1280px - 1439px)
+===================================================== */
+
+@media (min-width: 1280px) and (max-width: 1439px) {
+
+  .workspace-grid {
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 24px;
+  }
+
+  .panel-card-container {
+    max-height: 750px;
+  }
+}
+
+/* =====================================================
+   SMALL LAPTOP (1024px - 1279px)
+===================================================== */
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+
+  .main-viewport {
+    padding: 20px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .panel-card-container {
+    max-height: none;
+  }
+
+  .planner-panel {
+    display: flex !important;
+  }
+
+  .search-wrapper-card {
+    width: 100%;
+  }
+}
+
+/* =====================================================
+   TABLET LANDSCAPE
+   iPad Pro / iPad Air Landscape
+===================================================== */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+
+  .main-viewport {
+    padding: 18px;
+  }
+
+  .itinerary-container {
+    width: 100%;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .panel-card-container {
+    max-height: none;
+  }
+
+  .planner-panel {
+    display: flex !important;
+  }
+
+  .desktop-form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .search-wrapper-card {
+    width: 100%;
+  }
+
+  .place-thumb {
+    width: 75px;
+    height: 75px;
+  }
+
+  .primary-title {
+    font-size: 30px;
+  }
+
+  .panel-header h2 {
+    font-size: 18px;
+  }
+}
+
+/* =====================================================
+   TABLET PORTRAIT
+===================================================== */
+
+@media (min-width: 600px) and (max-width: 767px) {
+
   .main-viewport {
     padding: 16px;
   }
-  
-  .primary-title {
-    font-size: 26px;
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
-  /* Completely hide the desktop panel as per native mobile mock references */
+  .planner-panel {
+    display: flex !important;
+  }
+
+  .panel-card-container {
+    max-height: none;
+  }
+
+  .desktop-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-wrapper-card {
+    flex-direction: row;
+  }
+
+  .place-thumb {
+    width: 72px;
+    height: 72px;
+  }
+
+  .primary-title {
+    font-size: 28px;
+  }
+
+  .final-actions-row {
+    flex-direction: column;
+  }
+
+  .final-actions-row button {
+    width: 100%;
+  }
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 599px) {
+
+  .main-viewport {
+    padding: 14px;
+  }
+
+  .primary-title {
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  .sub-title {
+    font-size: 13px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Hide desktop planner on mobile */
   .planner-panel {
     display: none !important;
   }
 
   .suggested-panel {
-    max-height: none; /* Expand fluidly downstream */
+    padding: 16px;
+    max-height: none;
+  }
+
+  .panel-card-container {
     padding: 16px;
   }
 
-  .mobile-chevron {
-    display: block; /* Reveal dropdown tracking hooks */
+  .panel-header h2 {
+    font-size: 16px;
   }
 
-  /* Form layouts within item block overrides */
-  .form-header-mobile {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-
-  .form-header-mobile h4 {
-    margin: 0;
-    font-size: 14px;
-    color: var(--accent-green);
-  }
-
-  .mobile-remove-txt {
-    background: transparent;
-    border: none;
-    color: #ef4444;
+  .panel-header p {
     font-size: 12px;
-    cursor: pointer;
+  }
+
+  .place-thumb {
+    width: 65px;
+    height: 65px;
+  }
+
+  .card-main-row {
+    gap: 10px;
+  }
+
+  .place-details-box h3 {
+    font-size: 14px;
+  }
+
+  .address-text {
+    font-size: 11px;
+  }
+
+  .mobile-chevron {
+    display: block;
+  }
+
+  .search-wrapper-card {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .search-wrapper-card input {
+    font-size: 14px;
+  }
+
+  .premium-search-btn {
+    min-width: 90px;
+    padding: 10px 14px;
+    font-size: 13px;
   }
 
   .inputs-row {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 12px;
   }
 
   .input-field {
@@ -644,63 +835,74 @@ body {
 
   .input-field label {
     font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     color: var(--text-secondary);
   }
 
-  .search-wrapper-card {
-    flex-direction: row;
-    padding: 8px 12px;
+  .form-header-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
   }
-  
-  .premium-search-btn {
-    padding: 10px 20px;
+
+  .form-header-mobile h4 {
+    font-size: 14px;
+    color: var(--accent-green);
+    margin: 0;
+  }
+
+  .mobile-remove-txt {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 12px;
   }
 
   .final-actions-row {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .final-actions-row button {
     width: 100%;
   }
+
+  .premium-final-view {
+    padding: 18px;
+  }
+
+  .summary-row-card {
+    padding: 14px;
+  }
 }
 
-/* Webkit Native Field Custom Overrides */
+/* =====================================================
+   FIXES
+===================================================== */
+
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.5);
 }
 
-.empty-state-view-fallback {
-  text-align: center;
-  padding: 60px 20px;
-  border: 2px dashed rgba(255, 255, 255, 0.04);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.01);
-  margin: 10px 0;
-}
-
-.empty-icon-cloud {
-  font-size: 36px;
-  margin-bottom: 12px;
-  opacity: 0.4;
-}
-
-.empty-state-view-fallback p {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-}
-
-.empty-state-view-fallback span {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.4;
+img {
+  max-width: 100%;
   display: block;
-  max-width: 280px;
-  margin: 0 auto;
+}
+
+.workspace-grid,
+.panel-card-container,
+.search-wrapper-card {
+  min-width: 0;
+}
+
+.place-details-box {
+  min-width: 0;
+}
+
+.place-details-box h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

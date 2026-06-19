@@ -5,7 +5,7 @@ const express  = require("express");
 const dotenv   = require("dotenv");
 const cors     = require("cors");
 const connectDB = require("./config/db");
-const geocodeRoutes = require("./routes/geocode");
+import geocodeRouter from "./routes/geocode.js";
 
 
 dotenv.config();
