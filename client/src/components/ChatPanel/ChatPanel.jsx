@@ -13,12 +13,7 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import "./ChatPanel.css";
-import {
-  TempleCard,
-  FoodCard,
-  ItineraryCard,
-  BudgetExceededCard,
-} from "../Cards/Cards";
+
 
 const listStagger = {
   hidden: {},
