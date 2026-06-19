@@ -1,63 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { X, Search, Archive, Pin, Trash2, Settings } from "lucide-react";
 import "./InboxDropdown.css";
+import { useInbox } from "../../hooks/useInbox";
 
 // ============================================================
-// MOCK DATA - DEFINED OUTSIDE COMPONENT
+// CATEGORY TABS (presentation only)
 // ============================================================
-
-const mockMessages = [
-  {
-    id: "msg_1",
-    icon: "🧠",
-    title: "Sarathi created a 3-day Hyderabad itinerary",
-    description: "Your AI-generated trip includes temples, cultural sites, and hidden gems",
-    category: "ai_recommendations",
-    isRead: false,
-    timestamp: "2 minutes ago",
-    createdAt: new Date(Date.now() - 2 * 60000),
-  },
-  {
-    id: "msg_2",
-    icon: "🛕",
-    title: "Tirumala Brahmotsavam starts in 5 days",
-    description: "Get ready for one of the year's most important temple festivals",
-    category: "spiritual_alerts",
-    isRead: false,
-    timestamp: "1 hour ago",
-    createdAt: new Date(Date.now() - 60 * 60000),
-  },
-  {
-    id: "msg_3",
-    icon: "🌧",
-    title: "Rain expected during your Kerala trip",
-    description: "Heavy rainfall expected next week. Plan indoor activities.",
-    category: "travel_updates",
-    isRead: true,
-    timestamp: "3 hours ago",
-    createdAt: new Date(Date.now() - 3 * 60 * 60000),
-  },
-  {
-    id: "msg_4",
-    icon: "💰",
-    title: "Flights to Hyderabad are now cheaper",
-    description: "Price drop alert: ₹8,500 → ₹4,200. Limited seats available.",
-    category: "travel_updates",
-    isRead: true,
-    timestamp: "6 hours ago",
-    createdAt: new Date(Date.now() - 6 * 60 * 60000),
-  },
-  {
-    id: "msg_5",
-    icon: "❤️",
-    title: "New temple added near Visakhapatnam",
-    description: "Discover Sri Veerabhadra Temple with stunning riverside location",
-    category: "saved_places",
-    isRead: true,
-    timestamp: "1 day ago",
-    createdAt: new Date(Date.now() - 24 * 60 * 60000),
-  },
-];
 
 const categories = [
   { id: "all", label: "All" },
@@ -74,26 +22,20 @@ const categories = [
 
 const InboxDropdown = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
-  const [messages, setMessages] = useState([]);
+
+  const {
+    messages,
+    loading: isLoading,
+    unreadCount,
+    toggleRead,
+    togglePin,
+    archive,
+    remove,
+    clearAll,
+  } = useInbox();
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Load messages from mock data on mount or when opening
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true);
-      // Simulate API call with 300ms delay
-      const timer = setTimeout(() => {
-        setMessages([...mockMessages]);
-        const unread = mockMessages.filter((m) => !m.isRead).length;
-        setUnreadCount(unread);
-        setIsLoading(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
 
   // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
@@ -125,47 +67,34 @@ const InboxDropdown = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   // Filter messages by category and search query
-  const filteredMessages = messages.filter((msg) => {
-    const matchesCategory =
-      selectedCategory === "all" || msg.category === selectedCategory;
-    const matchesSearch =
-      searchQuery === "" ||
-      msg.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      msg.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredMessages = useMemo(
+    () =>
+      messages.filter((msg) => {
+        const matchesCategory =
+          selectedCategory === "all" || msg.category === selectedCategory;
+        const matchesSearch =
+          searchQuery === "" ||
+          msg.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          msg.description.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      }),
+    [messages, selectedCategory, searchQuery]
+  );
 
   // Handle message actions
-  const handleArchiveMessage = (id) => {
-    setMessages(messages.filter((m) => m.id !== id));
-  };
+  const handleArchiveMessage = useCallback((id) => archive(id), [archive]);
 
-  const handleDeleteMessage = (id) => {
-    setMessages(messages.filter((m) => m.id !== id));
-  };
+  const handleDeleteMessage = useCallback((id) => remove(id), [remove]);
 
-  const handlePinMessage = (id) => {
-    const updatedMessages = messages.map((m) =>
-      m.id === id ? { ...m, isPinned: !m.isPinned } : m
-    );
-    setMessages(updatedMessages);
-  };
+  const handlePinMessage = useCallback((id) => togglePin(id), [togglePin]);
 
-  const handleMarkAsRead = (id) => {
-    const updatedMessages = messages.map((m) =>
-      m.id === id ? { ...m, isRead: !m.isRead } : m
-    );
-    setMessages(updatedMessages);
-    const newUnreadCount = updatedMessages.filter((m) => !m.isRead).length;
-    setUnreadCount(newUnreadCount);
-  };
+  const handleMarkAsRead = useCallback((id) => toggleRead(id), [toggleRead]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     if (window.confirm("Clear all messages? This cannot be undone.")) {
-      setMessages([]);
-      setUnreadCount(0);
+      clearAll();
     }
-  };
+  }, [clearAll]);
 
   if (!isOpen) return null;
 
@@ -271,13 +200,13 @@ const InboxDropdown = ({ isOpen, onClose }) => {
 // MESSAGE CARD COMPONENT
 // ============================================================
 
-const MessageCard = ({
+const MessageCard = React.memo(function MessageCard({
   message,
   onArchive,
   onDelete,
   onPin,
   onRead,
-}) => {
+}) {
   const [showActions, setShowActions] = useState(false);
 
   return (
@@ -336,6 +265,6 @@ const MessageCard = ({
       )}
     </div>
   );
-};
+});
 
 export default InboxDropdown;

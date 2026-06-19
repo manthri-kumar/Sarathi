@@ -1,80 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { X, Search, Settings, Check } from "lucide-react";
 import "./NotificationDropdown.css";
+import { useNotifications } from "../../hooks/useNotifications";
 
 /* =========================================================
-   MOCK DATA (OUTSIDE COMPONENT)
+   CATEGORY TABS (presentation only)
 ========================================================= */
-const mockNotifications = [
-  {
-    id: "notif_1",
-    icon: "🛕",
-    category: "temple",
-    priority: "high",
-    title: "Temple Closes in 2 Hours",
-    message: "Tirumala Venkateswara closes at 6 PM. Avoid rush hour.",
-    isRead: false,
-    timestamp: "15 minutes ago",
-    actionUrl: "/temples/tirumala",
-    actionLabel: "View Temple",
-    createdAt: new Date(Date.now() - 15 * 60000),
-  },
-  {
-    id: "notif_2",
-    icon: "🌧",
-    category: "weather",
-    priority: "high",
-    title: "Heavy Rain Alert - Kochi",
-    message:
-      "Your planned temple visit may be affected. Plan covered temples.",
-    isRead: false,
-    timestamp: "45 minutes ago",
-    actionUrl: "/weather/kochi",
-    actionLabel: "View Weather",
-    createdAt: new Date(Date.now() - 45 * 60000),
-  },
-  {
-    id: "notif_3",
-    icon: "🎉",
-    category: "events",
-    priority: "medium",
-    title: "Festival Begins Tomorrow",
-    message: "Diwali celebrations start tomorrow across all temples.",
-    isRead: false,
-    timestamp: "2 hours ago",
-    actionUrl: "/events/diwali",
-    actionLabel: "View Festival",
-    createdAt: new Date(Date.now() - 2 * 60 * 60000),
-  },
-  {
-    id: "notif_4",
-    icon: "✈️",
-    category: "travel",
-    priority: "medium",
-    title: "New Destination Discovered",
-    message: "A new spiritual site discovered 45 km from you.",
-    isRead: true,
-    timestamp: "5 hours ago",
-    actionUrl: "/explore",
-    actionLabel: "Explore",
-    createdAt: new Date(Date.now() - 5 * 60 * 60000),
-  },
-  {
-    id: "notif_5",
-    icon: "🧠",
-    category: "ai",
-    priority: "low",
-    title: "Day Planner Ready",
-    message:
-      "Your personalized day plan for tomorrow is ready to review.",
-    isRead: true,
-    timestamp: "8 hours ago",
-    actionUrl: "/day-planner",
-    actionLabel: "View Plan",
-    createdAt: new Date(Date.now() - 8 * 60 * 60000),
-  },
-];
-
 const categories = [
   { id: "all", label: "All", color: "#22c55e" },
   { id: "travel", label: "Travel", color: "#3b82f6" },
@@ -89,28 +20,19 @@ const categories = [
 const NotificationDropdown = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
 
-  const [notifications, setNotifications] = useState([]);
+  const {
+    notifications,
+    loading: isLoading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    dismiss,
+    clearAll,
+  } = useNotifications();
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Load notifications
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true);
-
-      const timer = setTimeout(() => {
-        setNotifications([...mockNotifications]);
-        setUnreadCount(
-          mockNotifications.filter((n) => !n.isRead).length
-        );
-        setIsLoading(false);
-      }, 300);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -141,52 +63,41 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   // Filter notifications by category and search
-  const filteredNotifications = notifications.filter((notif) => {
-    const matchesCategory =
-      selectedCategory === "all" || notif.category === selectedCategory;
-    const matchesSearch =
-      searchQuery === "" ||
-      notif.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      notif.message.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredNotifications = useMemo(
+    () =>
+      notifications.filter((notif) => {
+        const matchesCategory =
+          selectedCategory === "all" || notif.category === selectedCategory;
+        const matchesSearch =
+          searchQuery === "" ||
+          notif.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          notif.message.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      }),
+    [notifications, selectedCategory, searchQuery]
+  );
 
   // Handle notification actions
-  const handleMarkAsRead = (id) => {
-    const notification = notifications.find((n) => n.id === id);
-    if (notification && !notification.isRead) {
-      notification.isRead = true;
-      setNotifications([...notifications]);
-      setUnreadCount(Math.max(0, unreadCount - 1));
-    }
-  };
+  const handleMarkAsRead = useCallback((id) => markAsRead(id), [markAsRead]);
 
-  const handleDismiss = (id) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
-  };
+  const handleDismiss = useCallback((id) => dismiss(id), [dismiss]);
 
-  const handleMarkAllRead = () => {
-    setNotifications(
-      notifications.map((n) => ({
-        ...n,
-        isRead: true,
-      }))
-    );
-    setUnreadCount(0);
-  };
+  const handleMarkAllRead = useCallback(() => markAllAsRead(), [markAllAsRead]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     if (window.confirm("Clear all notifications? This cannot be undone.")) {
-      setNotifications([]);
-      setUnreadCount(0);
+      clearAll();
     }
-  };
+  }, [clearAll]);
 
-  const handleNotificationClick = (notification) => {
-    handleMarkAsRead(notification.id);
-    // In real app, would navigate to notification.actionUrl
-    console.log("Navigate to:", notification.actionUrl);
-  };
+  const handleNotificationClick = useCallback(
+    (notification) => {
+      handleMarkAsRead(notification.id);
+      // In real app, would navigate to notification.actionUrl
+      console.log("Navigate to:", notification.actionUrl);
+    },
+    [handleMarkAsRead]
+  );
 
   if (!isOpen) return null;
 
@@ -294,12 +205,12 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
 };
 
 // NotificationCard Component
-const NotificationCard = ({
+const NotificationCard = React.memo(function NotificationCard({
   notification,
   onMarkAsRead,
   onDismiss,
   onClick,
-}) => {
+}) {
   return (
     <div
       className={`notification-card ${
@@ -349,6 +260,6 @@ const NotificationCard = ({
       </button>
     </div>
   );
-};
+});
 
 export default NotificationDropdown;
