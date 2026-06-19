@@ -17,8 +17,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 // Import new dropdown components
-import InboxDropdown from "./navbar/InboxDropdown";
-import NotificationDropdown from "./navbar/NotificationDropdown";
+import InboxDropdown from "./Navbar/InboxDropdown";
+import NotificationDropdown from "./Navbar/NotificationDropdown";
 
 const Navbar = ({ toggleSidebar }) => {
   const { i18n } = useTranslation();
