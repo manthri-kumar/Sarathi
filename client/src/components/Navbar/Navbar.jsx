@@ -31,12 +31,13 @@ const Navbar = ({ toggleSidebar }) => {
   // Active only on the Explore route; elsewhere the bar keeps its feature search.
   const onExplore = location.pathname.startsWith("/explore");
 
-  const {
-    query,
-    setQuery,
-    suggestions,
-    resolveAndSelect,
-  } = useExploreSearchContext();
+ const exploreContext = useExploreSearchContext() || {};
+
+const query = exploreContext.query || "";
+const setQuery = exploreContext.setQuery || (() => {});
+const suggestions = exploreContext.suggestions || [];
+const resolveAndSelect =
+  exploreContext.resolveAndSelect || (() => {});
 
   const [activeIdx, setActiveIdx] = useState(-1);
   const [showLanguages, setShowLanguages] = useState(false);
@@ -172,7 +173,7 @@ const Navbar = ({ toggleSidebar }) => {
           />
 
           {onExplore
-            ? suggestions.length > 0 && (
+            ? suggestions?.length > 0 && (
                 <div className="search-dropdown">
                   {suggestions.map((s, i) => (
                     <div
@@ -520,9 +521,9 @@ const Navbar = ({ toggleSidebar }) => {
         />
 
         {onExplore
-          ? suggestions.length > 0 && (
+  ? suggestions?.length > 0 && (
               <div className="search-dropdown">
-                {suggestions.map((s, i) => (
+                {(suggestions || []).map((s, i) => (
                   <div
                     key={s.placeId}
                     className={`search-item ${i === activeIdx ? "active" : ""}`}
