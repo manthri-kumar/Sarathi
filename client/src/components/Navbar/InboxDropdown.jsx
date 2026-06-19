@@ -322,6 +322,7 @@ const MessageCard = ({
       )}
     </div>
   );
+  
 };
 
 export default InboxDropdown;
