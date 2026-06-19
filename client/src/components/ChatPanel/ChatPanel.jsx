@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./ChatPanel.css";
 
 const API_BASE =
@@ -8,13 +8,19 @@ const API_BASE =
 const ChatPanel = ({ closeChat, templeContext = null }) => {
   const isTempleMode = !!templeContext;
 
-  const getInitialMessage = () =>
-    isTempleMode
-      ? {
-          text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`,
-          sender: "bot",
-        }
-      : { text: "Hi 👋 I'm Sarathi AI. Ask me anything about travel, temples, food, weather, and more!", sender: "bot" };
+  const getInitialMessage = useCallback(
+    () =>
+      isTempleMode
+        ? {
+            text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`,
+            sender: "bot",
+          }
+        : {
+            text: "Hi 👋 I'm Sarathi AI. Ask me anything about travel, temples, food, weather, and more!",
+            sender: "bot",
+          },
+    [isTempleMode, templeContext]
+  );
 
   const [messages, setMessages] = useState([getInitialMessage()]);
   const [input, setInput] = useState("");
@@ -26,7 +32,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     setMessages([getInitialMessage()]);
     setInput("");
     setShowQuickActions(true);
-  }, [templeContext?.name]);
+  }, [getInitialMessage]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,7 +112,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         setMessages((prev) => [
           ...prev,
           {
-            text: data.reply || "I couldn't retrieve a response. Please try again.",
+            text:
+              data.reply ||
+              "I couldn't retrieve a response. Please try again.",
             sender: "bot",
           },
         ]);
@@ -122,12 +130,21 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         } else if (data.type === "itinerary") {
           setMessages((prev) => [
             ...prev,
-            { type: "itinerary", budget: data.budget, data: data.data, sender: "bot" },
+            {
+              type: "itinerary",
+              budget: data.budget,
+              data: data.data,
+              sender: "bot",
+            },
           ]);
         } else if (data.type === "budgetExceeded") {
           setMessages((prev) => [
             ...prev,
-            { type: "budgetExceeded", budgetData: data.budgetData, sender: "bot" },
+            {
+              type: "budgetExceeded",
+              budgetData: data.budgetData,
+              sender: "bot",
+            },
           ]);
         } else {
           setMessages((prev) => [
@@ -163,14 +180,16 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     }
   };
 
-  const premiumActions = isTempleMode ? [] : [
-    { icon: "🛕", label: "Temples", action: "nearby temples" },
-    { icon: "🌦", label: "Weather", action: "weather forecast" },
-    { icon: "🗺", label: "2 Day Trip", action: "plan 2 day trip" },
-    { icon: "🍽", label: "Best Food", action: "best local food" },
-    { icon: "🏨", label: "Hotels", action: "hotels nearby" },
-    { icon: "🎉", label: "Festivals", action: "upcoming festivals" },
-  ];
+  const premiumActions = isTempleMode
+    ? []
+    : [
+        { icon: "🛕", label: "Temples", action: "nearby temples" },
+        { icon: "🌦", label: "Weather", action: "weather forecast" },
+        { icon: "🗺", label: "2 Day Trip", action: "plan 2 day trip" },
+        { icon: "🍽", label: "Best Food", action: "best local food" },
+        { icon: "🏨", label: "Hotels", action: "hotels nearby" },
+        { icon: "🎉", label: "Festivals", action: "upcoming festivals" },
+      ];
 
   const templeSuggestions = [
     "What is special about this temple?",
@@ -201,7 +220,11 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             )}
           </div>
         </div>
-        <button className="chat-close-btn" onClick={closeChat} aria-label="Close">
+        <button
+          className="chat-close-btn"
+          onClick={closeChat}
+          aria-label="Close"
+        >
           ✕
         </button>
       </div>
@@ -218,7 +241,11 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
             {/* Text Message */}
             {(!msg.type || msg.type === undefined) && msg.text && (
-              <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
+              <div
+                className={`chat-bubble ${
+                  msg.isError ? "chat-bubble-error" : ""
+                }`}
+              >
                 {msg.text.split("\n").map((line, j) => (
                   <React.Fragment key={j}>
                     {line}
@@ -250,9 +277,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                     <h4>{msg.current.city}</h4>
                     <p>{msg.current.condition}</p>
                   </div>
-                  <div className="weather-temp">
-                    {msg.current.temp}°C
-                  </div>
+                  <div className="weather-temp">{msg.current.temp}°C</div>
                 </div>
                 <div className="weather-details">
                   <div className="weather-stat">
@@ -268,11 +293,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                   <div className="weather-forecast">
                     <div className="forecast-day">
                       <span>Today</span>
-                      <p>{msg.forecast.today.icon} {msg.forecast.today.high}° / {msg.forecast.today.low}°</p>
+                      <p>
+                        {msg.forecast.today.icon} {msg.forecast.today.high}° /{" "}
+                        {msg.forecast.today.low}°
+                      </p>
                     </div>
                     <div className="forecast-day">
                       <span>Tomorrow</span>
-                      <p>{msg.forecast.tomorrow.icon} {msg.forecast.tomorrow.high}° / {msg.forecast.tomorrow.low}°</p>
+                      <p>
+                        {msg.forecast.tomorrow.icon}{" "}
+                        {msg.forecast.tomorrow.high}° /{" "}
+                        {msg.forecast.tomorrow.low}°
+                      </p>
                     </div>
                   </div>
                 )}
@@ -347,28 +379,63 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 <h3>⚠️ Budget Exceeded</h3>
                 <p>The estimated trip cost exceeds your budget.</p>
                 <div className="budget-breakdown">
-                  <div className="budget-line"><strong>🏨 Hotel</strong></div>
-                  <div className="budget-subline">₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days × {msg.budgetData.roomsNeeded} rooms</div>
-                  <div className="budget-value">₹{msg.budgetData.hotelCost?.toLocaleString()}</div>
+                  <div className="budget-line">
+                    <strong>🏨 Hotel</strong>
+                  </div>
+                  <div className="budget-subline">
+                    ₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days ×{" "}
+                    {msg.budgetData.roomsNeeded} rooms
+                  </div>
+                  <div className="budget-value">
+                    ₹{msg.budgetData.hotelCost?.toLocaleString()}
+                  </div>
                   <hr />
-                  <div className="budget-line"><strong>🍽 Food</strong></div>
-                  <div className="budget-subline">₹{msg.budgetData.foodRate} × {msg.budgetData.travellers} travelers × {msg.budgetData.days} days</div>
-                  <div className="budget-value">₹{msg.budgetData.foodCost?.toLocaleString()}</div>
+                  <div className="budget-line">
+                    <strong>🍽 Food</strong>
+                  </div>
+                  <div className="budget-subline">
+                    ₹{msg.budgetData.foodRate} × {msg.budgetData.travellers}{" "}
+                    travelers × {msg.budgetData.days} days
+                  </div>
+                  <div className="budget-value">
+                    ₹{msg.budgetData.foodCost?.toLocaleString()}
+                  </div>
                   <hr />
-                  <div className="budget-line"><strong>🚆 Transport</strong></div>
-                  <div className="budget-subline">₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}</div>
-                  <div className="budget-value">₹{msg.budgetData.transportCost?.toLocaleString()}</div>
+                  <div className="budget-line">
+                    <strong>🚆 Transport</strong>
+                  </div>
+                  <div className="budget-subline">
+                    ₹{msg.budgetData.transportRate} ×{" "}
+                    {msg.budgetData.travellers}
+                  </div>
+                  <div className="budget-value">
+                    ₹{msg.budgetData.transportCost?.toLocaleString()}
+                  </div>
                   <hr />
-                  <div className="budget-line"><strong>🎟 Activities</strong></div>
-                  <div className="budget-value">₹{msg.budgetData.activitiesCost?.toLocaleString()}</div>
+                  <div className="budget-line">
+                    <strong>🎟 Activities</strong>
+                  </div>
+                  <div className="budget-value">
+                    ₹{msg.budgetData.activitiesCost?.toLocaleString()}
+                  </div>
                   <hr />
-                  <div className="budget-total">Budget: ₹{msg.budgetData.budget?.toLocaleString()}</div>
-                  <div className="budget-total">Required: ₹{msg.budgetData.totalCost?.toLocaleString()}</div>
-                  <div className="budget-short">Need Extra: ₹{msg.budgetData.shortBy?.toLocaleString()}</div>
+                  <div className="budget-total">
+                    Budget: ₹{msg.budgetData.budget?.toLocaleString()}
+                  </div>
+                  <div className="budget-total">
+                    Required: ₹{msg.budgetData.totalCost?.toLocaleString()}
+                  </div>
+                  <div className="budget-short">
+                    Need Extra: ₹{msg.budgetData.shortBy?.toLocaleString()}
+                  </div>
                 </div>
                 <div className="budget-actions">
-                  <button onClick={() => sendMessage("update budget")}>Update Budget</button>
-                  <button onClick={() => sendMessage("change plan")}>Change Plan</button>
+                  <button onClick={() => sendMessage("update budget")}>
+                    Update Budget
+                  </button>
+                  <button onClick={() => sendMessage("change plan")}>
+                    Change Plan
+                  </button>
                 </div>
               </div>
             )}
@@ -379,7 +446,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           <div className="chat-row bot">
             <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>
             <div className="chat-typing">
-              <span /><span /><span />
+              <span />
+              <span />
+              <span />
             </div>
           </div>
         )}
@@ -422,14 +491,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 💬 Quick Questions
               </span>
               <span
-                className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}
+                className={`chat-quick-toggle-arrow ${
+                  showQuickActions ? "open" : ""
+                }`}
               >
                 ▲
               </span>
             </button>
 
             <div
-              className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
+              className={`chat-suggestions-collapse ${
+                showQuickActions ? "expanded" : "collapsed"
+              }`}
               aria-hidden={!showQuickActions}
             >
               <div className="chat-suggestions">
@@ -459,7 +532,11 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             onKeyDown={handleKeyDown}
             placeholder={
               isTempleMode
-                ? `Ask about ${templeContext.name.length > 22 ? templeContext.name.substring(0, 22) + "…" : templeContext.name}…`
+                ? `Ask about ${
+                    templeContext.name.length > 22
+                      ? templeContext.name.substring(0, 22) + "…"
+                      : templeContext.name
+                  }…`
                 : "Ask Sarathi anything…"
             }
             disabled={typing}
