@@ -31,7 +31,7 @@ body {
   position: relative;
   background-color: var(--bg-main);
   overflow-x: hidden;
-  padding-left: 8rem;
+  padding-left: 12rem;
 }
 
 .backdrop-overlay {
