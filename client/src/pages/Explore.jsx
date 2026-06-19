@@ -1,18 +1,19 @@
+// src/pages/Explore.jsx
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
 import PlacesSection from "../components/PlacesSection/PlacesSection";
-
+import DestinationPicker from "../components/explore/DestinationPicker";
 import { useTranslation } from "react-i18next";
 import { useExploreSearchContext } from "./ExploreSearchContext";
 
 import "./Explore.css";
 
-const Explore = () => {
+const GEO_KEY = process.env.REACT_APP_GOOGLE_MAPS_KEY;
 
+const Explore = () => {
   const { t } = useTranslation();
 
-  // 🔥 NEW: Import selectedCity from context
   const { selectedCity } = useExploreSearchContext();
 
   const [places, setPlaces] = useState([]);
@@ -28,10 +29,10 @@ const Explore = () => {
 
   const [locationName, setLocationName] = useState("");
 
-  /* ✅ SIDEBAR STATE */
+  /* SIDEBAR STATE */
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /* 👉 Swipe support */
+  /* Swipe support */
   const touchStartX = useRef(0);
 
   const handleTouchStart = (e) => {
@@ -40,30 +41,27 @@ const Explore = () => {
 
   const handleTouchEnd = (e) => {
     const diff = e.changedTouches[0].clientX - touchStartX.current;
-
     if (diff > 80) setSidebarOpen(true);
     if (diff < -80) setSidebarOpen(false);
   };
 
-  /* 🔥 LOCATION EXTRACTOR */
+  /* LOCATION EXTRACTOR */
   const getLocationName = (components) => {
     const priority = [
       "locality",
       "sublocality_level_1",
       "sublocality",
       "administrative_area_level_2",
-      "administrative_area_level_1"
+      "administrative_area_level_1",
     ];
-
     for (let type of priority) {
-      const match = components.find(c => c.types.includes(type));
+      const match = components.find((c) => c.types.includes(type));
       if (match) return match.long_name;
     }
-
     return "Your Location";
   };
 
-  /* 🔥 FETCH DATA (Original Geolocation - UNCHANGED) */
+  /* FETCH DATA (geolocation) */
   const fetchData = useCallback(() => {
     if (!navigator.geolocation) return;
 
@@ -79,8 +77,8 @@ const Explore = () => {
             `https://sarathi-backend-7u0y.onrender.com/api/places?lat=${lat}&lng=${lng}`
           ),
           fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
-          )
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GEO_KEY}`
+          ),
         ]);
 
         const data = await placesRes.json();
@@ -95,7 +93,6 @@ const Explore = () => {
 
         setLocationLoaded(true);
         localStorage.setItem("locationSelected", "true");
-
       } catch (err) {
         console.error(err);
       }
@@ -104,21 +101,19 @@ const Explore = () => {
     });
   }, []);
 
-  // Original effect for geolocation (UNCHANGED)
+  // Geolocation effect
   useEffect(() => {
     if (locationLoaded) {
       fetchData();
     }
   }, [locationLoaded, fetchData]);
 
-  /* 🔥 NEW EFFECT: Listen for city selection from search navbar */
+  /* City selected from the destination picker */
   useEffect(() => {
     if (selectedCity && selectedCity.lat && selectedCity.lng) {
-      // User selected a city from the search navbar
-      // This takes precedence over geolocation results
-
-      setActiveTab("places"); // Reset to places tab
-      setLocationName(selectedCity.city); // Update location header
+      setActiveTab("places");
+      setLocationName(selectedCity.city);
+      setLocationLoaded(true); // reveal results block
       setLoading(true);
 
       const fetchPlacesForSelectedCity = async () => {
@@ -126,14 +121,11 @@ const Explore = () => {
           const res = await fetch(
             `https://sarathi-backend-7u0y.onrender.com/api/places?lat=${selectedCity.lat}&lng=${selectedCity.lng}`
           );
-
           const data = await res.json();
 
-          // Update all place types for selected city
           setPlaces(data.places || []);
           setRestaurants(data.restaurants || []);
           setHotels(data.hotels || []);
-
         } catch (err) {
           console.error("Error fetching places for selected city:", err);
         } finally {
@@ -151,126 +143,90 @@ const Explore = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-
-      {/* ✅ SIDEBAR */}
+      {/* SIDEBAR */}
       <Sidebar isOpen={sidebarOpen} />
 
-      {/* ✅ OVERLAY */}
+      {/* OVERLAY */}
       {sidebarOpen && (
-        <div
-          className="overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* MAIN */}
       <div className="main-content">
-
-        {/* ✅ PASS TOGGLE */}
-        <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} showGreeting={false} />
+        <Navbar
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          showGreeting={false}
+        />
 
         {/* BEFORE LOAD */}
         {!locationLoaded && (
           <div style={{ padding: "20px" }}>
-            <h2>{t("enableLocation")}</h2>
+            <div className="enable-row">
+              <h2>{t("enableLocation")}</h2>
+              <DestinationPicker />
+            </div>
 
-            <div
-              className="card blue"
-              onClick={fetchData}
-            >
+            <div className="card blue" onClick={fetchData}>
               <h3>{t("addLocation")}</h3>
-
               <p>{t("localSuggestions")}</p>
             </div>
           </div>
         )}
 
         {/* LOADING */}
-        {loading && (
-          <h3 style={{ padding: "20px" }}>
-            {t("loading")}
-          </h3>
-        )}
+        {loading && <h3 style={{ padding: "20px" }}>{t("loading")}</h3>}
 
         {/* AFTER LOAD */}
         {locationLoaded && !loading && (
           <>
-            <div className="location-header">
-              <h2> {locationName}</h2>
+            <div className="location-header location-header--with-picker">
+              <div>
+                <h2> {locationName}</h2>
+                <p>{t("showingResults")}</p>
+              </div>
 
-              <p>{t("showingResults")}</p>
+              <DestinationPicker />
             </div>
 
             <div className="tabs">
-
               <button
-                className={
-                  activeTab === "places"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setActiveTab("places")
-                }
+                className={activeTab === "places" ? "active" : ""}
+                onClick={() => setActiveTab("places")}
               >
                 {t("places")}
               </button>
 
               <button
-                className={
-                  activeTab === "food"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setActiveTab("food")
-                }
+                className={activeTab === "food" ? "active" : ""}
+                onClick={() => setActiveTab("food")}
               >
                 {t("food")}
               </button>
 
               <button
-                className={
-                  activeTab === "hotels"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setActiveTab("hotels")
-                }
+                className={activeTab === "hotels" ? "active" : ""}
+                onClick={() => setActiveTab("hotels")}
               >
                 {t("hotels")}
               </button>
-
             </div>
 
             {activeTab === "places" && (
-              <PlacesSection
-                places={places}
-                title={t("popularPlaces")}
-              />
+              <PlacesSection places={places} title={t("popularPlaces")} />
             )}
 
             {activeTab === "food" && (
-              <PlacesSection
-                places={restaurants}
-                title={t("topRestaurants")}
-              />
+              <PlacesSection places={restaurants} title={t("topRestaurants")} />
             )}
 
             {activeTab === "hotels" && (
-              <PlacesSection
-                places={hotels}
-                title={t("bestHotels")}
-              />
+              <PlacesSection places={hotels} title={t("bestHotels")} />
             )}
           </>
         )}
-
       </div>
-
     </div>
   );
-}
+};
 
 export default Explore;

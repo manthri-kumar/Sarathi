@@ -1,17 +1,8 @@
-/* ═══════════════════════════════════════════════════════════
-   Explore.css — Sarathi
-   Selectors match Explore.jsx exactly:
-   .dashboard · .main-content · .overlay · .location-header ·
-   .tabs / .tabs button / .active · .card.blue · loading <h3>
-   Everything is scoped under .dashboard to avoid global bleed.
-   Import in Explore.jsx:  import "../styles/Explore.css";
-   ═══════════════════════════════════════════════════════════ */
+/* src/styles/Explore.css
+   Full file — replaces your existing Explore.css.
+   Original rules preserved; new rules for the standalone picker added at the end. */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-
-/* ════════════════════════════════
-   PAGE SHELL
-════════════════════════════════ */
 
 .dashboard {
   display: flex;
@@ -33,10 +24,6 @@
   padding: 0 28px 48px;
 }
 
-/* ════════════════════════════════
-   MOBILE SIDEBAR OVERLAY
-════════════════════════════════ */
-
 .dashboard .overlay {
   position: fixed;
   inset: 0;
@@ -46,14 +33,7 @@
   animation: expFadeIn 0.2s ease;
 }
 
-@keyframes expFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* ════════════════════════════════
-   LOCATION HEADER  (locationName + showingResults)
-════════════════════════════════ */
+@keyframes expFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .dashboard .location-header {
   padding: 28px 0 20px;
@@ -77,10 +57,6 @@
   font-weight: 400;
 }
 
-/* ========================================
-   EXPLORE TABS
-======================================== */
-
 .dashboard .tabs {
   display: flex;
   align-items: center;
@@ -103,8 +79,6 @@
   border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Hover */
-
 .dashboard .tabs button:hover {
   transform: translateY(-2px);
   color: #fff;
@@ -112,31 +86,15 @@
   border-color: rgba(255,255,255,0.15);
 }
 
-/* Active */
-
 .dashboard .tabs button.active {
   color: white;
-  background: linear-gradient(
-    135deg,
-    #00ff84,
-    #00d26a
-  );
+  background: linear-gradient(135deg, #00ff84, #00d26a);
   border-color: transparent;
-
-  box-shadow:
-    0 0 20px rgba(0,255,132,0.25),
-    0 8px 24px rgba(0,255,132,0.15);
-
+  box-shadow: 0 0 20px rgba(0,255,132,0.25), 0 8px 24px rgba(0,255,132,0.15);
   transform: translateY(-2px);
 }
 
-/* Icons look */
-
-.dashboard .tabs button.active::before {
-  margin-right: 8px;
-}
-
-/* Mobile */
+.dashboard .tabs button.active::before { margin-right: 8px; }
 
 @media (max-width: 768px) {
   .dashboard .tabs {
@@ -144,22 +102,9 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
-
-  .dashboard .tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .dashboard .tabs button {
-    flex-shrink: 0;
-    padding: 10px 18px;
-    font-size: 0.85rem;
-  }
+  .dashboard .tabs::-webkit-scrollbar { display: none; }
+  .dashboard .tabs button { flex-shrink: 0; padding: 10px 18px; font-size: 0.85rem; }
 }
-
-
-/* ════════════════════════════════
-   ENABLE-LOCATION CARD  (.card.blue)
-════════════════════════════════ */
 
 .dashboard .card.blue {
   display: flex;
@@ -172,32 +117,19 @@
   border: 1px solid rgba(59, 130, 246, 0.3);
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1),
-              box-shadow 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.25s ease;
   outline: none;
 }
 
 .dashboard .card.blue:hover,
 .dashboard .card.blue:focus-visible {
   transform: translateY(-4px);
-  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.4),
-              0 0 0 1px rgba(99, 165, 255, 0.2);
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.4), 0 0 0 1px rgba(99, 165, 255, 0.2);
 }
 
-.dashboard .card.blue h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #ffffff;
-}
+.dashboard .card.blue h3 { margin: 0; font-size: 1rem; font-weight: 600; color: #ffffff; }
+.dashboard .card.blue p { margin: 0; font-size: 0.82rem; color: rgba(255, 255, 255, 0.75); }
 
-.dashboard .card.blue p {
-  margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-/* The wrapper around the enable card holds the "enableLocation" heading */
 .dashboard .main-content > div > h2 {
   margin: 0 0 18px;
   font-size: 1.5rem;
@@ -205,10 +137,6 @@
   color: #ffffff;
   letter-spacing: -0.02em;
 }
-
-/* ════════════════════════════════
-   LOADING TEXT  (the <h3>{t("loading")}</h3>)
-════════════════════════════════ */
 
 .dashboard .main-content > h3 {
   margin: 0;
@@ -219,57 +147,54 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* ════════════════════════════════
-   RESPONSIVE
-════════════════════════════════ */
-
-/* Tablet */
 @media (max-width: 1024px) {
   .dashboard .main-content { padding: 0 20px 40px; }
   .dashboard .location-header h2 { font-size: 1.6rem; }
-
-  .dashboard .tabs {
-    width: 100%;
-    justify-content: stretch;
-  }
-  .dashboard .tabs button {
-    flex: 1;
-    text-align: center;
-  }
+  .dashboard .tabs { width: 100%; justify-content: stretch; }
+  .dashboard .tabs button { flex: 1; text-align: center; }
 }
 
-/* Mobile */
 @media (max-width: 640px) {
   .dashboard .main-content { padding: 0 14px 32px; }
-
-  .dashboard .location-header {
-    padding: 20px 0 16px;
-    margin-bottom: 18px;
-  }
+  .dashboard .location-header { padding: 20px 0 16px; margin-bottom: 18px; }
   .dashboard .location-header h2 { font-size: 1.3rem; }
   .dashboard .location-header p { font-size: 0.78rem; }
-
-  .dashboard .tabs {
-    border-radius: 12px;
-    padding: 5px;
-    gap: 4px;
-  }
-  .dashboard .tabs button {
-    padding: 8px 14px;
-    font-size: 0.78rem;
-    border-radius: 8px;
-  }
-
-  .dashboard .card.blue {
-    padding: 18px;
-    border-radius: 16px;
-  }
+  .dashboard .tabs { border-radius: 12px; padding: 5px; gap: 4px; }
+  .dashboard .tabs button { padding: 8px 14px; font-size: 0.78rem; border-radius: 8px; }
+  .dashboard .card.blue { padding: 18px; border-radius: 16px; }
 }
 
-/* Tiny */
 @media (max-width: 380px) {
-  .dashboard .tabs button {
-    padding: 7px 10px;
-    font-size: 0.72rem;
+  .dashboard .tabs button { padding: 7px 10px; font-size: 0.72rem; }
+}
+
+/* ════════════════════════════════
+   STANDALONE DESTINATION PICKER  (NEW)
+════════════════════════════════ */
+
+.dashboard .location-header--with-picker {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard .enable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.dashboard .enable-row h2 { margin: 0; }
+
+@media (max-width: 640px) {
+  .dashboard .location-header--with-picker,
+  .dashboard .enable-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
