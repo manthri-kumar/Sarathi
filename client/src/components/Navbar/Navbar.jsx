@@ -5,7 +5,6 @@ import {
   Search,
   Bell,
   Languages,
-  Mail,
   User,
   Luggage,
   Heart,
@@ -16,31 +15,39 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+
+// Import new dropdown components
+import NotificationDropdown from "./NotificationDropdown";
+
 const Navbar = ({ toggleSidebar }) => {
-  // ---- i18n: UNCHANGED from original source of truth ----
+
   const { i18n } = useTranslation();
+
   const navigate = useNavigate();
+
 
   const [showLanguages, setShowLanguages] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
+
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [search, setSearch] = useState("");
 
-  // FIX: separate refs per breakpoint so click-outside never
-  // resolves to a hidden duplicate node and pre-closes the menu.
-  const desktopLangRef = useRef(null);
-  const mobileLangRef = useRef(null);
-  const desktopProfileRef = useRef(null);
-  const mobileProfileRef = useRef(null);
+  const profileMenuRef = useRef(null);
+  const languageMenuRef = useRef(null);
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(
+    localStorage.getItem("user")
+  );
 
-  // ---- username + profile pic logic: UNCHANGED ----
   const username = user?.username || user?.name || "User";
   const profilePic = user?.picture;
 
-  const getAvatarLetter = () => (username.charAt(0) || "U").toUpperCase();
+  // Get first letter of username for avatar fallback
+  const getAvatarLetter = () => {
+    return (username.charAt(0) || "U").toUpperCase();
+  };
 
-  // ---- appItems / routes / filtering: UNCHANGED ----
   const appItems = [
     { name: "Dashboard", route: "/dashboard" },
     { name: "Explore", route: "/explore" },
@@ -55,13 +62,15 @@ const Navbar = ({ toggleSidebar }) => {
     { icon: User, label: "My Profile", route: "/profile" },
     { icon: Luggage, label: "My Trips", route: "/my-trips" },
     { icon: Heart, label: "Saved Places", route: "/saved" },
-    { icon: Settings, label: "Settings", route: "/settings" }
+    { icon: Settings, label: "Settings", route: "/settings" },
   ];
 
   const filteredItems =
     search.length > 0
       ? appItems.filter((item) =>
-          item.name.toLowerCase().includes(search.toLowerCase())
+          item.name
+            .toLowerCase()
+            .includes(search.toLowerCase())
         )
       : [];
 
@@ -77,29 +86,32 @@ const Navbar = ({ toggleSidebar }) => {
     setShowProfileMenu(false);
   };
 
-  // ---- Close menus on outside click (now ref-safe) ----
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const insideProfile =
-        desktopProfileRef.current?.contains(event.target) ||
-        mobileProfileRef.current?.contains(event.target);
-
-      const insideLang =
-        desktopLangRef.current?.contains(event.target) ||
-        mobileLangRef.current?.contains(event.target);
-
-      if (!insideProfile) setShowProfileMenu(false);
-      if (!insideLang) setShowLanguages(false);
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target)
+      ) {
+        setShowProfileMenu(false);
+      }
+      if (
+        languageMenuRef.current &&
+        !languageMenuRef.current.contains(event.target)
+      ) {
+        setShowLanguages(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
+    return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   return (
     <div className="navbar-container">
-      {/* ===================== Desktop Navbar ===================== */}
+      {/* Desktop Navbar */}
       <div className="navbar desktop-nav">
         <div className="search-wrapper">
           <Search size={18} />
@@ -126,10 +138,12 @@ const Navbar = ({ toggleSidebar }) => {
 
         <div className="nav-right">
           {/* Language Switcher */}
-          <div className="language-wrapper" ref={desktopLangRef}>
+          <div className="language-wrapper" ref={languageMenuRef}>
             <button
               className="language-btn"
-              onClick={() => setShowLanguages(!showLanguages)}
+              onClick={() =>
+                setShowLanguages(!showLanguages)
+              }
               title="Change Language"
             >
               <Languages size={20} />
@@ -138,29 +152,31 @@ const Navbar = ({ toggleSidebar }) => {
             {showLanguages && (
               <div className="language-dropdown">
                 <div
-                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("en");
                     setShowLanguages(false);
                   }}
+                  className="dropdown-item"
                 >
                   🇬🇧 English
                 </div>
+
                 <div
-                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("te");
                     setShowLanguages(false);
                   }}
+                  className="dropdown-item"
                 >
                   🇮🇳 తెలుగు
                 </div>
+
                 <div
-                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("hi");
                     setShowLanguages(false);
                   }}
+                  className="dropdown-item"
                 >
                   🇮🇳 हिन्दी
                 </div>
@@ -168,28 +184,30 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
-          {/* Mail Icon (UI enhancement kept) */}
-          <div className="mail-wrapper">
-            <button
-              className="mail-icon"
-              onClick={() => navigate("/messages")}
-              title="Messages"
-            >
-              <Mail size={18} />
-              <span className="notification-dot"></span>
-            </button>
-          </div>
+          {/* Mail Icon - NEW */}
+          
 
-          {/* Notification Bell */}
+          {/* Notification Bell - NEW */}
           <div className="bell-wrapper">
-            <button className="bell-icon" title="Notifications">
+            <button
+              className="bell-icon"
+              onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+              title="Notifications"
+              aria-label="Open Notifications"
+            >
               <Bell size={18} />
               <span className="notification-dot"></span>
             </button>
+
+            {/* Notification Dropdown */}
+            <NotificationDropdown
+              isOpen={showNotificationDropdown}
+              onClose={() => setShowNotificationDropdown(false)}
+            />
           </div>
 
-          {/* Profile */}
-          <div className="profile-wrapper" ref={desktopProfileRef}>
+          {/* Profile Section */}
+          <div className="profile-wrapper" ref={profileMenuRef}>
             <div
               className="profile-section"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -203,14 +221,21 @@ const Navbar = ({ toggleSidebar }) => {
             >
               <div className="profile-avatar">
                 {profilePic ? (
-                  <img src={profilePic} alt={username} className="avatar-image" />
+                  <img
+                    src={profilePic}
+                    alt={username}
+                    className="avatar-image"
+                  />
                 ) : (
-                  <div className="avatar-fallback">{getAvatarLetter()}</div>
+                  <div className="avatar-fallback">
+                    {getAvatarLetter()}
+                  </div>
                 )}
               </div>
               <span className="profile-username">{username}</span>
             </div>
 
+            {/* Profile Dropdown Menu */}
             {showProfileMenu && (
               <div className="profile-dropdown">
                 <div className="profile-header">
@@ -268,7 +293,7 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </div>
 
-      {/* ===================== Mobile Navbar ===================== */}
+      {/* Mobile Navbar */}
       <div className="navbar mobile-nav">
         <button
           className="menu-btn"
@@ -279,10 +304,12 @@ const Navbar = ({ toggleSidebar }) => {
         </button>
 
         <div className="nav-right">
-          <div className="language-wrapper" ref={mobileLangRef}>
+          <div className="language-wrapper" ref={languageMenuRef}>
             <button
               className="language-btn"
-              onClick={() => setShowLanguages(!showLanguages)}
+              onClick={() =>
+                setShowLanguages(!showLanguages)
+              }
               title="Change Language"
             >
               <Languages size={18} />
@@ -291,29 +318,31 @@ const Navbar = ({ toggleSidebar }) => {
             {showLanguages && (
               <div className="language-dropdown">
                 <div
-                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("en");
                     setShowLanguages(false);
                   }}
+                  className="dropdown-item"
                 >
                   English
                 </div>
+
                 <div
-                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("te");
                     setShowLanguages(false);
                   }}
+                  className="dropdown-item"
                 >
                   తెలుగు
                 </div>
+
                 <div
-                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("hi");
                     setShowLanguages(false);
                   }}
+                  className="dropdown-item"
                 >
                   हिन्दी
                 </div>
@@ -321,13 +350,32 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
-          <button className="bell-icon" title="Notifications">
+
+
+          <button
+            className="bell-icon"
+            onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+            title="Notifications"
+            aria-label="Open Notifications"
+          >
+            
             <Bell size={18} />
+            
             <span className="notification-dot"></span>
+
           </button>
 
-          <div className="profile-wrapper" ref={mobileProfileRef}>
+
+          <NotificationDropdown
+            isOpen={showNotificationDropdown}
+      
+            onClose={() => setShowNotificationDropdown(false)}
+          />
+
+          <div className="profile-wrapper" ref={profileMenuRef}>
             <button
+
+
               className="nav-avatar"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               aria-label="Profile menu"
@@ -335,7 +383,9 @@ const Navbar = ({ toggleSidebar }) => {
               {profilePic ? (
                 <img src={profilePic} alt={username} />
               ) : (
-                <div className="avatar-fallback mobile">{getAvatarLetter()}</div>
+                <div className="avatar-fallback mobile">
+                  {getAvatarLetter()}
+                </div>
               )}
             </button>
 
@@ -372,7 +422,7 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </div>
 
-      {/* ===================== Mobile Search ===================== */}
+      {/* Mobile Search */}
       <div className="mobile-search">
         <Search size={18} />
         <input
