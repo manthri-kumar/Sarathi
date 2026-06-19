@@ -5,7 +5,6 @@ import {
   Search,
   Bell,
   Languages,
-  Mail,
   User,
   Luggage,
   Heart,
@@ -16,35 +15,34 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-// Import new dropdown components
-import InboxDropdown from "./navbar/InboxDropdown";
-import NotificationDropdown from "./navbar/NotificationDropdown";
-
 const Navbar = ({ toggleSidebar }) => {
+  // ---- i18n: UNCHANGED from original source of truth ----
   const { i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [showLanguages, setShowLanguages] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false); // ✨ NEW
   const [search, setSearch] = useState("");
 
-  const profileMenuRef = useRef(null);
-  const languageMenuRef = useRef(null);
+  // FIX: separate refs per breakpoint so click-outside never
+  // resolves to a hidden duplicate node and pre-closes the menu.
+  const desktopLangRef = useRef(null);
+  const mobileLangRef = useRef(null);
+  const desktopProfileRef = useRef(null);
+  const mobileProfileRef = useRef(null);
+  const desktopNotificationRef = useRef(null); // ✨ NEW
+  const mobileNotificationRef = useRef(null); // ✨ NEW
 
-  const user = JSON.parse(
-    localStorage.getItem("user")
-  );
+  const user = JSON.parse(localStorage.getItem("user"));
 
+  // ---- username + profile pic logic: UNCHANGED ----
   const username = user?.username || user?.name || "User";
   const profilePic = user?.picture;
 
-  // Get first letter of username for avatar fallback
-  const getAvatarLetter = () => {
-    return (username.charAt(0) || "U").toUpperCase();
-  };
+  const getAvatarLetter = () => (username.charAt(0) || "U").toUpperCase();
 
+  // ---- appItems / routes / filtering: UNCHANGED ----
   const appItems = [
     { name: "Dashboard", route: "/dashboard" },
     { name: "Explore", route: "/explore" },
@@ -59,15 +57,13 @@ const Navbar = ({ toggleSidebar }) => {
     { icon: User, label: "My Profile", route: "/profile" },
     { icon: Luggage, label: "My Trips", route: "/my-trips" },
     { icon: Heart, label: "Saved Places", route: "/saved" },
-    { icon: Settings, label: "Settings", route: "/settings" },
+    { icon: Settings, label: "Settings", route: "/settings" }
   ];
 
   const filteredItems =
     search.length > 0
       ? appItems.filter((item) =>
-          item.name
-            .toLowerCase()
-            .includes(search.toLowerCase())
+          item.name.toLowerCase().includes(search.toLowerCase())
         )
       : [];
 
@@ -83,32 +79,67 @@ const Navbar = ({ toggleSidebar }) => {
     setShowProfileMenu(false);
   };
 
-  // Close menus when clicking outside
+  // ✨ DUMMY NOTIFICATION DATA
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: "Trip Confirmed",
+      message: "Your Kerala itinerary has been confirmed.",
+      time: "2 min ago",
+      unread: true
+    },
+    {
+      id: 2,
+      title: "New Destination Added",
+      message: "Explore newly added spiritual destinations.",
+      time: "1 hour ago",
+      unread: true
+    },
+    {
+      id: 3,
+      title: "Travel Reminder",
+      message: "Your trip starts tomorrow.",
+      time: "Yesterday",
+      unread: false
+    }
+  ]);
+
+  // ✨ MARK ALL AS READ HANDLER
+  const handleMarkAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, unread: false })));
+  };
+
+  // ✨ CALCULATE UNREAD COUNT
+  const unreadCount = notifications.filter(n => n.unread).length;
+
+  // ---- Close menus on outside click (UPDATED with notification logic) ----
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target)
-      ) {
-        setShowProfileMenu(false);
-      }
-      if (
-        languageMenuRef.current &&
-        !languageMenuRef.current.contains(event.target)
-      ) {
-        setShowLanguages(false);
-      }
+      const insideProfile =
+        desktopProfileRef.current?.contains(event.target) ||
+        mobileProfileRef.current?.contains(event.target);
+
+      const insideLang =
+        desktopLangRef.current?.contains(event.target) ||
+        mobileLangRef.current?.contains(event.target);
+
+      const insideNotification = // ✨ NEW
+        desktopNotificationRef.current?.contains(event.target) ||
+        mobileNotificationRef.current?.contains(event.target);
+
+      if (!insideProfile) setShowProfileMenu(false);
+      if (!insideLang) setShowLanguages(false);
+      if (!insideNotification) setShowNotifications(false); // ✨ NEW
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
+    return () =>
       document.removeEventListener("mousedown", handleClickOutside);
-    };
   }, []);
 
   return (
     <div className="navbar-container">
-      {/* Desktop Navbar */}
+      {/* ===================== Desktop Navbar ===================== */}
       <div className="navbar desktop-nav">
         <div className="search-wrapper">
           <Search size={18} />
@@ -135,12 +166,10 @@ const Navbar = ({ toggleSidebar }) => {
 
         <div className="nav-right">
           {/* Language Switcher */}
-          <div className="language-wrapper" ref={languageMenuRef}>
+          <div className="language-wrapper" ref={desktopLangRef}>
             <button
               className="language-btn"
-              onClick={() =>
-                setShowLanguages(!showLanguages)
-              }
+              onClick={() => setShowLanguages(!showLanguages)}
               title="Change Language"
             >
               <Languages size={20} />
@@ -149,31 +178,29 @@ const Navbar = ({ toggleSidebar }) => {
             {showLanguages && (
               <div className="language-dropdown">
                 <div
+                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("en");
                     setShowLanguages(false);
                   }}
-                  className="dropdown-item"
                 >
                   🇬🇧 English
                 </div>
-
                 <div
+                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("te");
                     setShowLanguages(false);
                   }}
-                  className="dropdown-item"
                 >
                   🇮🇳 తెలుగు
                 </div>
-
                 <div
+                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("hi");
                     setShowLanguages(false);
                   }}
-                  className="dropdown-item"
                 >
                   🇮🇳 हिन्दी
                 </div>
@@ -181,46 +208,85 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
-          {/* Mail Icon - NEW */}
-          <div className="mail-wrapper">
-            <button
-              className="mail-icon"
-              onClick={() => setShowInboxDropdown(!showInboxDropdown)}
-              title="Messages"
-              aria-label="Open AI Inbox"
-            >
-              <Mail size={18} />
-              <span className="notification-dot"></span>
-            </button>
-
-            {/* Inbox Dropdown */}
-            <InboxDropdown
-              isOpen={showInboxDropdown}
-              onClose={() => setShowInboxDropdown(false)}
-            />
-          </div>
-
-          {/* Notification Bell - NEW */}
-          <div className="bell-wrapper">
+          {/* ✨ Notification Bell - FULLY FUNCTIONAL */}
+          <div className="bell-wrapper" ref={desktopNotificationRef}>
             <button
               className="bell-icon"
-              onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+              onClick={() => setShowNotifications(!showNotifications)}
               title="Notifications"
-              aria-label="Open Notifications"
+              aria-label="Toggle notifications"
             >
               <Bell size={18} />
-              <span className="notification-dot"></span>
+              {unreadCount > 0 && (
+                <span className="notification-dot"></span>
+              )}
             </button>
 
-            {/* Notification Dropdown */}
-            <NotificationDropdown
-              isOpen={showNotificationDropdown}
-              onClose={() => setShowNotificationDropdown(false)}
-            />
+            {/* ✨ NOTIFICATION DROPDOWN */}
+            {showNotifications && (
+              <div className="notification-dropdown">
+                {/* Header */}
+                <div className="notification-header">
+                  <div className="notification-title-section">
+                    <h3 className="notification-title">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <span className="notification-count-badge">{unreadCount}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notifications List */}
+                <div className="notification-list">
+                  {notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`notification-item ${
+                          notif.unread ? "unread" : ""
+                        }`}
+                      >
+                        <div className="notification-item-content">
+                          <div className="notification-item-header">
+                            <h4 className="notification-item-title">
+                              {notif.title}
+                            </h4>
+                            {notif.unread && (
+                              <span className="notification-unread-indicator"></span>
+                            )}
+                          </div>
+                          <p className="notification-item-message">
+                            {notif.message}
+                          </p>
+                          <span className="notification-item-time">
+                            {notif.time}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="notification-empty">
+                      <p>No notifications available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                {notifications.length > 0 && (
+                  <div className="notification-footer">
+                    <button
+                      className="mark-read-btn"
+                      onClick={handleMarkAllAsRead}
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Profile Section */}
-          <div className="profile-wrapper" ref={profileMenuRef}>
+          {/* Profile */}
+          <div className="profile-wrapper" ref={desktopProfileRef}>
             <div
               className="profile-section"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -234,21 +300,14 @@ const Navbar = ({ toggleSidebar }) => {
             >
               <div className="profile-avatar">
                 {profilePic ? (
-                  <img
-                    src={profilePic}
-                    alt={username}
-                    className="avatar-image"
-                  />
+                  <img src={profilePic} alt={username} className="avatar-image" />
                 ) : (
-                  <div className="avatar-fallback">
-                    {getAvatarLetter()}
-                  </div>
+                  <div className="avatar-fallback">{getAvatarLetter()}</div>
                 )}
               </div>
               <span className="profile-username">{username}</span>
             </div>
 
-            {/* Profile Dropdown Menu */}
             {showProfileMenu && (
               <div className="profile-dropdown">
                 <div className="profile-header">
@@ -306,7 +365,7 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </div>
 
-      {/* Mobile Navbar */}
+      {/* ===================== Mobile Navbar ===================== */}
       <div className="navbar mobile-nav">
         <button
           className="menu-btn"
@@ -317,12 +376,10 @@ const Navbar = ({ toggleSidebar }) => {
         </button>
 
         <div className="nav-right">
-          <div className="language-wrapper" ref={languageMenuRef}>
+          <div className="language-wrapper" ref={mobileLangRef}>
             <button
               className="language-btn"
-              onClick={() =>
-                setShowLanguages(!showLanguages)
-              }
+              onClick={() => setShowLanguages(!showLanguages)}
               title="Change Language"
             >
               <Languages size={18} />
@@ -331,31 +388,29 @@ const Navbar = ({ toggleSidebar }) => {
             {showLanguages && (
               <div className="language-dropdown">
                 <div
+                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("en");
                     setShowLanguages(false);
                   }}
-                  className="dropdown-item"
                 >
                   English
                 </div>
-
                 <div
+                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("te");
                     setShowLanguages(false);
                   }}
-                  className="dropdown-item"
                 >
                   తెలుగు
                 </div>
-
                 <div
+                  className="dropdown-item"
                   onClick={() => {
                     i18n.changeLanguage("hi");
                     setShowLanguages(false);
                   }}
-                  className="dropdown-item"
                 >
                   हिन्दी
                 </div>
@@ -363,37 +418,84 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
-          <button
-            className="mail-icon"
-            onClick={() => setShowInboxDropdown(!showInboxDropdown)}
-            title="Messages"
-            aria-label="Open AI Inbox"
-          >
-            <Mail size={18} />
-            <span className="notification-dot"></span>
-          </button>
+          {/* ✨ Mobile Notification Bell */}
+          <div className="bell-wrapper" ref={mobileNotificationRef}>
+            <button
+              className="bell-icon"
+              onClick={() => setShowNotifications(!showNotifications)}
+              title="Notifications"
+              aria-label="Toggle notifications"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="notification-dot"></span>
+              )}
+            </button>
 
-          <InboxDropdown
-            isOpen={showInboxDropdown}
-            onClose={() => setShowInboxDropdown(false)}
-          />
+            {/* ✨ MOBILE NOTIFICATION DROPDOWN */}
+            {showNotifications && (
+              <div className="notification-dropdown mobile">
+                {/* Header */}
+                <div className="notification-header">
+                  <div className="notification-title-section">
+                    <h3 className="notification-title">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <span className="notification-count-badge">{unreadCount}</span>
+                    )}
+                  </div>
+                </div>
 
-          <button
-            className="bell-icon"
-            onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
-            title="Notifications"
-            aria-label="Open Notifications"
-          >
-            <Bell size={18} />
-            <span className="notification-dot"></span>
-          </button>
+                {/* Notifications List */}
+                <div className="notification-list">
+                  {notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`notification-item ${
+                          notif.unread ? "unread" : ""
+                        }`}
+                      >
+                        <div className="notification-item-content">
+                          <div className="notification-item-header">
+                            <h4 className="notification-item-title">
+                              {notif.title}
+                            </h4>
+                            {notif.unread && (
+                              <span className="notification-unread-indicator"></span>
+                            )}
+                          </div>
+                          <p className="notification-item-message">
+                            {notif.message}
+                          </p>
+                          <span className="notification-item-time">
+                            {notif.time}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="notification-empty">
+                      <p>No notifications available</p>
+                    </div>
+                  )}
+                </div>
 
-          <NotificationDropdown
-            isOpen={showNotificationDropdown}
-            onClose={() => setShowNotificationDropdown(false)}
-          />
+                {/* Footer */}
+                {notifications.length > 0 && (
+                  <div className="notification-footer">
+                    <button
+                      className="mark-read-btn"
+                      onClick={handleMarkAllAsRead}
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-          <div className="profile-wrapper" ref={profileMenuRef}>
+          <div className="profile-wrapper" ref={mobileProfileRef}>
             <button
               className="nav-avatar"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -402,9 +504,7 @@ const Navbar = ({ toggleSidebar }) => {
               {profilePic ? (
                 <img src={profilePic} alt={username} />
               ) : (
-                <div className="avatar-fallback mobile">
-                  {getAvatarLetter()}
-                </div>
+                <div className="avatar-fallback mobile">{getAvatarLetter()}</div>
               )}
             </button>
 
@@ -441,7 +541,7 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </div>
 
-      {/* Mobile Search */}
+      {/* ===================== Mobile Search ===================== */}
       <div className="mobile-search">
         <Search size={18} />
         <input
