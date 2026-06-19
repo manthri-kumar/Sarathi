@@ -29,10 +29,8 @@ const Explore = () => {
 
   const [locationName, setLocationName] = useState("");
 
-  /* SIDEBAR STATE */
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /* Swipe support */
   const touchStartX = useRef(0);
 
   const handleTouchStart = (e) => {
@@ -45,7 +43,6 @@ const Explore = () => {
     if (diff < -80) setSidebarOpen(false);
   };
 
-  /* LOCATION EXTRACTOR */
   const getLocationName = (components) => {
     const priority = [
       "locality",
@@ -54,8 +51,9 @@ const Explore = () => {
       "administrative_area_level_2",
       "administrative_area_level_1",
     ];
+    const list = Array.isArray(components) ? components : [];
     for (let type of priority) {
-      const match = components.find((c) => c.types.includes(type));
+      const match = list.find((c) => (c.types || []).includes(type));
       if (match) return match.long_name;
     }
     return "Your Location";
@@ -88,7 +86,7 @@ const Explore = () => {
         setRestaurants(data.restaurants || []);
         setHotels(data.hotels || []);
 
-        const components = geoData.results[0]?.address_components || [];
+        const components = geoData?.results?.[0]?.address_components || [];
         setLocationName(getLocationName(components));
 
         setLocationLoaded(true);
@@ -101,7 +99,6 @@ const Explore = () => {
     });
   }, []);
 
-  // Geolocation effect
   useEffect(() => {
     if (locationLoaded) {
       fetchData();
@@ -113,7 +110,7 @@ const Explore = () => {
     if (selectedCity && selectedCity.lat && selectedCity.lng) {
       setActiveTab("places");
       setLocationName(selectedCity.city);
-      setLocationLoaded(true); // reveal results block
+      setLocationLoaded(true);
       setLoading(true);
 
       const fetchPlacesForSelectedCity = async () => {
@@ -143,15 +140,12 @@ const Explore = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* SIDEBAR */}
       <Sidebar isOpen={sidebarOpen} />
 
-      {/* OVERLAY */}
       {sidebarOpen && (
         <div className="overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* MAIN */}
       <div className="main-content">
         <Navbar
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -212,15 +206,18 @@ const Explore = () => {
             </div>
 
             {activeTab === "places" && (
-              <PlacesSection places={places} title={t("popularPlaces")} />
+              <PlacesSection places={places || []} title={t("popularPlaces")} />
             )}
 
             {activeTab === "food" && (
-              <PlacesSection places={restaurants} title={t("topRestaurants")} />
+              <PlacesSection
+                places={restaurants || []}
+                title={t("topRestaurants")}
+              />
             )}
 
             {activeTab === "hotels" && (
-              <PlacesSection places={hotels} title={t("bestHotels")} />
+              <PlacesSection places={hotels || []} title={t("bestHotels")} />
             )}
           </>
         )}

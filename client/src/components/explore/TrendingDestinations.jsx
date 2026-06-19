@@ -1,4 +1,4 @@
-// src/components/TrendingDestinations.jsx
+// src/components/explore/TrendingDestinations.jsx
 import React from "react";
 import { useTranslation } from "react-i18next";
 

@@ -1,7 +1,4 @@
 // src/pages/ExploreSearchContext.jsx
-// Keep at this path so Explore.jsx's `./ExploreSearchContext` import is unchanged.
-// If your existing provider exposed extra fields, merge them into `value` below.
-
 import React, {
   createContext,
   useContext,
@@ -33,7 +30,8 @@ export const ExploreSearchProvider = ({ children }) => {
   const addRecentSearch = useCallback((entry) => {
     if (!entry?.city || entry.lat == null || entry.lng == null) return;
     setRecentSearches((prev) => {
-      const deduped = prev.filter(
+      const list = Array.isArray(prev) ? prev : [];
+      const deduped = list.filter(
         (r) => r.city.toLowerCase() !== entry.city.toLowerCase()
       );
       const next = [{ ...entry }, ...deduped].slice(0, RECENT_LIMIT);
@@ -55,7 +53,6 @@ export const ExploreSearchProvider = ({ children }) => {
     }
   }, []);
 
-  // Single entry point used by the picker: persist + select in one call.
   const chooseDestination = useCallback(
     (entry) => {
       if (!entry?.city || entry.lat == null || entry.lng == null) return;

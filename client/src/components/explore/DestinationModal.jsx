@@ -1,4 +1,4 @@
-// src/components/DestinationModal.jsx
+// src/components/explore/DestinationModal.jsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
@@ -21,8 +21,9 @@ const LOCALITY_PRIORITY = [
 ];
 
 function cityFromComponents(components = [], fallback = "Your Location") {
+  const list = Array.isArray(components) ? components : [];
   for (const type of LOCALITY_PRIORITY) {
-    const match = components.find((c) =>
+    const match = list.find((c) =>
       (c.types || c.Types || []).includes(type)
     );
     if (match) return match.long_name || match.longText || fallback;
@@ -243,6 +244,8 @@ const DestinationModal = ({ onClose }) => {
   /* recent → already carries coords */
   const pickRecent = useCallback((entry) => select(entry), [select]);
 
+  const list = Array.isArray(predictions) ? predictions : [];
+
   return createPortal(
     <div
       className="dest-modal__backdrop"
@@ -289,12 +292,12 @@ const DestinationModal = ({ onClose }) => {
         {/* PREDICTIONS */}
         {query.trim() && (
           <ul className="dest-predictions">
-            {!searching && (!predictions || predictions.length === 0) && (
+            {!searching && list.length === 0 && (
               <li className="dest-predictions__empty">
                 {t("noResults") || "No matches found."}
               </li>
             )}
-            {predictions.map((p) => (
+            {list.map((p) => (
               <li key={p.id}>
                 <button
                   type="button"

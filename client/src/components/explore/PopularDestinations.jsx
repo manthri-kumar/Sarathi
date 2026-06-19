@@ -1,4 +1,4 @@
-// src/components/PopularDestinations.jsx
+// src/components/explore/PopularDestinations.jsx
 import React from "react";
 import { useTranslation } from "react-i18next";
 

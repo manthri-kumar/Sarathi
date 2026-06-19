@@ -1,100 +1,42 @@
 // src/lib/loadGoogleMaps.js
-
 let loaderPromise = null;
 
 export function loadGoogleMaps() {
-  if (loaderPromise) {
-    return loaderPromise;
-  }
+  if (loaderPromise) return loaderPromise;
 
   loaderPromise = new Promise((resolve, reject) => {
-    try {
-      // Already loaded
-      if (window.google?.maps) {
-        return resolve(window.google);
-      }
+    if (window.google?.maps?.importLibrary) return resolve(window.google);
 
-      const key = process.env.REACT_APP_GOOGLE_MAPS_KEY;
+    const key = process.env.REACT_APP_GOOGLE_MAPS_KEY;
+    if (!key) return reject(new Error("Missing REACT_APP_GOOGLE_MAPS_KEY"));
 
-      console.log(
-        "Google Maps Key:",
-        key ? `${key.substring(0, 8)}...` : "NOT FOUND"
+    const finish = () =>
+      window.google?.maps?.importLibrary
+        ? resolve(window.google)
+        : reject(new Error("Maps loaded but importLibrary is unavailable"));
+
+    const existing = document.getElementById("gmaps-sdk");
+    if (existing) {
+      existing.addEventListener("load", finish);
+      existing.addEventListener("error", () =>
+        reject(new Error("Google Maps script failed"))
       );
-
-      if (!key) {
-        console.error("REACT_APP_GOOGLE_MAPS_KEY is missing");
-        return reject(
-          new Error("Missing REACT_APP_GOOGLE_MAPS_KEY")
-        );
-      }
-
-      // Script already exists
-      const existingScript = document.getElementById("gmaps-sdk");
-
-      if (existingScript) {
-        existingScript.addEventListener("load", () => {
-          if (window.google?.maps) {
-            resolve(window.google);
-          } else {
-            reject(
-              new Error(
-                "Google Maps loaded but window.google.maps is unavailable"
-              )
-            );
-          }
-        });
-
-        existingScript.addEventListener("error", () => {
-          reject(new Error("Google Maps script failed"));
-        });
-
-        return;
-      }
-
-      const script = document.createElement("script");
-
-      script.id = "gmaps-sdk";
-      script.async = true;
-      script.defer = true;
-
-      script.src =
-        `https://maps.googleapis.com/maps/api/js?key=${key}` +
-        `&libraries=places` +
-        `&v=weekly`;
-
-      script.onload = () => {
-        if (!window.google?.maps) {
-          reject(
-            new Error(
-              "Google Maps API loaded but maps object unavailable"
-            )
-          );
-          return;
-        }
-
-        console.log("Google Maps loaded successfully");
-        resolve(window.google);
-      };
-
-      script.onerror = () => {
-        console.error("Failed to load Google Maps");
-        reject(new Error("Failed to load Google Maps"));
-      };
-
-      document.head.appendChild(script);
-    } catch (err) {
-      console.error("Google Maps Loader Error:", err);
-      reject(err);
+      return;
     }
+
+    const s = document.createElement("script");
+    s.id = "gmaps-sdk";
+    s.async = true;
+    s.defer = true;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&v=weekly&loading=async`;
+    s.onload = finish;
+    s.onerror = () => reject(new Error("Failed to load Google Maps"));
+    document.head.appendChild(s);
   });
 
   return loaderPromise;
 }
 
 export function toSelectedCity(label, lat, lng) {
-  return {
-    city: label,
-    lat,
-    lng,
-  };
+  return { city: label, lat, lng };
 }

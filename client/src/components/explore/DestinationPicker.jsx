@@ -1,4 +1,4 @@
-// src/components/DestinationPicker.jsx
+// src/components/explore/DestinationPicker.jsx
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExploreSearchContext } from "../../pages/ExploreSearchContext";
