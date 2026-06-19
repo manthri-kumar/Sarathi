@@ -177,33 +177,33 @@ const Itinerary = () => {
 
   return (
     <div
-      className="dashboard-layout"
+      className="itin-layout"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && (
         <div
-          className="backdrop-overlay"
+          className="itin-overlay"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <div className="main-viewport">
+      <div className="itin-viewport">
         <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-        <div className="itinerary-container">
-          <div className="header-meta">
-            <h1 className="primary-title">
-              <span className="sparkle-icon">✦</span> Plan Your Trip
+        <div className="itin-container">
+          <div className="itin-header">
+            <h1 className="itin-title">
+              <span className="itin-title__icon">✦</span> Plan Your Trip
             </h1>
-            <p className="sub-title">Build your perfect itinerary</p>
+            <p className="itin-subtitle">Build your perfect itinerary</p>
           </div>
 
           {/* SEARCH BAR */}
-          <div className="search-wrapper-card">
-            <div className="input-group-icon">
-              <span className="geo-icon">📍</span>
+          <div className="itin-search">
+            <div className="itin-search__input-group">
+              <span className="itin-search__icon">📍</span>
               <input
                 type="text"
                 placeholder="Search city (e.g., kashmir)..."
@@ -212,28 +212,28 @@ const Itinerary = () => {
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <button className="premium-search-btn" onClick={handleSearch}>
-              {loading ? <div className="spinner"></div> : "Search"}
+            <button className="itin-search__button" onClick={handleSearch}>
+              {loading ? <div className="itin-spinner"></div> : "Search"}
             </button>
           </div>
 
           {!showFinal ? (
-            <div className="workspace-grid">
+            <div className="itin-workspace">
 
               {/* SUGGESTED PLACES */}
-              <div className="panel-card-container suggested-panel">
-                <div className="panel-header">
-                  <span className="panel-title-icon">🗺️</span>
+              <div className="itin-panel itin-panel--suggestions">
+                <div className="itin-panel__header">
+                  <span className="itin-panel__icon">🗺️</span>
                   <div>
                     <h2>Suggested Places</h2>
                     <p>Top places recommended for you</p>
                   </div>
                 </div>
 
-                <div className="places-scroll-area">
+                <div className="itin-panel__scroll">
                   {places.length === 0 ? (
-                    <div className="empty-state-view-fallback">
-                      <div className="empty-icon-cloud">🔍</div>
+                    <div className="itin-empty">
+                      <div className="itin-empty__icon">🔍</div>
                       <p>No locations showing yet</p>
                       <span>
                         Type a destination in the search box above to discover
@@ -246,29 +246,29 @@ const Itinerary = () => {
                       return (
                         <div
                           key={place.id}
-                          className={`premium-place-card ${isAdded ? "state-added" : ""}`}
+                          className={`itin-place-card ${isAdded ? "itin-place-card--added" : ""}`}
                         >
-                          <div className="card-main-row">
+                          <div className="itin-place-card__row">
                             <img
                               src={place.image}
                               alt={place.name}
-                              className="place-thumb"
+                              className="itin-place-card__image"
                             />
-                            <div className="place-details-box">
+                            <div className="itin-place-card__details">
                               <h3>{place.name}</h3>
-                              <p className="address-text">
-                                <span className="pin-symbol">📍</span>{" "}
+                              <p className="itin-place-card__address">
+                                <span className="itin-place-card__pin">📍</span>{" "}
                                 {place.address}
                               </p>
                             </div>
                             <button
-                              className={`action-pill-btn ${isAdded ? "btn-added" : ""}`}
+                              className={`itin-place-card__action-btn ${isAdded ? "itin-place-card__action-btn--added" : ""}`}
                               onClick={() => togglePlaceInPlan(place)}
                             >
                               {isAdded ? "Added" : "+ Add"}
                             </button>
                             <div
-                              className={`mobile-chevron ${expandedPlace === place.id ? "rotated" : ""}`}
+                              className={`itin-place-card__chevron ${expandedPlace === place.id ? "itin-place-card__chevron--rotated" : ""}`}
                               onClick={() =>
                                 setExpandedPlace(
                                   expandedPlace === place.id ? null : place.id
@@ -282,21 +282,21 @@ const Itinerary = () => {
                           {/* MOBILE ACCORDION FORM */}
                           {isAdded && (
                             <div
-                              className={`mobile-inline-form ${expandedPlace === place.id ? "is-expanded" : ""}`}
+                              className={`itin-place-card__form ${expandedPlace === place.id ? "itin-place-card__form--expanded" : ""}`}
                             >
-                              <div className="form-inner-wrapper">
-                                <div className="form-header-mobile">
-                                  <span className="green-dot">🟢</span>
+                              <div className="itin-place-card__form-inner">
+                                <div className="itin-place-card__form-header">
+                                  <span className="itin-place-card__form-icon">🟢</span>
                                   <h4>Your Plan</h4>
                                   <button
-                                    className="mobile-remove-txt"
+                                    className="itin-place-card__remove-btn"
                                     onClick={() => removePlaceById(place.id)}
                                   >
                                     🗑️ Remove
                                   </button>
                                 </div>
-                                <div className="inputs-row">
-                                  <div className="input-field">
+                                <div className="itin-place-card__inputs">
+                                  <div className="itin-place-card__input-field">
                                     <label>Date</label>
                                     <input
                                       type="date"
@@ -313,7 +313,7 @@ const Itinerary = () => {
                                       }
                                     />
                                   </div>
-                                  <div className="input-field">
+                                  <div className="itin-place-card__input-field">
                                     <label>Time</label>
                                     <input
                                       type="time"
@@ -327,7 +327,7 @@ const Itinerary = () => {
                                       }
                                     />
                                   </div>
-                                  <div className="input-field">
+                                  <div className="itin-place-card__input-field">
                                     <label>Budget (₹)</label>
                                     <input
                                       type="number"
@@ -343,7 +343,7 @@ const Itinerary = () => {
                                     />
                                   </div>
                                 </div>
-                                <div className="textarea-field">
+                                <div className="itin-place-card__textarea-field">
                                   <textarea
                                     placeholder="Notes..."
                                     maxLength={300}
@@ -356,7 +356,7 @@ const Itinerary = () => {
                                       )
                                     }
                                   />
-                                  <span className="char-count">
+                                  <span className="itin-place-card__char-count">
                                     {(plan[place.id].note || "").length}/300
                                   </span>
                                 </div>
@@ -371,16 +371,16 @@ const Itinerary = () => {
               </div>
 
               {/* DESKTOP PLANNER PANEL */}
-              <div className="panel-card-container planner-panel">
-                <div className="panel-header border-b">
-                  <span className="panel-title-icon green-icon">✅</span>
+              <div className="itin-panel itin-panel--planner">
+                <div className="itin-panel__header itin-panel__header--bordered">
+                  <span className="itin-panel__icon itin-panel__icon--highlight">✅</span>
                   <div>
                     <h2>Your Plan</h2>
                     <p>Add places and details to finalize your trip</p>
                   </div>
                   {Object.keys(plan).length > 0 && (
                     <button
-                      className="clear-all-btn"
+                      className="itin-panel__clear-btn"
                       onClick={() => setPlan({})}
                     >
                       ✖
@@ -388,10 +388,10 @@ const Itinerary = () => {
                   )}
                 </div>
 
-                <div className="planner-scroll-area">
+                <div className="itin-panel__scroll">
                   {Object.keys(plan).length === 0 ? (
-                    <div className="empty-state-view">
-                      <div className="empty-icon">🗺️</div>
+                    <div className="itin-empty">
+                      <div className="itin-empty__icon">🗺️</div>
                       <p>Your itinerary workspace is empty.</p>
                       <span>
                         Click "+ Add" on recommended places to map out your
@@ -400,18 +400,18 @@ const Itinerary = () => {
                     </div>
                   ) : (
                     Object.values(plan).map((item) => (
-                      <div key={item.id} className="desktop-plan-card">
-                        <div className="plan-card-top">
+                      <div key={item.id} className="itin-plan-card">
+                        <div className="itin-plan-card__header">
                           <h3>{item.name}</h3>
                           <button
-                            className="card-delete-icon"
+                            className="itin-plan-card__delete-btn"
                             onClick={() => removePlaceById(item.id)}
                           >
                             ✖
                           </button>
                         </div>
 
-                        <div className="desktop-form-grid">
+                        <div className="itin-plan-card__form-grid">
                           <input
                             type="date"
                             min={new Date().toISOString().split("T")[0]}
@@ -427,7 +427,7 @@ const Itinerary = () => {
                               updatePlanField(item.id, "time", e.target.value)
                             }
                           />
-                          <div className="currency-input-wrapper">
+                          <div className="itin-plan-card__currency-input">
                             <input
                               type="number"
                               placeholder="Budget (₹)"
@@ -443,7 +443,7 @@ const Itinerary = () => {
                           </div>
                         </div>
 
-                        <div className="textarea-wrapper">
+                        <div className="itin-plan-card__textarea-wrapper">
                           <textarea
                             placeholder="Notes..."
                             maxLength={300}
@@ -452,7 +452,7 @@ const Itinerary = () => {
                               updatePlanField(item.id, "note", e.target.value)
                             }
                           />
-                          <span className="counter-tag">
+                          <span className="itin-plan-card__char-count">
                             {(item.note || "").length}/300
                           </span>
                         </div>
@@ -462,14 +462,14 @@ const Itinerary = () => {
                 </div>
 
                 {Object.keys(plan).length > 0 && (
-                  <div className="action-footer-sticky">
+                  <div className="itin-panel__footer">
                     <button
-                      className="finalize-submit-btn"
+                      className="itin-panel__finalize-btn"
                       onClick={finalizeTrip}
                     >
-                      Finalize Trip <span className="send-arrow">➔</span>
+                      Finalize Trip <span className="itin-panel__finalize-arrow">➔</span>
                     </button>
-                    <p className="sticky-disclaimer">
+                    <p className="itin-panel__footer-note">
                       🛡️ You can always edit your plan later
                     </p>
                   </div>
@@ -478,31 +478,31 @@ const Itinerary = () => {
             </div>
           ) : (
             /* FINAL SUMMARY VIEW */
-            <div className="premium-final-view animate-fade-in">
-              <div className="final-view-header">
+            <div className="itin-final-view itin-final-view--animating">
+              <div className="itin-final-view__header">
                 <h2>Your Ultimate Itinerary</h2>
                 <p>
                   Perfectly curated sequence optimized by dates and timestamps.
                 </p>
               </div>
 
-              <div className="summary-cards-stack">
+              <div className="itin-final-view__list">
                 {finalPlan.map((item, index) => (
-                  <div key={index} className="summary-row-card">
-                    <div className="timeline-badge">
-                      <span className="calendar-mini">📅</span>{" "}
+                  <div key={index} className="itin-summary-card">
+                    <div className="itin-summary-card__timeline">
+                      <span className="itin-summary-card__calendar">📅</span>{" "}
                       {item.date || "No Date Assigned"} |{" "}
                       {item.time || "Anytime"}
                     </div>
-                    <div className="summary-body">
+                    <div className="itin-summary-card__body">
                       <h3>{item.name}</h3>
                       {item.budget && (
-                        <span className="budget-tag">
+                        <span className="itin-summary-card__budget">
                           Estimated Cost: ₹{item.budget}
                         </span>
                       )}
                       {item.note && (
-                        <p className="notes-block-view">
+                        <p className="itin-summary-card__notes">
                           <strong>Notes:</strong> {item.note}
                         </p>
                       )}
@@ -511,21 +511,21 @@ const Itinerary = () => {
                 ))}
               </div>
 
-              <div className="final-actions-row">
+              <div className="itin-final-view__actions">
                 <button
-                  className="btn-secondary-dark"
+                  className="itin-btn-secondary"
                   onClick={() => setShowFinal(false)}
                 >
                   ⬅ Edit Itinerary
                 </button>
                 <button
-                  className="btn-secondary-dark save-alt"
+                  className="itin-btn-secondary itin-btn-secondary--alt"
                   onClick={handleSaveTrip}
                 >
                   💾 Save Draft Locally
                 </button>
                 <button
-                  className="btn-primary-action"
+                  className="itin-btn-primary"
                   onClick={handleConfirmTrip}
                 >
                   ✅ Confirm & Sync Trip
