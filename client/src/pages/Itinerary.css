@@ -1,7 +1,5 @@
 /* ==========================================================================
-   💎 PREMIUM INTERFACE — SARATHI ITINERARY PAGE
-   Refactored: All class names updated to itin- namespace
-   Layout bug fixed: replaced width: calc(100vw - 220px) with flex: 1 + min-width: 0
+   💎 PREMIUM INTERFACE ARCHITECTURE DESIGN SYSTEMS
    ========================================================================== */
 
 :root {
@@ -26,39 +24,16 @@ body {
   margin: 0;
 }
 
-/* ==========================================================================
-   ✅ LAYOUT — ROOT FIX
-   Old: .main-viewport { width: calc(100vw - 220px) }  ← caused the overlap
-   New: flex row on parent + flex:1 min-width:0 on child ← correct
-   ========================================================================== */
-
-.itin-layout {
+/* ===== APP LAYOUT CONFIG ===== */
+.dashboard-layout {
   display: flex;
-  flex-direction: row;        /* sidebar + content sit side by side */
   min-height: 100vh;
   position: relative;
   background-color: var(--bg-main);
   overflow-x: hidden;
 }
 
-.sidebar {
-  width: 220px;
-  flex-shrink: 0;             /* never let sidebar compress */
-  position: relative;         /* stays in normal document flow on desktop */
-  z-index: 100;
-}
-
-.itin-viewport {
-  flex: 1;                    /* fills all remaining width after sidebar */
-  min-width: 0;               /* prevents flex child overflow — critical */
-  display: flex;
-  flex-direction: column;
-  padding: 24px;
-  overflow-x: hidden;
-  /* ❌ REMOVED: width: calc(100vw - 220px); — this was the root bug */
-}
-
-.itin-overlay {
+.backdrop-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -69,24 +44,25 @@ body {
   z-index: 999;
 }
 
-/* ==========================================================================
-   PAGE CONTAINER
-   ========================================================================== */
-
-.itin-container {
-  margin-top: 20px;
-  min-width: 0;
+.main-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: calc(100vw - 220px);
+  padding: 24px;
+  overflow-x: hidden;
 }
 
-/* ==========================================================================
-   HERO HEADER
-   ========================================================================== */
+.itinerary-container {
+  margin-top: 20px;
+}
 
-.itin-header {
+/* ===== HERO HEADERS ===== */
+.header-meta {
   margin-bottom: 24px;
 }
 
-.itin-title {
+.primary-title {
   font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.025em;
@@ -96,22 +72,19 @@ body {
   margin: 0 0 6px 0;
 }
 
-.itin-title__icon {
+.sparkle-icon {
   color: var(--accent-green);
   font-size: 26px;
 }
 
-.itin-subtitle {
+.sub-title {
   color: var(--text-secondary);
   font-size: 15px;
   margin: 0;
 }
 
-/* ==========================================================================
-   SEARCH BAR
-   ========================================================================== */
-
-.itin-search {
+/* ===== PREMIUM SEARCHBAR BAR ===== */
+.search-wrapper-card {
   display: flex;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -121,40 +94,32 @@ body {
   gap: 12px;
   margin-bottom: 30px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  min-width: 0;
 }
 
-.itin-search__input-group {
+.input-group-icon {
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 1;
-  min-width: 0;
 }
 
-.itin-search__icon {
+.geo-icon {
   font-size: 18px;
   opacity: 0.8;
-  flex-shrink: 0;
 }
 
-.itin-search input {
+.search-wrapper-card input {
   background: transparent;
   border: none;
   outline: none;
   color: var(--text-primary);
   font-size: 16px;
   width: 100%;
-  min-width: 0;
 }
 
-.itin-search input::placeholder {
-  color: var(--text-secondary);
-}
-
-.itin-search__button {
+.premium-search-btn {
   background: var(--accent-green);
-  color: #000;
+  color: #000000;
   font-weight: 700;
   font-size: 14px;
   padding: 12px 28px;
@@ -166,23 +131,19 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 100px;
-  flex-shrink: 0;
 }
 
-.itin-search__button:hover {
+.premium-search-btn:hover {
   background: var(--accent-green-hover);
   transform: translateY(-1px);
 }
 
-/* ==========================================================================
-   SPINNER
-   ========================================================================== */
-
-.itin-spinner {
+/* ===== UI LOADING SPINNER ===== */
+.spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(0, 0, 0, 0.15);
-  border-top-color: #000;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #000000;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -191,23 +152,18 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ==========================================================================
-   TWO-COLUMN WORKSPACE GRID
-   ========================================================================== */
-
-.itin-workspace {
+/* ===== GRID SYSTEM (DESKTOP) ===== */
+.workspace-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 500px);
+  grid-template-columns:
+      minmax(0, 1fr)
+      minmax(420px, 500px);
   gap: 24px;
   align-items: start;
-  min-width: 0;
 }
 
-/* ==========================================================================
-   PANEL CARDS (shared by both columns)
-   ========================================================================== */
-
-.itin-panel {
+/* ===== COMPONENT WORKSPACE PANELS ===== */
+.panel-card-container {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -216,10 +172,9 @@ body {
   flex-direction: column;
   max-height: 780px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  min-width: 0;
 }
 
-.itin-panel__header {
+.panel-header {
   display: flex;
   align-items: flex-start;
   gap: 14px;
@@ -227,148 +182,106 @@ body {
   position: relative;
 }
 
-.itin-panel__header--bordered {
+.panel-header.border-b {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 16px;
 }
 
-.itin-panel__icon {
+.panel-title-icon {
   font-size: 24px;
   background: rgba(255, 255, 255, 0.04);
   padding: 8px;
   border-radius: 10px;
-  flex-shrink: 0;
 }
 
-.itin-panel__icon--highlight {
-  color: var(--accent-green);
-}
-
-.itin-panel__header h2 {
+.panel-header h2 {
   font-size: 20px;
   font-weight: 700;
   margin: 0 0 4px 0;
 }
 
-.itin-panel__header p {
+.panel-header p {
   font-size: 13px;
   color: var(--text-secondary);
   margin: 0;
 }
 
-.itin-panel__clear-btn {
-  background: transparent;
-  border: none;
-  color: #ef4444;
-  cursor: pointer;
-  font-size: 16px;
-  opacity: 0.7;
-  transition: var(--transition-smooth);
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.itin-panel__clear-btn:hover {
-  opacity: 1;
-  transform: scale(1.15);
-}
-
-/* ==========================================================================
-   SCROLLABLE AREAS
-   ========================================================================== */
-
-.itin-panel__scroll {
+/* ===== RECOMMENDATION LIST ITEMS ===== */
+.places-scroll-area,
+.planner-scroll-area {
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
   padding-right: 6px;
-  flex: 1;
-  min-height: 0;
 }
 
-.itin-panel__scroll::-webkit-scrollbar {
+/* Custom Scrollbar Styles */
+.places-scroll-area::-webkit-scrollbar,
+.planner-scroll-area::-webkit-scrollbar {
   width: 6px;
 }
-
-.itin-panel__scroll::-webkit-scrollbar-thumb {
+.places-scroll-area::-webkit-scrollbar-thumb,
+.planner-scroll-area::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
 }
 
-/* ==========================================================================
-   PLACE CARDS (left panel)
-   ========================================================================== */
-
-.itin-place-card {
+.premium-place-card {
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 14px;
   transition: var(--transition-smooth);
-  flex-shrink: 0;
 }
 
-.itin-place-card:hover {
+.premium-place-card:hover {
   border-color: rgba(34, 197, 94, 0.3);
   transform: translateY(-2px);
 }
 
-.itin-place-card--added {
+.premium-place-card.state-added {
   border-color: rgba(34, 197, 94, 0.2);
 }
 
-.itin-place-card__row {
+.card-main-row {
   display: flex;
   align-items: center;
   gap: 16px;
   position: relative;
-  min-width: 0;
 }
 
-.itin-place-card__image {
+.place-thumb {
   width: 85px;
   height: 85px;
   object-fit: cover;
   border-radius: 10px;
   background: #1f2937;
-  flex-shrink: 0;
 }
 
-.itin-place-card__details {
+.place-details-box {
   flex: 1;
-  min-width: 0;
 }
 
-.itin-place-card__details h3 {
+.place-details-box h3 {
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 6px 0;
   line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.itin-place-card__address {
+.address-text {
   font-size: 13px;
   color: var(--text-secondary);
   margin: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 4px;
   line-height: 1.4;
 }
 
-.itin-place-card__pin {
-  flex-shrink: 0;
-}
-
-/* ==========================================================================
-   ACTION PILL BUTTONS
-   ========================================================================== */
-
-.itin-place-card__action-btn {
+/* ACTIONS PILL BUTTONS */
+.action-pill-btn {
   background: transparent;
   color: var(--accent-green);
   border: 1px solid var(--accent-green);
@@ -378,174 +291,40 @@ body {
   border-radius: 20px;
   cursor: pointer;
   transition: var(--transition-smooth);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
-.itin-place-card__action-btn:hover {
+.action-pill-btn:hover {
   background: var(--accent-green);
   color: #000;
 }
 
-.itin-place-card__action-btn--added {
+.action-pill-btn.btn-added {
   background: rgba(34, 197, 94, 0.1);
   color: var(--accent-green);
   border-color: rgba(34, 197, 94, 0.4);
 }
 
-/* ==========================================================================
-   MOBILE CHEVRON (hidden on desktop)
-   ========================================================================== */
-
-.itin-place-card__chevron {
-  display: none;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 8px;
-  transition: var(--transition-smooth);
-  flex-shrink: 0;
-}
-
-.itin-place-card__chevron--rotated {
-  transform: rotate(180deg);
-  color: var(--accent-green);
-}
-
-/* ==========================================================================
-   MOBILE ACCORDION FORM (inline, inside place card)
-   ========================================================================== */
-
-.itin-place-card__form {
-  max-height: 0;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0;
-}
-
-.itin-place-card__form--expanded {
-  max-height: 400px;
-  opacity: 1;
-  margin-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 14px;
-}
-
-.itin-place-card__form-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.itin-place-card__form-header h4 {
-  flex: 1;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.itin-place-card__form-icon {
-  flex-shrink: 0;
-}
-
-.itin-place-card__remove-btn {
-  background: transparent;
-  border: none;
-  color: #ef4444;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.itin-place-card__inputs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.itin-place-card__input-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.itin-place-card__input-field label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.itin-place-card__form-inner input {
-  background: #030712;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px;
-  color: #fff;
-  font-size: 13px;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.itin-place-card__textarea-field {
-  position: relative;
-}
-
-.itin-place-card__form-inner textarea {
-  width: 100%;
-  min-height: 70px;
-  background: #030712;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px;
-  color: #fff;
-  font-size: 13px;
-  resize: none;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.itin-place-card__char-count {
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-/* ==========================================================================
-   DESKTOP PLANNER CARDS (right panel)
-   ========================================================================== */
-
-.itin-plan-card {
+/* ===== DESKTOP EXCLUSIVE CARDS ===== */
+.desktop-plan-card {
   background: var(--bg-surface-elevated);
   border-radius: var(--radius-md);
   padding: 18px;
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
 }
 
-.itin-plan-card__header {
+.plan-card-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
-  gap: 10px;
-  min-width: 0;
 }
 
-.itin-plan-card__header h3 {
+.plan-card-top h3 {
   font-size: 16px;
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
 }
 
-.itin-plan-card__delete-btn {
+.card-delete-icon, .clear-all-btn {
   background: transparent;
   border: none;
   color: #ef4444;
@@ -553,23 +332,23 @@ body {
   font-size: 16px;
   opacity: 0.7;
   transition: var(--transition-smooth);
-  flex-shrink: 0;
 }
 
-.itin-plan-card__delete-btn:hover {
+.card-delete-icon:hover, .clear-all-btn:hover {
   opacity: 1;
   transform: scale(1.15);
 }
 
-.itin-plan-card__form-grid {
+.desktop-form-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 12px;
 }
 
-.itin-plan-card__form-grid input {
-  background: #030712;
+.desktop-form-grid input,
+.form-inner-wrapper input {
+  background: #030712 !important;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px;
@@ -580,15 +359,12 @@ body {
   box-sizing: border-box;
 }
 
-.itin-plan-card__currency-input {
-  width: 100%;
-}
-
-.itin-plan-card__textarea-wrapper {
+.textarea-wrapper, .textarea-field {
   position: relative;
 }
 
-.itin-plan-card textarea {
+.desktop-plan-card textarea,
+.form-inner-wrapper textarea {
   width: 100%;
   min-height: 70px;
   background: #030712;
@@ -602,7 +378,7 @@ body {
   box-sizing: border-box;
 }
 
-.itin-plan-card__char-count {
+.counter-tag, .char-count {
   position: absolute;
   right: 10px;
   bottom: 8px;
@@ -610,18 +386,14 @@ body {
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* ==========================================================================
-   FINALIZE BUTTON FOOTER
-   ========================================================================== */
-
-.itin-panel__footer {
+/* ===== STICKY ACTIONS FOOTER AREA ===== */
+.action-footer-sticky {
   margin-top: auto;
   padding-top: 20px;
   border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
 }
 
-.itin-panel__finalize-btn {
+.finalize-submit-btn {
   width: 100%;
   background: var(--accent-green);
   color: #000;
@@ -638,143 +410,135 @@ body {
   transition: var(--transition-smooth);
 }
 
-.itin-panel__finalize-btn:hover {
+.finalize-submit-btn:hover {
   background: var(--accent-green-hover);
 }
 
-.itin-panel__finalize-arrow {
-  font-size: 16px;
-}
-
-.itin-panel__footer-note {
+.sticky-disclaimer {
   text-align: center;
   font-size: 12px;
   color: var(--text-secondary);
   margin: 10px 0 0 0;
 }
 
-/* ==========================================================================
-   EMPTY STATES
-   ========================================================================== */
-
-.itin-empty {
-  text-align: center;
-  padding: 60px 20px;
+/* ===== MOBILE INTERACTIVE ACCORDION FORMS ===== */
+.mobile-inline-form {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
 }
 
-.itin-empty__icon {
-  font-size: 36px;
-  margin-bottom: 14px;
+.mobile-inline-form.is-expanded {
+  max-height: 400px;
+  opacity: 1;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 14px;
+}
+
+.mobile-chevron {
+  display: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px;
+  transition: var(--transition-smooth);
+}
+
+.mobile-chevron.rotated {
+  transform: rotate(180deg);
+  color: var(--accent-green);
+}
+
+/* ===== EMPTY STATE OVERRIDE ===== */
+.empty-state-view {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.itin-empty p {
-  font-size: 15px;
+.empty-state-view p {
+  font-size: 16px;
   font-weight: 600;
   margin: 0 0 6px 0;
 }
 
-.itin-empty span {
+.empty-state-view span {
   font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.5;
 }
 
-/* ==========================================================================
-   FINAL SUMMARY VIEW
-   ========================================================================== */
-
-.itin-final-view {
+/* ===== PREMIUM FINAL OUTPUT SUMMARY SCREEN ===== */
+.premium-final-view {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 30px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.itin-final-view--animating {
-  animation: fadeIn 0.35s ease both;
-}
-
-.itin-final-view__header {
+.final-view-header {
   margin-bottom: 24px;
 }
 
-.itin-final-view__header h2 {
+.final-view-header h2 {
   font-size: 24px;
-  font-weight: 800;
   margin: 0 0 6px 0;
 }
 
-.itin-final-view__header p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.itin-final-view__list {
+.summary-cards-stack {
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin-bottom: 30px;
 }
 
-.itin-summary-card {
+.summary-row-card {
   background: var(--bg-surface-elevated);
   border-left: 4px solid var(--accent-green);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   padding: 16px;
 }
 
-.itin-summary-card__timeline {
+.timeline-badge {
   font-size: 12px;
   color: var(--accent-green);
   font-weight: 700;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  margin-bottom: 6px;
 }
 
-.itin-summary-card__calendar {
-  flex-shrink: 0;
-}
-
-.itin-summary-card__body h3 {
+.summary-body h3 {
   margin: 0 0 8px 0;
   font-size: 18px;
-  font-weight: 700;
 }
 
-.itin-summary-card__budget {
+.budget-tag {
   display: inline-block;
   background: rgba(34, 197, 94, 0.1);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 13px;
   color: var(--accent-green);
-  font-weight: 600;
 }
 
-.itin-summary-card__notes {
+.notes-block-view {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 10px 0 0 0;
-  line-height: 1.5;
 }
 
-.itin-final-view__actions {
+.final-actions-row {
   display: flex;
   justify-content: flex-end;
   gap: 14px;
-  flex-wrap: wrap;
 }
 
-.itin-btn-secondary {
+.btn-secondary-dark {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: #fff;
@@ -783,18 +547,13 @@ body {
   border-radius: 10px;
   cursor: pointer;
   transition: var(--transition-smooth);
-  font-size: 14px;
 }
 
-.itin-btn-secondary:hover {
+.btn-secondary-dark:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.itin-btn-secondary--alt {
-  /* Additional style variant if needed */
-}
-
-.itin-btn-primary {
+.btn-primary-action {
   background: var(--accent-green);
   border: none;
   color: #000;
@@ -803,324 +562,341 @@ body {
   border-radius: 10px;
   cursor: pointer;
   transition: var(--transition-smooth);
-  font-size: 14px;
 }
 
-.itin-btn-primary:hover {
+.btn-primary-action:hover {
   background: var(--accent-green-hover);
 }
-
 /* ==========================================================================
-   DATE / TIME PICKER DARK ICON FIX
+   RESPONSIVE BREAKPOINT SYSTEM
    ========================================================================== */
 
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.5);
-  cursor: pointer;
+/* =====================================================
+   LARGE DESKTOP (1440px+)
+===================================================== */
+
+@media (min-width: 1440px) {
+
+  .main-viewport {
+    padding: 32px;
+    max-width: 1800px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr 500px;
+    gap: 32px;
+  }
+
+  .panel-card-container {
+    max-height: 850px;
+  }
+
+  .primary-title {
+    font-size: 38px;
+  }
 }
 
-/* ==========================================================================
-   GLOBAL RESETS
-   ========================================================================== */
+/* =====================================================
+   DESKTOP & LAPTOP
+   1024px - 1439px
+===================================================== */
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+
+  .main-viewport {
+    padding: 24px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 24px;
+  }
+
+  .panel-card-container {
+    min-width: 0;
+    max-height: 780px;
+  }
+
+  .planner-panel {
+    display: flex !important;
+  }
+
+  .search-wrapper-card,
+  .itinerary-container,
+  .header-meta {
+    width: 100%;
+  }
+}
+
+/* =====================================================
+   TABLET LANDSCAPE
+   768px - 1023px
+===================================================== */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+
+  .main-viewport {
+    padding: 18px;
+    width: 100%;
+  }
+
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 18px;
+  }
+
+  .planner-panel {
+    display: flex !important;
+  }
+
+  .panel-card-container {
+    max-height: none;
+    min-width: 0;
+  }
+
+  .place-thumb {
+    width: 72px;
+    height: 72px;
+  }
+
+  .primary-title {
+    font-size: 30px;
+  }
+
+  .panel-header h2 {
+    font-size: 18px;
+  }
+
+  .desktop-form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -220px;
+    top: 0;
+    z-index: 1000;
+    transition: .3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
+
+/* =====================================================
+   TABLET PORTRAIT
+   600px - 767px
+===================================================== */
+
+@media (min-width: 600px) and (max-width: 767px) {
+
+  .main-viewport {
+    padding: 16px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .planner-panel {
+    display: flex !important;
+  }
+
+  .panel-card-container {
+    max-height: none;
+  }
+
+  .desktop-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-wrapper-card {
+    flex-direction: row;
+  }
+
+  .place-thumb {
+    width: 70px;
+    height: 70px;
+  }
+
+  .primary-title {
+    font-size: 28px;
+  }
+
+  .final-actions-row {
+    flex-direction: column;
+  }
+
+  .final-actions-row button {
+    width: 100%;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -220px;
+    top: 0;
+    z-index: 1000;
+    transition: .3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
+
+/* =====================================================
+   MOBILE
+   <600px
+===================================================== */
+
+@media (max-width: 599px) {
+
+  .main-viewport {
+    padding: 14px;
+  }
+
+  .primary-title {
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  .sub-title {
+    font-size: 13px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .planner-panel {
+    display: none !important;
+  }
+
+  .suggested-panel {
+    padding: 16px;
+    max-height: none;
+  }
+
+  .panel-card-container {
+    padding: 16px;
+  }
+
+  .panel-header h2 {
+    font-size: 16px;
+  }
+
+  .panel-header p {
+    font-size: 12px;
+  }
+
+  .place-thumb {
+    width: 65px;
+    height: 65px;
+  }
+
+  .card-main-row {
+    gap: 10px;
+  }
+
+  .place-details-box h3 {
+    font-size: 14px;
+  }
+
+  .address-text {
+    font-size: 11px;
+  }
+
+  .mobile-chevron {
+    display: block;
+  }
+
+  .search-wrapper-card {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .search-wrapper-card input {
+    font-size: 14px;
+  }
+
+  .premium-search-btn {
+    min-width: 90px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .inputs-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .input-field label {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .final-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .final-actions-row button {
+    width: 100%;
+  }
+
+  .premium-final-view {
+    padding: 18px;
+  }
+
+  .summary-row-card {
+    padding: 14px;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -220px;
+    top: 0;
+    z-index: 1000;
+    transition: .3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
+
+/* =====================================================
+   GLOBAL FIXES
+===================================================== */
 
 img {
   max-width: 100%;
   display: block;
 }
 
-.itin-workspace,
-.itin-panel,
-.itin-search,
-.itin-place-card__details,
-.itin-container {
+.workspace-grid,
+.panel-card-container,
+.search-wrapper-card,
+.place-details-box {
   min-width: 0;
 }
 
-/* ==========================================================================
-   RESPONSIVE — LARGE DESKTOP (1440px+)
-   ========================================================================== */
-
-@media (min-width: 1440px) {
-  .itin-viewport {
-    padding: 32px;
-  }
-
-  .itin-workspace {
-    grid-template-columns: 1fr 500px;
-    gap: 32px;
-  }
-
-  .itin-panel {
-    max-height: 850px;
-  }
-
-  .itin-title {
-    font-size: 38px;
-  }
+.place-details-box h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ==========================================================================
-   RESPONSIVE — DESKTOP & LAPTOP (1024px–1439px)
-   ========================================================================== */
-
-@media (min-width: 1024px) and (max-width: 1439px) {
-  .itin-viewport {
-    padding: 24px;
-  }
-
-  .itin-workspace {
-    grid-template-columns: minmax(0, 1fr) 420px;
-    gap: 24px;
-  }
-
-  .itin-panel {
-    min-width: 0;
-    max-height: 780px;
-  }
-
-  .itin-panel--planner {
-    display: flex !important;
-  }
-}
-
-/* ==========================================================================
-   RESPONSIVE — TABLET LANDSCAPE (768px–1023px)
-   Sidebar becomes fixed off-canvas; content fills full width
-   ========================================================================== */
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  /* Pull sidebar out of flow so main-viewport fills 100% */
-  .sidebar {
-    position: fixed;
-    left: -220px;
-    top: 0;
-    height: 100vh;
-    z-index: 1000;
-    transition: left 0.3s ease;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-  /* itin-viewport already has flex:1 so it fills the row naturally */
-  .itin-viewport {
-    padding: 18px;
-  }
-
-  .itin-workspace {
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 18px;
-  }
-
-  .itin-panel--planner {
-    display: flex !important;
-  }
-
-  .itin-panel {
-    max-height: none;
-    min-width: 0;
-  }
-
-  .itin-place-card__image {
-    width: 72px;
-    height: 72px;
-  }
-
-  .itin-title {
-    font-size: 30px;
-  }
-
-  .itin-panel__header h2 {
-    font-size: 18px;
-  }
-
-  .itin-plan-card__form-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* ==========================================================================
-   RESPONSIVE — TABLET PORTRAIT (600px–767px)
-   ========================================================================== */
-
-@media (min-width: 600px) and (max-width: 767px) {
-  .sidebar {
-    position: fixed;
-    left: -220px;
-    top: 0;
-    height: 100vh;
-    z-index: 1000;
-    transition: left 0.3s ease;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-  .itin-viewport {
-    padding: 16px;
-  }
-
-  .itin-workspace {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .itin-panel--planner {
-    display: flex !important;
-  }
-
-  .itin-panel {
-    max-height: none;
-  }
-
-  .itin-plan-card__form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .itin-search {
-    flex-direction: row;
-  }
-
-  .itin-place-card__image {
-    width: 70px;
-    height: 70px;
-  }
-
-  .itin-title {
-    font-size: 28px;
-  }
-
-  .itin-final-view__actions {
-    flex-direction: column;
-  }
-
-  .itin-final-view__actions button {
-    width: 100%;
-  }
-}
-
-/* ==========================================================================
-   RESPONSIVE — MOBILE (<600px)
-   Sidebar off-canvas; planner panel hidden; accordion form active
-   ========================================================================== */
-
-@media (max-width: 599px) {
-  .sidebar {
-    position: fixed;
-    left: -220px;
-    top: 0;
-    height: 100vh;
-    z-index: 1000;
-    transition: left 0.3s ease;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-  .itin-viewport {
-    padding: 14px;
-  }
-
-  .itin-title {
-    font-size: 26px;
-    line-height: 1.2;
-  }
-
-  .itin-subtitle {
-    font-size: 13px;
-  }
-
-  .itin-workspace {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  /* Desktop planner panel hidden on mobile — accordion form used instead */
-  .itin-panel--planner {
-    display: none !important;
-  }
-
-  .itin-panel--suggestions {
-    padding: 16px;
-    max-height: none;
-  }
-
-  .itin-panel {
-    padding: 16px;
-  }
-
-  .itin-panel__header h2 {
-    font-size: 16px;
-  }
-
-  .itin-panel__header p {
-    font-size: 12px;
-  }
-
-  .itin-place-card__image {
-    width: 65px;
-    height: 65px;
-  }
-
-  .itin-place-card__row {
-    gap: 10px;
-  }
-
-  .itin-place-card__details h3 {
-    font-size: 14px;
-  }
-
-  .itin-place-card__address {
-    font-size: 11px;
-  }
-
-  /* Show mobile chevron toggle on mobile only */
-  .itin-place-card__chevron {
-    display: block;
-  }
-
-  .itin-search {
-    padding: 8px;
-    gap: 8px;
-  }
-
-  .itin-search input {
-    font-size: 14px;
-  }
-
-  .itin-search__button {
-    min-width: 80px;
-    padding: 10px 14px;
-    font-size: 13px;
-  }
-
-  .itin-place-card__inputs {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .itin-final-view__actions {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .itin-final-view__actions button {
-    width: 100%;
-  }
-
-  .itin-final-view {
-    padding: 18px;
-  }
-
-  .itin-summary-card {
-    padding: 14px;
-  }
-
-  .itin-summary-card__body h3 {
-    font-size: 16px;
-  }
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.5);
 }
