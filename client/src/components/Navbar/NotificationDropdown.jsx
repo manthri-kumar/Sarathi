@@ -75,6 +75,14 @@ const mockNotifications = [
   },
 ];
 
+const categories = [
+  { id: "all", label: "All", color: "#22c55e" },
+  { id: "travel", label: "Travel", color: "#3b82f6" },
+  { id: "temple", label: "Temple", color: "#f59e0b" },
+  { id: "weather", label: "Weather", color: "#06b6d4" },
+  { id: "events", label: "Events", color: "#8b5cf6" },
+  { id: "ai", label: "AI", color: "#22c55e" },
+];
 /* =========================================================
    COMPONENT
 ========================================================= */
