@@ -20,6 +20,7 @@
   font-family: 'Poppins', sans-serif;
   position: relative;
   overflow-x: hidden;
+  padding-left: 3rem;
 }
 
 .dashboard .main-content {
