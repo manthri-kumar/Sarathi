@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { useExploreSearchContext } from "../../pages/ExploreSearchContext";
-import { loadGoogleMaps, toSelectedCity } from "../lib/loadGoogleMaps";
+import { loadGoogleMaps, toSelectedCity } from "../../lib/loadGoogleMaps";
 import PopularDestinations from "./PopularDestinations";
 import TrendingDestinations from "./TrendingDestinations";
 import RecentSearches from "./RecentSearches";
