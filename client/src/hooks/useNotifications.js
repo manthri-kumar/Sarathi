@@ -1,102 +1,92 @@
-import { useState, useEffect, useCallback } from "react";
+/**
+ * useNotifications Hook
+ *
+ * Reads notification state from localStorage and stays in sync via:
+ *   1. sarathiNotificationUpdate CustomEvent  — same-tab writes from notificationService
+ *   2. Native storage Event                   — cross-tab writes
+ *
+ * All mutation methods delegate to notificationService so the single
+ * write path always dispatches the sync event.
+ */
 
-const NOTIFICATIONS_STORAGE_KEY = "sarathiNotifications";
+import { useState, useEffect, useCallback } from "react";
+import {
+  NOTIFICATION_UPDATE_EVENT,
+  getNotifications,
+  addNotification as serviceAdd,
+  removeNotification as serviceRemove,
+  markAsRead as serviceMarkAsRead,
+  markAllAsRead as serviceMarkAllAsRead,
+  clearNotifications as serviceClearAll,
+} from "../services/notificationService";
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load notifications from localStorage on mount
-  useEffect(() => {
+  /**
+   * Pull the current state from localStorage into React state.
+   * Called on mount and whenever a sync event fires.
+   */
+  const syncFromStorage = useCallback(() => {
     try {
-      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      setNotifications(Array.isArray(parsed) ? parsed : []);
+      const parsed = getNotifications();
+      setNotifications(parsed);
     } catch (error) {
-      console.error("Error loading notifications:", error);
+      console.error("useNotifications: sync error", error);
       setNotifications([]);
     } finally {
+      // Only show loading skeleton on the very first load
       setLoading(false);
     }
   }, []);
 
-  // Save notifications to localStorage whenever they change
-  const saveToLocalStorage = useCallback((notifs) => {
-    try {
-      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifs));
-    } catch (error) {
-      console.error("Error saving notifications:", error);
-    }
-  }, []);
+  useEffect(() => {
+    // Initial load
+    syncFromStorage();
 
-  // Add a new notification (prepend to show newest first)
+    // Same-tab sync: fired by notificationService after every write
+    window.addEventListener(NOTIFICATION_UPDATE_EVENT, syncFromStorage);
+
+    // Cross-tab sync: native storage event fires in OTHER tabs
+    window.addEventListener("storage", syncFromStorage);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_UPDATE_EVENT, syncFromStorage);
+      window.removeEventListener("storage", syncFromStorage);
+    };
+  }, [syncFromStorage]);
+
+  // ── Mutation methods — all delegate to the service ──────────────────────
+
   const addNotification = useCallback(
-    (notificationData) => {
-      const notification = {
-        id: notificationData.id || `notif_${Date.now()}`,
-        category: notificationData.category || "general",
-        priority: notificationData.priority || "medium",
-        isRead: false,
-        icon: notificationData.icon || "🔔",
-        title: notificationData.title || "Notification",
-        message: notificationData.message || "",
-        timestamp: notificationData.timestamp || new Date().toLocaleString(),
-        actionLabel: notificationData.actionLabel || null,
-        actionUrl: notificationData.actionUrl || null,
-      };
-
-      setNotifications((prev) => {
-        const updated = [notification, ...prev];
-        saveToLocalStorage(updated);
-        return updated;
-      });
-    },
-    [saveToLocalStorage]
+    (notificationData) => serviceAdd(notificationData),
+    []
   );
 
-  // Mark a notification as read
   const markAsRead = useCallback(
-    (id) => {
-      setNotifications((prev) => {
-        const updated = prev.map((notif) =>
-          notif.id === id ? { ...notif, isRead: true } : notif
-        );
-        saveToLocalStorage(updated);
-        return updated;
-      });
-    },
-    [saveToLocalStorage]
+    (id) => serviceMarkAsRead(id),
+    []
   );
 
-  // Mark all notifications as read
-  const markAllAsRead = useCallback(() => {
-    setNotifications((prev) => {
-      const updated = prev.map((notif) => ({ ...notif, isRead: true }));
-      saveToLocalStorage(updated);
-      return updated;
-    });
-  }, [saveToLocalStorage]);
+  const markAllAsRead = useCallback(
+    () => serviceMarkAllAsRead(),
+    []
+  );
 
-  // Dismiss (delete) a notification
   const dismiss = useCallback(
-    (id) => {
-      setNotifications((prev) => {
-        const updated = prev.filter((notif) => notif.id !== id);
-        saveToLocalStorage(updated);
-        return updated;
-      });
-    },
-    [saveToLocalStorage]
+    (id) => serviceRemove(id),
+    []
   );
 
-  // Clear all notifications
-  const clearAll = useCallback(() => {
-    setNotifications([]);
-    saveToLocalStorage([]);
-  }, [saveToLocalStorage]);
+  const clearAll = useCallback(
+    () => serviceClearAll(),
+    []
+  );
 
-  // Calculate unread count
-  const unreadCount = notifications.filter((notif) => !notif.isRead).length;
+  // ── Derived state ────────────────────────────────────────────────────────
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
     notifications,

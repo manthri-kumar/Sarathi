@@ -10,58 +10,51 @@ import {
   Luggage,
   Heart,
   Settings,
-  LogOut
+  LogOut,
 } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 
-// Import new dropdown components
 import InboxDropdown from "./InboxDropdown";
-import NotificationDropdown from "./NotificationDropdown";// Explore search context (drives city search only on the Explore route)
+import NotificationDropdown from "./NotificationDropdown";
 import { useExploreSearchContext } from "../../pages/ExploreSearchContext";
+import { useNotifications } from "../../hooks/useNotifications";
 
 const Navbar = ({ toggleSidebar }) => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Active only on the Explore route; elsewhere the bar keeps its feature search.
   const onExplore = location.pathname.startsWith("/explore");
 
- const exploreContext = useExploreSearchContext() || {};
-
-const query = exploreContext.query || "";
-const setQuery = exploreContext.setQuery || (() => {});
-const suggestions = exploreContext.suggestions || [];
-const resolveAndSelect =
-  exploreContext.resolveAndSelect || (() => {});
+  const exploreContext = useExploreSearchContext() || {};
+  const query = exploreContext.query || "";
+  const setQuery = exploreContext.setQuery || (() => {});
+  const suggestions = exploreContext.suggestions || [];
+  const resolveAndSelect = exploreContext.resolveAndSelect || (() => {});
 
   const [activeIdx, setActiveIdx] = useState(-1);
   const [showLanguages, setShowLanguages] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] =
+    useState(false);
   const [search, setSearch] = useState("");
 
-  // FIX: Separate refs per breakpoint so click-outside never
-  // resolves to a hidden duplicate node and pre-closes the menu.
   const desktopLangRef = useRef(null);
   const mobileLangRef = useRef(null);
   const desktopProfileRef = useRef(null);
   const mobileProfileRef = useRef(null);
 
-  const user = JSON.parse(
-    localStorage.getItem("user")
-  );
+  // Live unread count — updates instantly whenever notificationService writes
+  const { unreadCount } = useNotifications();
 
+  const user = JSON.parse(localStorage.getItem("user"));
   const username = user?.username || user?.name || "User";
   const profilePic = user?.picture;
 
-  // Get first letter of username for avatar fallback
-  const getAvatarLetter = () => {
-    return (username.charAt(0) || "U").toUpperCase();
-  };
+  const getAvatarLetter = () => (username.charAt(0) || "U").toUpperCase();
 
   const appItems = [
     { name: "Dashboard", route: "/dashboard" },
@@ -70,7 +63,7 @@ const resolveAndSelect =
     { name: "Day Planner", route: "/day-planner" },
     { name: "Saved", route: "/saved" },
     { name: "Profile", route: "/profile" },
-    { name: "Itinerary", route: "/itinerary" }
+    { name: "Itinerary", route: "/itinerary" },
   ];
 
   const profileMenuItems = [
@@ -83,9 +76,7 @@ const resolveAndSelect =
   const filteredItems =
     search.length > 0
       ? appItems.filter((item) =>
-          item.name
-            .toLowerCase()
-            .includes(search.toLowerCase())
+          item.name.toLowerCase().includes(search.toLowerCase())
         )
       : [];
 
@@ -101,7 +92,6 @@ const resolveAndSelect =
     setShowProfileMenu(false);
   };
 
-  // ---- Search bar bindings: city search on Explore, feature search elsewhere
   const searchValue = onExplore ? query : search;
 
   const onSearchChange = (e) => {
@@ -136,13 +126,11 @@ const resolveAndSelect =
     setActiveIdx(-1);
   };
 
-  // Close menus when clicking outside (improved ref handling for mobile/desktop)
   useEffect(() => {
     const handleClickOutside = (event) => {
       const insideProfile =
         desktopProfileRef.current?.contains(event.target) ||
         mobileProfileRef.current?.contains(event.target);
-
       const insideLang =
         desktopLangRef.current?.contains(event.target) ||
         mobileLangRef.current?.contains(event.target);
@@ -152,9 +140,7 @@ const resolveAndSelect =
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -176,7 +162,9 @@ const resolveAndSelect =
                   {suggestions.map((s, i) => (
                     <div
                       key={s.placeId}
-                      className={`search-item ${i === activeIdx ? "active" : ""}`}
+                      className={`search-item ${
+                        i === activeIdx ? "active" : ""
+                      }`}
                       onClick={() => onSuggestionClick(s.description)}
                     >
                       {s.description}
@@ -204,9 +192,7 @@ const resolveAndSelect =
           <div className="language-wrapper" ref={desktopLangRef}>
             <button
               className="language-btn"
-              onClick={() =>
-                setShowLanguages(!showLanguages)
-              }
+              onClick={() => setShowLanguages(!showLanguages)}
               title="Change Language"
             >
               <Languages size={20} />
@@ -223,7 +209,6 @@ const resolveAndSelect =
                 >
                   🇬🇧 English
                 </div>
-
                 <div
                   onClick={() => {
                     i18n.changeLanguage("te");
@@ -233,7 +218,6 @@ const resolveAndSelect =
                 >
                   🇮🇳 తెలుగు
                 </div>
-
                 <div
                   onClick={() => {
                     i18n.changeLanguage("hi");
@@ -259,26 +243,28 @@ const resolveAndSelect =
               <span className="notification-dot"></span>
             </button>
 
-            {/* Inbox Dropdown */}
             <InboxDropdown
               isOpen={showInboxDropdown}
               onClose={() => setShowInboxDropdown(false)}
             />
           </div>
 
-          {/* Notification Bell */}
+          {/* Notification Bell — live unread badge */}
           <div className="bell-wrapper">
             <button
               className="bell-icon"
-              onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+              onClick={() =>
+                setShowNotificationDropdown(!showNotificationDropdown)
+              }
               title="Notifications"
               aria-label="Open Notifications"
             >
               <Bell size={18} />
-              <span className="notification-dot"></span>
+              {unreadCount > 0 && (
+                <span className="notification-dot" aria-label={`${unreadCount} unread`}></span>
+              )}
             </button>
 
-            {/* Notification Dropdown */}
             <NotificationDropdown
               isOpen={showNotificationDropdown}
               onClose={() => setShowNotificationDropdown(false)}
@@ -306,15 +292,12 @@ const resolveAndSelect =
                     className="avatar-image"
                   />
                 ) : (
-                  <div className="avatar-fallback">
-                    {getAvatarLetter()}
-                  </div>
+                  <div className="avatar-fallback">{getAvatarLetter()}</div>
                 )}
               </div>
               <span className="profile-username">{username}</span>
             </div>
 
-            {/* Profile Dropdown Menu */}
             {showProfileMenu && (
               <div className="profile-dropdown">
                 <div className="profile-header">
@@ -386,9 +369,7 @@ const resolveAndSelect =
           <div className="language-wrapper" ref={mobileLangRef}>
             <button
               className="language-btn"
-              onClick={() =>
-                setShowLanguages(!showLanguages)
-              }
+              onClick={() => setShowLanguages(!showLanguages)}
               title="Change Language"
             >
               <Languages size={18} />
@@ -405,7 +386,6 @@ const resolveAndSelect =
                 >
                   English
                 </div>
-
                 <div
                   onClick={() => {
                     i18n.changeLanguage("te");
@@ -415,7 +395,6 @@ const resolveAndSelect =
                 >
                   తెలుగు
                 </div>
-
                 <div
                   onClick={() => {
                     i18n.changeLanguage("hi");
@@ -429,35 +408,44 @@ const resolveAndSelect =
             )}
           </div>
 
-          <button
-            className="mail-icon"
-            onClick={() => setShowInboxDropdown(!showInboxDropdown)}
-            title="Messages"
-            aria-label="Open AI Inbox"
-          >
-            <Mail size={18} />
-            <span className="notification-dot"></span>
-          </button>
+          <div className="mail-wrapper">
+            <button
+              className="mail-icon"
+              onClick={() => setShowInboxDropdown(!showInboxDropdown)}
+              title="Messages"
+              aria-label="Open AI Inbox"
+            >
+              <Mail size={18} />
+              <span className="notification-dot"></span>
+            </button>
 
-          <InboxDropdown
-            isOpen={showInboxDropdown}
-            onClose={() => setShowInboxDropdown(false)}
-          />
+            <InboxDropdown
+              isOpen={showInboxDropdown}
+              onClose={() => setShowInboxDropdown(false)}
+            />
+          </div>
 
-          <button
-            className="bell-icon"
-            onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
-            title="Notifications"
-            aria-label="Open Notifications"
-          >
-            <Bell size={18} />
-            <span className="notification-dot"></span>
-          </button>
+          {/* Mobile Bell — live unread badge */}
+          <div className="bell-wrapper">
+            <button
+              className="bell-icon"
+              onClick={() =>
+                setShowNotificationDropdown(!showNotificationDropdown)
+              }
+              title="Notifications"
+              aria-label="Open Notifications"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="notification-dot" aria-label={`${unreadCount} unread`}></span>
+              )}
+            </button>
 
-          <NotificationDropdown
-            isOpen={showNotificationDropdown}
-            onClose={() => setShowNotificationDropdown(false)}
-          />
+            <NotificationDropdown
+              isOpen={showNotificationDropdown}
+              onClose={() => setShowNotificationDropdown(false)}
+            />
+          </div>
 
           <div className="profile-wrapper" ref={mobileProfileRef}>
             <button
@@ -519,12 +507,14 @@ const resolveAndSelect =
         />
 
         {onExplore
-  ? suggestions?.length > 0 && (
+          ? suggestions?.length > 0 && (
               <div className="search-dropdown">
                 {(suggestions || []).map((s, i) => (
                   <div
                     key={s.placeId}
-                    className={`search-item ${i === activeIdx ? "active" : ""}`}
+                    className={`search-item ${
+                      i === activeIdx ? "active" : ""
+                    }`}
                     onClick={() => onSuggestionClick(s.description)}
                   >
                     {s.description}

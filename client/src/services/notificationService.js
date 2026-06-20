@@ -1,17 +1,37 @@
 /**
  * Notification Service
- * Centralized functions for creating and managing notifications
+ * Centralized functions for creating and managing notifications.
+ *
+ * Every write dispatches a CustomEvent so all useNotifications hook
+ * instances in the same tab re-sync from localStorage immediately.
  */
 
 const NOTIFICATIONS_STORAGE_KEY = "sarathiNotifications";
+export const NOTIFICATION_UPDATE_EVENT = "sarathiNotificationUpdate";
 
 /**
- * Get all notifications from localStorage
+ * Internal helper — persist to localStorage and notify all listeners.
+ */
+const persistAndDispatch = (notifications) => {
+  try {
+    localStorage.setItem(
+      NOTIFICATIONS_STORAGE_KEY,
+      JSON.stringify(notifications)
+    );
+    window.dispatchEvent(new CustomEvent(NOTIFICATION_UPDATE_EVENT));
+  } catch (error) {
+    console.error("Error persisting notifications:", error);
+  }
+};
+
+/**
+ * Get all notifications from localStorage.
  */
 export const getNotifications = () => {
   try {
     const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     console.error("Error getting notifications:", error);
     return [];
@@ -19,11 +39,13 @@ export const getNotifications = () => {
 };
 
 /**
- * Add a new notification to localStorage
+ * Add a new notification to localStorage.
+ * Prevents duplicate IDs.
  */
 export const addNotification = (notificationData) => {
   try {
     const notifications = getNotifications();
+
     const notification = {
       id: notificationData.id || `notif_${Date.now()}`,
       category: notificationData.category || "general",
@@ -36,8 +58,16 @@ export const addNotification = (notificationData) => {
       actionLabel: notificationData.actionLabel || null,
       actionUrl: notificationData.actionUrl || null,
     };
+
+    // Prevent duplicate IDs
+    const isDuplicate = notifications.some((n) => n.id === notification.id);
+    if (isDuplicate) {
+      console.warn("Duplicate notification prevented:", notification.id);
+      return null;
+    }
+
     const updated = [notification, ...notifications];
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+    persistAndDispatch(updated);
     return notification;
   } catch (error) {
     console.error("Error adding notification:", error);
@@ -46,13 +76,13 @@ export const addNotification = (notificationData) => {
 };
 
 /**
- * Remove a notification by ID
+ * Remove a notification by ID.
  */
 export const removeNotification = (id) => {
   try {
     const notifications = getNotifications();
     const updated = notifications.filter((notif) => notif.id !== id);
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+    persistAndDispatch(updated);
     return true;
   } catch (error) {
     console.error("Error removing notification:", error);
@@ -61,7 +91,7 @@ export const removeNotification = (id) => {
 };
 
 /**
- * Mark a notification as read by ID
+ * Mark a notification as read by ID.
  */
 export const markAsRead = (id) => {
   try {
@@ -69,7 +99,7 @@ export const markAsRead = (id) => {
     const updated = notifications.map((notif) =>
       notif.id === id ? { ...notif, isRead: true } : notif
     );
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+    persistAndDispatch(updated);
     return true;
   } catch (error) {
     console.error("Error marking notification as read:", error);
@@ -78,13 +108,13 @@ export const markAsRead = (id) => {
 };
 
 /**
- * Mark all notifications as read
+ * Mark all notifications as read.
  */
 export const markAllAsRead = () => {
   try {
     const notifications = getNotifications();
     const updated = notifications.map((notif) => ({ ...notif, isRead: true }));
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+    persistAndDispatch(updated);
     return true;
   } catch (error) {
     console.error("Error marking all notifications as read:", error);
@@ -93,11 +123,11 @@ export const markAllAsRead = () => {
 };
 
 /**
- * Clear all notifications
+ * Clear all notifications.
  */
 export const clearNotifications = () => {
   try {
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify([]));
+    persistAndDispatch([]);
     return true;
   } catch (error) {
     console.error("Error clearing notifications:", error);
@@ -106,7 +136,26 @@ export const clearNotifications = () => {
 };
 
 /**
- * Create a trip confirmation notification
+ * Get unread notification count.
+ */
+export const getUnreadCount = () => {
+  const notifications = getNotifications();
+  return notifications.filter((notif) => !notif.isRead).length;
+};
+
+/**
+ * Get notifications by category.
+ */
+export const getNotificationsByCategory = (category) => {
+  const notifications = getNotifications();
+  if (category === "all") return notifications;
+  return notifications.filter((notif) => notif.category === category);
+};
+
+// ─── Typed notification creators ────────────────────────────────────────────
+
+/**
+ * Create a trip confirmation notification.
  */
 export const createTripConfirmationNotification = (destinationCount) => {
   return addNotification({
@@ -125,7 +174,7 @@ export const createTripConfirmationNotification = (destinationCount) => {
 };
 
 /**
- * Create a temple saved notification
+ * Create a temple saved notification.
  */
 export const createTempleSavedNotification = (templeName) => {
   return addNotification({
@@ -142,7 +191,7 @@ export const createTempleSavedNotification = (templeName) => {
 };
 
 /**
- * Create an AI itinerary notification
+ * Create an AI itinerary notification.
  */
 export const createAIItineraryNotification = () => {
   return addNotification({
@@ -159,7 +208,7 @@ export const createAIItineraryNotification = () => {
 };
 
 /**
- * Create a day planner notification
+ * Create a day planner notification.
  */
 export const createDayPlannerNotification = () => {
   return addNotification({
@@ -176,7 +225,7 @@ export const createDayPlannerNotification = () => {
 };
 
 /**
- * Create a draft saved notification
+ * Create a draft saved notification.
  */
 export const createDraftSavedNotification = () => {
   return addNotification({
@@ -190,21 +239,4 @@ export const createDraftSavedNotification = () => {
     actionLabel: null,
     actionUrl: null,
   });
-};
-
-/**
- * Get unread notification count
- */
-export const getUnreadCount = () => {
-  const notifications = getNotifications();
-  return notifications.filter((notif) => !notif.isRead).length;
-};
-
-/**
- * Get notifications by category
- */
-export const getNotificationsByCategory = (category) => {
-  const notifications = getNotifications();
-  if (category === "all") return notifications;
-  return notifications.filter((notif) => notif.category === category);
 };
