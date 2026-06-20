@@ -323,13 +323,6 @@ function AuthPage() {
       {/* RIGHT PANEL */}
       <div className="right-panel">
 
-        {/* Mobile-only brand identity */}
-        <div className="mobile-brand">
-          <div className="brand-logo">{BrandMark}</div>
-          <h1 className="brand-name">Sarathi</h1>
-          <p className="brand-tagline">Plan Smarter. Travel Better.</p>
-        </div>
-
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
           <p className="auth-subtitle">

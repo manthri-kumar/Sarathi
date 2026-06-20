@@ -87,7 +87,7 @@ body {
   100% { transform: translateY(0) translateX(0); opacity: 0.12; }
 }
 
-/* ---- Top logo + name ---- */
+/* ---- Top logo + name (custom logo preserved) ---- */
 .left-top {
   position: relative;
   z-index: 3;
@@ -111,7 +111,7 @@ body {
   margin: 0;
 }
 
-/* ---- Content ---- */
+/* ---- Content (vertically centered) ---- */
 .left-content {
   flex: 1;
   position: relative;
@@ -124,9 +124,9 @@ body {
 .hero-title {
   font-size: 72px;
   font-weight: 800;
-  line-height: 1.05;
+  line-height: 1.02;
   letter-spacing: -0.04em;
-  margin: 0 0 24px;
+  margin: 0 0 22px;
   color: #ffffff;
 }
 
@@ -139,55 +139,57 @@ body {
 
 .desc {
   color: #94a3b8;
-  max-width: 560px;
-  line-height: 1.75;
-  font-size: 15.5px;
+  max-width: 520px;
+  line-height: 1.8;
+  font-size: 18px;
   font-weight: 400;
-  margin: 0 0 30px;
+  margin: 0 0 28px;
 }
 
-/* ---- CTA ---- */
+/* ---- CTA — compact, content-aligned ---- */
 .explore-btns {
-  width: auto;
-  min-width: 210px;
-  margin: 0 0 36px;
-  padding: 15px 28px;
+  width: fit-content;
+  min-width: 220px;
+  max-width: 260px;
+  margin: 0 0 32px;
+  padding: 14px 26px;
   background: linear-gradient(90deg, #16a34a, #22c55e);
   color: #04210f;
   border: none;
-  border-radius: 14px;
+  border-radius: 13px;
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 14px 34px rgba(34, 197, 94, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 28px rgba(34, 197, 94, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .explore-btns:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 22px 50px rgba(34, 197, 94, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(34, 197, 94, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .explore-btns:active { transform: translateY(-1px) scale(0.99); }
 
-/* ---- Feature pills ---- */
+/* ---- Feature pills — compact, premium ---- */
 .hero-pills {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   flex-wrap: wrap;
-  max-width: 620px;
+  max-width: 580px;
 }
 
 .hero-pill {
-  flex: 1;
-  min-width: 175px;
+  flex: 0 1 170px;
+  min-width: 160px;
+  max-width: 180px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease, background 0.3s ease;
@@ -199,25 +201,30 @@ body {
   border-color: rgba(74, 222, 128, 0.35);
 }
 
-.hp-icon { font-size: 1.3rem; line-height: 1; }
-.hp-text h4 { margin: 0; font-size: 13.5px; font-weight: 700; color: #fff; }
-.hp-text p { margin: 2px 0 0; font-size: 11.5px; color: #94a3b8; }
+.hp-icon { font-size: 1.15rem; line-height: 1; }
+.hp-text h4 { margin: 0; font-size: 13px; font-weight: 700; color: #fff; }
+.hp-text p { margin: 2px 0 0; font-size: 11px; color: #94a3b8; }
 
-/* ---- Cinematic mountains (parallax) ---- */
+/* ---- Cinematic mountains — darker, lower, supporting ---- */
 .lp-mountains {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 46%;
+  height: 32%;
   z-index: 1;
   pointer-events: none;
 }
 
 .lp-mtn { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; }
-.lp-mtn-3 { opacity: 0.55; animation: lpParallax3 22s ease-in-out infinite alternate; }
-.lp-mtn-2 { opacity: 0.8;  animation: lpParallax2 18s ease-in-out infinite alternate; }
-.lp-mtn-1 { opacity: 1;    animation: lpParallax1 26s ease-in-out infinite alternate; }
+
+.lp-mtn-3 { opacity: 0.26; animation: lpParallax3 22s ease-in-out infinite alternate; }
+.lp-mtn-2 { opacity: 0.38; animation: lpParallax2 18s ease-in-out infinite alternate; }
+.lp-mtn-1 { opacity: 0.52; animation: lpParallax1 26s ease-in-out infinite alternate; }
+
+.lp-mtn-3 path { fill: #040b08; }
+.lp-mtn-2 path { fill: #020705; }
+.lp-mtn-1 path { fill: #010301; }
 
 @keyframes lpParallax1 { from { transform: translateX(0); } to { transform: translateX(-10px); } }
 @keyframes lpParallax2 { from { transform: translateX(0); } to { transform: translateX(12px); } }
@@ -226,7 +233,8 @@ body {
 /* ---- Tablet scale for hero ---- */
 @media (max-width: 1024px) {
   .left-panel { padding: 48px 44px; }
-  .hero-title { font-size: 52px; }
+  .hero-title { font-size: 54px; }
+  .desc { font-size: 16.5px; }
   .hero-pill { min-width: 150px; }
 }
 
@@ -254,41 +262,11 @@ body {
   min-width: 0;
 }
 
-/* Mobile-only brand identity */
-.mobile-brand {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  margin-bottom: 26px;
-}
-
-.brand-logo {
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* Brand mark base (used by desktop logo) */
 .brand-mark {
   width: 80px;
   height: 80px;
   filter: drop-shadow(0 0 25px rgba(34, 197, 94, 0.35));
-}
-
-.brand-name {
-  margin: 12px 0 4px;
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: #ffffff;
-}
-
-.brand-tagline {
-  margin: 0;
-  font-size: 14px;
-  color: #94a3b8;
 }
 
 /* ===== AUTH CARD — glass ===== */
@@ -861,7 +839,7 @@ body {
 }
 
 /* ============================================================
-   RESPONSIVE — DESKTOP & TABLET (unchanged)
+   RESPONSIVE — DESKTOP & TABLET
    ============================================================ */
 @media (max-width: 1200px) {
   .auth-card { max-width: 500px; padding: 42px; }
@@ -872,40 +850,19 @@ body {
 }
 
 /* ============================================================
-   RESPONSIVE — MOBILE (compact, single-viewport fit)
+   RESPONSIVE — MOBILE (no branding, card near top)
    ============================================================ */
 @media (max-width: 768px) {
   .main-container { flex-direction: column; }
   .left-panel { display: none; }
 
   .right-panel {
-    padding: 16px;
-    padding-top: 20px;
+    padding: 20px;
+    padding-top: 28px;
     justify-content: flex-start;
     align-items: center;
     min-height: 100dvh;
   }
-
-  /* Brand — 25% smaller logo, tight rhythm */
-  .mobile-brand {
-    display: flex;
-    margin-bottom: 14px;
-  }
-
-  .brand-logo,
-  .brand-mark {
-    width: 58px;
-    height: 58px;
-  }
-
-  .brand-mark { filter: drop-shadow(0 0 18px rgba(34, 197, 94, 0.3)); }
-
-  .brand-name {
-    margin: 8px 0 2px;
-    font-size: 24px;
-  }
-
-  .brand-tagline { font-size: 12px; }
 
   /* Card — dense but premium */
   .auth-card {
@@ -976,10 +933,8 @@ body {
 
 /* Smaller phones — squeeze further */
 @media (max-width: 380px) {
-  .right-panel { padding: 12px; padding-top: 16px; }
+  .right-panel { padding: 12px; padding-top: 20px; }
   .auth-card { width: calc(100vw - 24px); padding: 20px; }
-  .brand-logo, .brand-mark { width: 52px; height: 52px; }
-  .brand-name { font-size: 22px; }
   .auth-card h2 { font-size: 24px; }
   .auth-card input { height: 52px; margin: 7px 0; }
   .auth-btn, .google-icon-btn { height: 52px; }
