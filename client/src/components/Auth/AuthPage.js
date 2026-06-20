@@ -1,3 +1,4 @@
+// src/components/Auth/AuthPage.jsx
 import React, { useState, useEffect } from "react";
 import "./Auth.css";
 import axios from "axios";
@@ -9,6 +10,8 @@ const SPLASH_IMAGES = [
   "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80",
   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
 ];
+
+const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
 
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
@@ -22,6 +25,10 @@ function AuthPage() {
   const [showSplash, setShowSplash] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotState, setForgotState] = useState({ loading: false, success: false, error: "" });
 
   const navigate = useNavigate();
 
@@ -66,7 +73,7 @@ function AuthPage() {
         const googleUser = await googleRes.json();
 
         const backendRes = await axios.post(
-          "https://sarathi-backend-7u0y.onrender.com/api/auth/google",
+          `${API_BASE}/api/auth/google`,
           { email: googleUser.email, name: googleUser.name, picture: googleUser.picture }
         );
 
@@ -104,14 +111,12 @@ function AuthPage() {
     e.preventDefault();
     try {
       if (!isLogin) {
-        const res = await axios.post(
-          "https://sarathi-backend-7u0y.onrender.com/api/auth/signup", form
-        );
+        const res = await axios.post(`${API_BASE}/api/auth/signup`, form);
         alert(res.data.message);
         setIsLogin(true);
       } else {
         const res = await axios.post(
-          "https://sarathi-backend-7u0y.onrender.com/api/auth/login",
+          `${API_BASE}/api/auth/login`,
           { email: form.email, password: form.password }
         );
         localStorage.setItem("token", res.data.token);
@@ -121,6 +126,32 @@ function AuthPage() {
       setForm({ username: "", email: "", password: "" });
     } catch (err) {
       alert(err.response?.data?.message || "Error");
+    }
+  };
+
+  /* ── Forgot password ── */
+  const openForgot = () => {
+    setForgotEmail(form.email || "");
+    setForgotState({ loading: false, success: false, error: "" });
+    setShowForgot(true);
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      setForgotState({ loading: false, success: false, error: "Please enter your email." });
+      return;
+    }
+    setForgotState({ loading: true, success: false, error: "" });
+    try {
+      await axios.post(`${API_BASE}/api/auth/forgot-password`, { email: forgotEmail });
+      setForgotState({ loading: false, success: true, error: "" });
+    } catch (err) {
+      setForgotState({
+        loading: false,
+        success: false,
+        error: err.response?.data?.message || "Could not send reset link. Please try again.",
+      });
     }
   };
 
@@ -187,13 +218,39 @@ function AuthPage() {
     );
   }
 
+  /* Inline brand mark (no asset dependency) */
+  const BrandMark = (
+    <svg className="brand-mark" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#86efac" />
+          <stop offset="55%" stopColor="#4ade80" />
+          <stop offset="100%" stopColor="#16a34a" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M40 6 C25 6 13 18 13 33 C13 50 33 66 40 74 C47 66 67 50 67 33 C67 18 55 6 40 6 Z"
+        fill="url(#brandGrad)"
+      />
+      <circle cx="40" cy="32" r="13" fill="#04210f" opacity="0.9" />
+      <path
+        d="M46 25 C42 24 36 25 36 30 C36 34 44 34 44 38 C44 43 38 43 34 41"
+        stroke="#86efac"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M55 16 l1.6 3.4 L60 21 l-3.4 1.6 L55 26 l-1.6-3.4 L50 21 l3.4-1.6 Z" fill="#86efac" />
+    </svg>
+  );
+
   /* ════════════════════════════════════════
      RENDER: Auth page
   ════════════════════════════════════════ */
   return (
     <div className="main-container auth-fade-in">
 
-      {/* LEFT PANEL */}
+      {/* LEFT PANEL — unchanged */}
       <div className="left-panel">
         <div className="left-top"><h1>Sarathi</h1></div>
         <div className="left-content">
@@ -209,10 +266,18 @@ function AuthPage() {
 
       {/* RIGHT PANEL */}
       <div className="right-panel">
+
+        {/* Mobile-only brand identity */}
+        <div className="mobile-brand">
+          <div className="brand-logo">{BrandMark}</div>
+          <h1 className="brand-name">Sarathi</h1>
+          <p className="brand-tagline">Plan Smarter. Travel Better.</p>
+        </div>
+
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
           <p className="auth-subtitle">
-            {isLogin ? "Sign in to continue" : "Create your account"}
+            {isLogin ? "Sign in to continue" : "Create your account to get started"}
           </p>
 
           {googleError && (
@@ -245,6 +310,15 @@ function AuthPage() {
               onFocus={(e) => e.target.removeAttribute("readOnly")}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
+
+            {isLogin && (
+              <div className="forgot-row">
+                <button type="button" className="forgot-link" onClick={openForgot}>
+                  Forgot Password?
+                </button>
+              </div>
+            )}
+
             <button className="auth-btn">{isLogin ? "Login" : "Sign Up"}</button>
           </form>
 
@@ -261,8 +335,44 @@ function AuthPage() {
               <>Already have an account? <span onClick={() => setIsLogin(true)}>Login</span></>
             )}
           </p>
+
+          <div className="trust-row">
+            <div className="trust-item"><span>🔒</span><p>Secure &amp; Private</p></div>
+            <div className="trust-item"><span>⚡</span><p>Fast &amp; Reliable</p></div>
+            <div className="trust-item"><span>🌍</span><p>Trusted by Travelers</p></div>
+          </div>
         </div>
       </div>
+
+      {/* Forgot-password modal */}
+      {showForgot && (
+        <div className="forgot-overlay" onClick={() => setShowForgot(false)}>
+          <div className="forgot-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="forgot-close" onClick={() => setShowForgot(false)} aria-label="Close">✕</button>
+            <h3>Reset Password</h3>
+            <p className="forgot-sub">Enter your email address and we'll send you a reset link.</p>
+
+            {forgotState.success ? (
+              <div className="forgot-success">
+                ✅ Reset link sent successfully.<br />Please check your email.
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit} autoComplete="off">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                />
+                {forgotState.error && <div className="forgot-error">⚠️ {forgotState.error}</div>}
+                <button className="forgot-submit" type="submit" disabled={forgotState.loading}>
+                  {forgotState.loading ? "Sending…" : "Send Reset Link"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
