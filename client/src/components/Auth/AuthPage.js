@@ -254,8 +254,7 @@ const BrandMark = (
 
         <div className="left-content">
           <h2 className="hero-title">
-            Plan Smarter. Travel Better<br />
-            
+            Plan Smarter. <span className="hero-grad">Travel Better.</span>
           </h2>
 
           <p className="desc">
