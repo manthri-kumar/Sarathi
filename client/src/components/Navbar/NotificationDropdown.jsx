@@ -4,21 +4,16 @@ import { useNavigate } from "react-router-dom";
 import "./NotificationDropdown.css";
 import { useNotifications } from "../../hooks/useNotifications";
 
-/* =========================================================
-   CATEGORY TABS (presentation only)
-========================================================= */
 const categories = [
   { id: "all", label: "All", color: "#22c55e" },
   { id: "travel", label: "Travel", color: "#3b82f6" },
   { id: "temple", label: "Temple", color: "#f59e0b" },
 ];
 
-/* =========================================================
-   COMPONENT
-========================================================= */
 const NotificationDropdown = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const mouseDownInsideRef = useRef(false);
 
   const {
     notifications,
@@ -33,36 +28,50 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Close dropdown when clicking outside
+  // FIX: Use mousedown+mouseup pair. mousedown alone fires BEFORE React's
+  // synthetic onClick, causing the component to unmount before click completes.
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
-        !event.target.closest(".bell-icon")
-      ) {
+    if (!isOpen) return;
+
+    const handleMouseDown = (event) => {
+      const insideDropdown =
+        dropdownRef.current && dropdownRef.current.contains(event.target);
+      const insideBell = event.target.closest(".bell-wrapper");
+      mouseDownInsideRef.current = !!(insideDropdown || insideBell);
+      console.log("[NotifDropdown] mousedown — insideDropdown:", insideDropdown, "insideBell:", !!insideBell);
+    };
+
+    const handleMouseUp = (event) => {
+      if (mouseDownInsideRef.current) {
+        console.log("[NotifDropdown] mouseup inside — keeping open");
+        mouseDownInsideRef.current = false;
+        return;
+      }
+      const insideDropdown =
+        dropdownRef.current && dropdownRef.current.contains(event.target);
+      const insideBell = event.target.closest(".bell-wrapper");
+      if (!insideDropdown && !insideBell) {
+        console.log("[NotifDropdown] mouseup outside — closing");
         onClose();
       }
+      mouseDownInsideRef.current = false;
     };
 
     const handleEscapeKey = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscapeKey);
-    }
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("keydown", handleEscapeKey);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [isOpen, onClose]);
 
-  // Filter notifications by category and search
   const filteredNotifications = useMemo(
     () =>
       notifications.filter((notif) => {
@@ -77,14 +86,23 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
     [notifications, selectedCategory, searchQuery]
   );
 
-  // Handle notification actions
-  const handleMarkAsRead = useCallback((id) => markAsRead(id), [markAsRead]);
+  const handleMarkAsRead = useCallback((id) => {
+    console.log("[NotifDropdown] MARK AS READ CLICKED — id:", id);
+    markAsRead(id);
+  }, [markAsRead]);
 
-  const handleDismiss = useCallback((id) => dismiss(id), [dismiss]);
+  const handleDismiss = useCallback((id) => {
+    console.log("[NotifDropdown] DISMISS CLICKED — id:", id);
+    dismiss(id);
+  }, [dismiss]);
 
-  const handleMarkAllRead = useCallback(() => markAllAsRead(), [markAllAsRead]);
+  const handleMarkAllRead = useCallback(() => {
+    console.log("[NotifDropdown] MARK ALL READ CLICKED");
+    markAllAsRead();
+  }, [markAllAsRead]);
 
   const handleClearAll = useCallback(() => {
+    console.log("[NotifDropdown] CLEAR ALL CLICKED");
     if (window.confirm("Clear all notifications? This cannot be undone.")) {
       clearAll();
     }
@@ -92,6 +110,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
 
   const handleNotificationClick = useCallback(
     (notification) => {
+      console.log("[NotifDropdown] CARD CLICKED — id:", notification.id);
       handleMarkAsRead(notification.id);
       if (notification.actionUrl) {
         onClose();
@@ -103,6 +122,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
 
   const handleActionButtonClick = useCallback(
     (e, notification) => {
+      console.log("[NotifDropdown] ACTION BUTTON CLICKED — id:", notification.id);
       e.stopPropagation();
       handleMarkAsRead(notification.id);
       if (notification.actionUrl) {
@@ -112,6 +132,11 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
     },
     [handleMarkAsRead, navigate, onClose]
   );
+
+  const handleCategoryClick = useCallback((catId) => {
+    console.log("[NotifDropdown] CATEGORY CLICKED —", catId);
+    setSelectedCategory(catId);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -125,7 +150,10 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
         </div>
         <button
           className="notification-close-btn"
-          onClick={onClose}
+          onClick={() => {
+            console.log("[NotifDropdown] CLOSE BTN CLICKED");
+            onClose();
+          }}
           aria-label="Close notifications"
           title="Close"
         >
@@ -150,10 +178,8 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
         {categories.map((cat) => (
           <button
             key={cat.id}
-            className={`category-tab ${
-              selectedCategory === cat.id ? "active" : ""
-            }`}
-            onClick={() => setSelectedCategory(cat.id)}
+            className={`category-tab ${selectedCategory === cat.id ? "active" : ""}`}
+            onClick={() => handleCategoryClick(cat.id)}
           >
             {cat.label}
           </button>
@@ -163,7 +189,6 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
       {/* Notifications List */}
       <div className="notification-list">
         {isLoading ? (
-          // Skeleton loaders
           <>
             {[1, 2, 3].map((i) => (
               <div key={i} className="notification-skeleton">
@@ -223,7 +248,6 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
   );
 };
 
-// NotificationCard Component
 const NotificationCard = React.memo(function NotificationCard({
   notification,
   onMarkAsRead,
@@ -233,31 +257,23 @@ const NotificationCard = React.memo(function NotificationCard({
 }) {
   const getCategoryBadgeColor = (category) => {
     switch (category) {
-      case "travel":
-        return "#3b82f6";
-      case "temple":
-        return "#f59e0b";
-      default:
-        return "#22c55e";
+      case "travel": return "#3b82f6";
+      case "temple": return "#f59e0b";
+      default: return "#22c55e";
     }
   };
 
   const getCategoryLabel = (category) => {
     switch (category) {
-      case "travel":
-        return "Travel";
-      case "temple":
-        return "Temple";
-      default:
-        return category.charAt(0).toUpperCase() + category.slice(1);
+      case "travel": return "Travel";
+      case "temple": return "Temple";
+      default: return category.charAt(0).toUpperCase() + category.slice(1);
     }
   };
 
   return (
     <div
-      className={`notification-card ${
-        notification.isRead ? "read" : "unread"
-      } priority-${notification.priority}`}
+      className={`notification-card ${notification.isRead ? "read" : "unread"} priority-${notification.priority}`}
       onClick={onClick}
     >
       {notification.priority === "high" && (
@@ -278,9 +294,7 @@ const NotificationCard = React.memo(function NotificationCard({
               <span
                 className="notification-category-badge"
                 style={{
-                  backgroundColor: `${getCategoryBadgeColor(
-                    notification.category
-                  )}20`,
+                  backgroundColor: `${getCategoryBadgeColor(notification.category)}20`,
                   color: getCategoryBadgeColor(notification.category),
                   borderColor: getCategoryBadgeColor(notification.category),
                 }}
