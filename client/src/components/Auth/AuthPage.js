@@ -250,17 +250,73 @@ function AuthPage() {
   return (
     <div className="main-container auth-fade-in">
 
-      {/* LEFT PANEL — unchanged */}
+      {/* LEFT PANEL — premium hero */}
       <div className="left-panel">
-        <div className="left-top"><h1>Sarathi</h1></div>
+
+        {/* Layered background */}
+        <div className="lp-bg" aria-hidden="true">
+          <div className="lp-glow" />
+          <div className="lp-mesh" />
+          <div className="lp-grid" />
+          <div className="lp-particles">
+            <span /><span /><span /><span /><span /><span /><span /><span />
+          </div>
+        </div>
+
+        <div className="left-top">
+          <span className="left-logo">{BrandMark}</span>
+          <h1>Sarathi</h1>
+        </div>
+
         <div className="left-content">
-          <h2>Plan Smarter. Travel Better.</h2>
+          <h2 className="hero-title">
+            Plan Smarter.<br />
+            <span className="hero-grad">Travel Better.</span>
+          </h2>
+
           <p className="desc">
-            Sarathi is an AI-powered travel companion that personalizes your journey based on
-            your mood, preferences, and real-time conditions. Discover hidden gems, get smart
-            recommendations, and experience travel that adapts to you.
+            Sarathi is an AI-powered travel companion that creates personalized itineraries,
+            discovers hidden destinations, and helps travelers make smarter decisions in real time.
           </p>
+
           <button className="explore-btns">Start Exploring →</button>
+
+          <div className="hero-pills">
+            <div className="hero-pill">
+              <span className="hp-icon">🧭</span>
+              <div className="hp-text">
+                <h4>Smart Itineraries</h4>
+                <p>AI-built travel plans</p>
+              </div>
+            </div>
+            <div className="hero-pill">
+              <span className="hp-icon">💎</span>
+              <div className="hp-text">
+                <h4>Hidden Gems</h4>
+                <p>Discover unseen places</p>
+              </div>
+            </div>
+            <div className="hero-pill">
+              <span className="hp-icon">⚡</span>
+              <div className="hp-text">
+                <h4>Live Updates</h4>
+                <p>Real-time travel insights</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cinematic mountain silhouettes */}
+        <div className="lp-mountains" aria-hidden="true">
+          <svg className="lp-mtn lp-mtn-3" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="#06140d" d="M0,200 L180,130 L340,190 L520,110 L720,180 L920,120 L1140,190 L1320,140 L1440,180 L1440,320 L0,320 Z" />
+          </svg>
+          <svg className="lp-mtn lp-mtn-2" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="#040c08" d="M0,240 L200,180 L420,235 L640,170 L860,235 L1080,175 L1280,235 L1440,195 L1440,320 L0,320 Z" />
+          </svg>
+          <svg className="lp-mtn lp-mtn-1" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="#010402" d="M0,275 L240,215 L470,270 L700,205 L920,270 L1140,215 L1360,270 L1440,240 L1440,320 L0,320 Z" />
+          </svg>
         </div>
       </div>
 
