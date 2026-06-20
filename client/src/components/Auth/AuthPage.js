@@ -254,8 +254,8 @@ const BrandMark = (
 
         <div className="left-content">
           <h2 className="hero-title">
-            Plan Smarter.<br />
-            <span className="hero-grad">Travel Better.</span>
+            Plan Smarter. Travel Better<br />
+            
           </h2>
 
           <p className="desc">
@@ -370,9 +370,9 @@ const BrandMark = (
           </p>
 
           <div className="trust-row">
-            <div className="trust-item"><span>🔒</span><p>Secure &amp; Private</p></div>
-            <div className="trust-item"><span>⚡</span><p>Fast &amp; Reliable</p></div>
-            <div className="trust-item"><span>🌍</span><p>Trusted by Travelers</p></div>
+            <div className="trust-item"><span></span><p>Secure &amp; Private</p></div>
+            <div className="trust-item"><span></span><p>Fast &amp; Reliable</p></div>
+            <div className="trust-item"><span></span><p>Trusted by Travelers</p></div>
           </div>
         </div>
       </div>
