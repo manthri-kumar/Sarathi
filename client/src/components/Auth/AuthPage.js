@@ -22,7 +22,7 @@ function AuthPage() {
 
   const [showSplash, setShowSplash] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
-  const [activeSlide, setActiveSlide] = useState(0);
+  
 
   const navigate = useNavigate();
 
@@ -49,18 +49,14 @@ function AuthPage() {
       setShowSplash(true);
       sessionStorage.setItem("sarathi_splash_seen", "true");
 
-      const slideInterval = setInterval(() => {
-        setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
-      }, 1600);
 
-      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 3200);
-      const removeTimer = setTimeout(() => setShowSplash(false), 4100);
+     const fadeTimer = setTimeout(() => setSplashFadingOut(true), 3200);
+const removeTimer = setTimeout(() => setShowSplash(false), 4100);
 
-      return () => {
-        clearInterval(slideInterval);
-        clearTimeout(fadeTimer);
-        clearTimeout(removeTimer);
-      };
+return () => {
+  clearTimeout(fadeTimer);
+  clearTimeout(removeTimer);
+};
     }
   }, [isGoogleRedirect]);
 
