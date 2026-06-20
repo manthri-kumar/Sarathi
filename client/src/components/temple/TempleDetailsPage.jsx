@@ -1,246 +1,338 @@
-/**
- * TempleDetailsPage.jsx
- *
- * All existing UI, routing, CSS, and tab structure preserved exactly.
- * Change: When the "History" tab is active, fetch from the new
- * GET /api/temples/history?templeName= endpoint and pass result to HistoryTab.
- *
- * If your original TempleDetailsPage has additional features
- * (map integration, SaveButton, chat trigger, etc.), those are represented
- * as comments — paste them back in at the marked locations.
- */
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import HistoryTab from "../components/temple/tabs/HistoryTab";
-import OverviewTab from "../components/temple/tabs/OverviewTab";
-import RitualsTab from "../components/temple/tabs/RitualsTab";
-import FestivalsTab from "../components/temple/tabs/FestivalsTab";
-import VideosTab from "../components/temple/tabs/VideosTab";
-import TravelGuideTab from "../components/temple/tabs/TravelGuideTab";
+import axios from "axios";
+import Sidebar from "../Sidebar/Sidebar";
+import OverviewTab from "./tabs/OverviewTab";
+import HistoryTab from "./tabs/HistoryTab";
+import RitualsTab from "./tabs/RitualsTab";
+import FestivalsTab from "./tabs/FestivalsTab";
+import VideosTab from "./tabs/VideosTab";
+import TravelGuideTab from "./tabs/TravelGuideTab";
+import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
 
-const API_BASE =
-  process.env.REACT_APP_API_URL ||
-  "https://sarathi-backend-7u0y.onrender.com";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// Tab definition — existing structure preserved
 const TABS = [
-  { id: "overview",     label: "Overview",     icon: "🛕" },
-  { id: "history",      label: "History",      icon: "📜" },
-  { id: "rituals",      label: "Rituals",      icon: "🪔" },
-  { id: "festivals",    label: "Festivals",    icon: "🎊" },
-  { id: "videos",       label: "Videos",       icon: "🎬" },
-  { id: "travelguide",  label: "Travel Guide", icon: "🗺️" },
+  { id: "overview",  label: "Overview",     icon: "🛕" },
+  { id: "history",   label: "History",      icon: "📜" },
+  { id: "rituals",   label: "Rituals",      icon: "🪔" },
+  { id: "festivals", label: "Festivals",    icon: "🎊" },
+  { id: "videos",    label: "Videos",       icon: "▶️"  },
+  { id: "travel",    label: "Travel Guide", icon: "🗺️" },
 ];
 
-const TempleDetailsPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-
-  // ── Existing temple state ────────────────────────────────────────────────
-  const [temple,        setTemple]        = useState(null);
-  const [templeLoading, setTempleLoading] = useState(true);
-  const [templeError,   setTempleError]   = useState(null);
-
-  // ── Tab state ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("overview");
-
-  // ── History state — new, isolated, does not affect other tabs ────────────
-  const [historyContent,  setHistoryContent]  = useState("");
-  const [historySources,  setHistorySources]  = useState([]);
-  const [historyLoading,  setHistoryLoading]  = useState(false);
-  const [historyFetched,  setHistoryFetched]  = useState(false); // prevent re-fetch
-
-  // ── EXISTING: Fetch temple details on mount ───────────────────────────────
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchTempleDetails = async () => {
-      setTempleLoading(true);
-      setTempleError(null);
-
-      try {
-        // ── PASTE YOUR ORIGINAL temple details fetch here ──
-        // Example:
-        // const res = await fetch(`${API_BASE}/api/temples/${id}`);
-        // if (!res.ok) throw new Error("Temple not found");
-        // const data = await res.json();
-        // setTemple(data);
-
-        // Placeholder for compilation — remove once real fetch is pasted:
-        const res = await fetch(`${API_BASE}/api/temples/${id}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setTemple(data);
-      } catch (err) {
-        console.error("[TempleDetails] Fetch error:", err.message);
-        setTempleError(err.message);
-      } finally {
-        setTempleLoading(false);
-      }
-    };
-
-    fetchTempleDetails();
-  }, [id]);
-
-  // ── NEW: Fetch Wikipedia history when History tab is first activated ──────
-  // Fetches ONCE per temple page load (historyFetched guard).
-  // Uses the same Wikipedia pipeline as Temple Chat.
-  const fetchHistory = useCallback(async (templeName) => {
-    if (historyFetched || !templeName) return;
-
-    setHistoryLoading(true);
-
-    try {
-      const encodedName = encodeURIComponent(templeName);
-      const res = await fetch(
-        `${API_BASE}/api/temples/history?templeName=${encodedName}`
-      );
-
-      if (!res.ok) {
-        throw new Error(`History API returned HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      setHistoryContent(data.content || "");
-      setHistorySources(data.sources || []);
-      setHistoryFetched(true);
-
-      console.log(
-        `[TempleDetails] History fetched — found: ${data.found}, length: ${data.content?.length}`
-      );
-    } catch (err) {
-      console.error("[TempleDetails] History fetch error:", err.message);
-      // Leave content empty — HistoryTab will show its fallback state
-      setHistoryContent("");
-      setHistorySources([]);
-      setHistoryFetched(true); // mark as fetched even on error to avoid loops
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [historyFetched]);
-
-  // Trigger history fetch when tab switches to "history"
-  useEffect(() => {
-    if (activeTab === "history" && temple?.name && !historyFetched) {
-      fetchHistory(temple.name);
-    }
-  }, [activeTab, temple, historyFetched, fetchHistory]);
-
-  // Reset history fetch state when temple changes (navigating between temples)
-  useEffect(() => {
-    setHistoryFetched(false);
-    setHistoryContent("");
-    setHistorySources([]);
-    setActiveTab("overview");
-  }, [id]);
-
-  // ── Render guards ────────────────────────────────────────────────────────
-  if (templeLoading) {
-    return (
-      <div className="temple-details-loading">
-        <div className="spinner" />
-        <p>Loading temple details...</p>
+/* ─── Error Boundary ──────────────────────────────── */
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) return (
+      <div style={{ color:"#ff6b6b", padding:"40px", background:"#050f0a", minHeight:"100vh", fontFamily:"monospace" }}>
+        <h2>⚠️ Crashed: {this.state.error?.toString()}</h2>
+        <pre style={{ marginTop:16, whiteSpace:"pre-wrap", fontSize:12 }}>{this.state.error?.stack}</pre>
+        <button onClick={() => window.history.back()} style={{ marginTop:20, padding:"10px 20px", background:"#22c55e", border:"none", borderRadius:8, cursor:"pointer", color:"#fff" }}>← Go Back</button>
       </div>
     );
+    return this.props.children;
   }
+}
 
-  if (templeError || !temple) {
-    return (
-      <div className="temple-details-error">
-        <p>Unable to load temple details. Please try again.</p>
-        <button onClick={() => navigate(-1)}>← Back</button>
-      </div>
-    );
-  }
-
-  // ── Render ───────────────────────────────────────────────────────────────
+export default function TempleDetailsPage() {
   return (
-    <div className="temple-details-page">
+    <ErrorBoundary>
+      <TempleDetailsPageInner />
+    </ErrorBoundary>
+  );
+}
 
-      {/* ── Hero section — EXISTING, unchanged ── */}
-      <div
-        className="temple-hero"
-        style={{
-          backgroundImage: temple.image
-            ? `url(${temple.image})`
-            : "linear-gradient(135deg, #0f1f0f 0%, #1a2f1a 100%)",
-        }}
-      >
-        <div className="temple-hero-overlay">
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            ← Back
-          </button>
+function TempleDetailsPageInner() {
+  const { placeId } = useParams();
+  const navigate    = useNavigate();
 
-          <div className="temple-hero-info">
-            <h1 className="temple-hero-name">{temple.name}</h1>
-            {temple.address && (
-              <p className="temple-hero-address">📍 {temple.address}</p>
-            )}
-            {temple.rating && (
-              <span className="temple-hero-rating">
-                ⭐ {temple.rating}
-                {temple.userRatingsTotal && ` (${temple.userRatingsTotal})`}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+  const [activeTab,        setActiveTab]        = useState("overview");
+  const [googleData,       setGoogleData]       = useState(null);
+  const [enriched,         setEnriched]         = useState(null);
+  const [enrichError,      setEnrichError]      = useState(false);
+  const [videos,           setVideos]           = useState([]);
+  const [nearbyServices,   setNearbyServices]   = useState(null);
+  const [loadingGoogle,    setLoadingGoogle]    = useState(true);
+  const [loadingEnriched,  setLoadingEnriched]  = useState(false);
+  const [loadingVideos,    setLoadingVideos]    = useState(false);
+  const [loadingServices,  setLoadingServices]  = useState(false);
+  const [showChat,         setShowChat]         = useState(false);
+  const [error,            setError]            = useState(null);
 
-      {/* ── Tab Navigation — EXISTING, unchanged ── */}
-      <div className="temple-tabs">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={`tab-btn ${activeTab === tab.id ? "active" : ""}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-      </div>
+  /* ── 1. Google Places details ─────────────────── */
+  useEffect(() => {
+    if (!placeId) return;
+    setLoadingGoogle(true);
+    setError(null);
 
-      {/* ── Tab Content ── */}
-      <div className="temple-tab-content">
+    axios.get(`${API_BASE}/api/temples/details/${placeId}`)
+      .then(res => {
+        console.log("[TEMPLE] Google data:", res.data.temple);
+        setGoogleData(res.data.temple);
+      })
+      .catch(e => {
+        console.error("[TEMPLE] Google fetch failed:", e.message);
+        setError("Could not load temple details: " + e.message);
+      })
+      .finally(() => setLoadingGoogle(false));
+  }, [placeId]);
 
-        {activeTab === "overview" && (
-          <OverviewTab temple={temple} />
-        )}
+  /* ── 2. Gemini enriched — runs once googleData is ready ── */
+  useEffect(() => {
+    if (!googleData?.name) return;
 
-        {activeTab === "history" && (
-          <HistoryTab
-            content={historyContent}
-            sources={historySources}
-            loading={historyLoading}
-            templeName={temple.name}
-          />
-        )}
+    console.log("[ENRICH] Starting fetch for:", googleData.name);
+    setLoadingEnriched(true);
+    setEnrichError(false);
 
-        {activeTab === "rituals" && (
-          <RitualsTab temple={temple} />
-        )}
+    axios.get(`${API_BASE}/api/temples/enriched`, {
+      params: { name: googleData.name, address: googleData.address || "" },
+      timeout: 60000, // Gemini can be slow — 60s timeout
+    })
+      .then(res => {
+        console.log("[ENRICH] Full response:", JSON.stringify(res.data, null, 2));
+        if (res.data && typeof res.data === "object") {
+          setEnriched(res.data);
+        } else {
+          console.warn("[ENRICH] Unexpected response format:", res.data);
+          setEnrichError(true);
+        }
+      })
+      .catch(e => {
+        console.error("[ENRICH] Failed:", e.message, e.response?.data);
+        setEnrichError(true);
+      })
+      .finally(() => {
+        console.log("[ENRICH] Done loading");
+        setLoadingEnriched(false);
+      });
+ }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
 
-        {activeTab === "festivals" && (
-          <FestivalsTab temple={temple} />
-        )}
+  /* ── 3. Videos — lazy ─────────────────────────── */
+  const fetchVideos = useCallback(async () => {
+    if (!googleData?.name || videos.length > 0) return;
+    console.log("[VIDEOS] Fetching for:", googleData.name);
+    setLoadingVideos(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/temples/videos`, {
+        params: { name: googleData.name },
+      });
+      console.log("[VIDEOS] Got:", res.data.videos?.length, "videos");
+      setVideos(res.data.videos || []);
+    } catch (e) {
+      console.error("[VIDEOS] Failed:", e.message);
+      setVideos([]);
+    } finally {
+      setLoadingVideos(false);
+    }
+  }, [googleData?.name, videos.length]);
 
-        {activeTab === "videos" && (
-          <VideosTab temple={temple} />
-        )}
+  /* ── 4. Nearby services — lazy ────────────────── */
+  const fetchNearbyServices = useCallback(async () => {
+    if (!googleData?.lat || nearbyServices) return;
+    console.log("[SERVICES] Fetching near:", googleData.lat, googleData.lng);
+    setLoadingServices(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
+        params: { lat: googleData.lat, lng: googleData.lng },
+      });
+      console.log("[SERVICES]", res.data);
+      setNearbyServices(res.data);
+    } catch (e) {
+      console.error("[SERVICES] Failed:", e.message);
+      setNearbyServices({ hotels: [], restaurants: [], parking: [] });
+    } finally {
+      setLoadingServices(false);
+    }
+  }, [googleData?.lat, googleData?.lng, nearbyServices]);
 
-        {activeTab === "travelguide" && (
-          <TravelGuideTab temple={temple} />
-        )}
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    if (tabId === "videos") fetchVideos();
+    if (tabId === "travel") fetchNearbyServices();
+  };
 
-      </div>
-
-      {/* ── PASTE any additional existing JSX here ──
-          e.g. ChatPanel trigger button, SaveButton, MapView, etc. ── */}
-
+  /* ── Guards ───────────────────────────────────── */
+  if (loadingGoogle) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main"><LoadingSkeleton /></div>
     </div>
   );
-};
 
-export default TempleDetailsPage;
+  if (error) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main">
+        <ErrorState message={error} onBack={() => navigate("/temples")} />
+      </div>
+    </div>
+  );
+
+  if (!googleData) return (
+    <div className="tdp-layout">
+      <Sidebar />
+      <div className="tdp-main">
+        <ErrorState message="Temple not found." onBack={() => navigate("/temples")} />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="tdp-layout">
+      {/* ── Sidebar ── */}
+      <Sidebar />
+
+      {/* ── Main Content ── */}
+      <div className="tdp-main">
+
+        {/* Hero */}
+        <div
+          className="tdp-hero"
+          style={{
+            backgroundImage: googleData.photos?.[0]
+              ? `url(${googleData.photos[0]})`
+              : "linear-gradient(135deg,#0a2a1a,#1a4a2a)",
+          }}
+        >
+          <div className="tdp-hero-overlay" />
+          <div className="tdp-hero-content">
+            <button className="tdp-back-btn" onClick={() => navigate("/temples")}>
+              ← Back
+            </button>
+            <h1 className="tdp-hero-title">{googleData.name}</h1>
+            <p className="tdp-hero-addr">📍 {googleData.address}</p>
+            <div className="tdp-hero-meta">
+              {googleData.rating && (
+                <span className="tdp-hero-badge">
+                  ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
+                </span>
+              )}
+              {enriched?.overview?.deity && (
+                <span className="tdp-hero-badge">🙏 {enriched.overview.deity}</span>
+              )}
+              {googleData.openNow !== null && (
+                <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
+                  {googleData.openNow ? "🟢 Open Now" : "🔴 Closed"}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="tdp-tabs-wrap">
+          <div className="tdp-tabs">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                className={`tdp-tab ${activeTab === tab.id ? "active" : ""}`}
+                onClick={() => handleTabChange(tab.id)}
+              >
+                <span className="tdp-tab-icon">{tab.icon}</span>
+                <span className="tdp-tab-label">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="tdp-content">
+          {activeTab === "overview" && (
+            <OverviewTab
+              google={googleData}
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
+            />
+          )}
+          {activeTab === "history" && (
+            <HistoryTab
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
+              templeName={googleData.name}
+            />
+          )}
+          {activeTab === "rituals" && (
+            <RitualsTab
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
+              templeName={googleData.name}
+            />
+          )}
+          {activeTab === "festivals" && (
+            <FestivalsTab
+              enriched={enriched}
+              loading={loadingEnriched}
+              enrichError={enrichError}
+              templeName={googleData.name}
+            />
+          )}
+          {activeTab === "videos" && (
+            <VideosTab
+              videos={videos}
+              loading={loadingVideos}
+              templeName={googleData.name}
+            />
+          )}
+          {activeTab === "travel" && (
+            <TravelGuideTab
+              google={googleData}
+              enriched={enriched}
+              services={nearbyServices}
+              loading={loadingServices}
+            />
+          )}
+        </div>
+
+        {/* FAB */}
+        <button
+          className="tdp-chat-fab"
+          onClick={() => setShowChat(true)}
+          title="Ask Temple Assistant"
+        >
+
+        </button>
+
+        {/* Chat */}
+        {/* Replace the existing wrapper div with: */}
+{showChat && (
+  <ChatPanel
+    closeChat={() => setShowChat(false)}
+    templeContext={{ name: googleData.name, address: googleData.address || "" }}
+  />
+
+  
+)}
+      </div>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="tdp-skeleton">
+      <div className="tdp-skeleton-hero" />
+      <div className="tdp-skeleton-tabs" />
+      <div className="tdp-skeleton-body">
+        {[1,2,3].map(i => <div key={i} className="tdp-skeleton-card" />)}
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ message, onBack }) {
+  return (
+    <div className="tdp-error">
+      <span>⚠️</span>
+      <p>{message}</p>
+      <button onClick={onBack}>← Back to Temples</button>
+    </div>
+  );
+}
