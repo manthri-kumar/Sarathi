@@ -1,103 +1,111 @@
-// client/src/hooks/useNotifications.js
-// ---------------------------------------------------------------------------
-// Realtime notifications for the current (JWT) user. Owns the onSnapshot
-// lifecycle, exposes memoized derived state and stable action callbacks.
-// ---------------------------------------------------------------------------
+import { useState, useEffect, useCallback } from "react";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import {
-  getCurrentUserId,
-  ensureFirebaseAuth,
-} from "../firebase/firebase";
-import {
-  subscribeToNotifications,
-  markAsRead as svcMarkAsRead,
-  markAllAsRead as svcMarkAllAsRead,
-  deleteNotification as svcDelete,
-  clearAll as svcClearAll,
-} from "../services/notificationService";
+const NOTIFICATIONS_STORAGE_KEY = "sarathiNotifications";
 
-export function useNotifications({ enabled = true } = {}) {
-  const userId = useMemo(() => getCurrentUserId(), []);
+export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const unsubRef = useRef(null);
 
+  // Load notifications from localStorage on mount
   useEffect(() => {
-    if (!enabled) return undefined;
-    if (!userId) {
+    try {
+      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      setNotifications(Array.isArray(parsed) ? parsed : []);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+      setNotifications([]);
+    } finally {
       setLoading(false);
-      setError(new Error("No authenticated user"));
-      return undefined;
     }
+  }, []);
 
-    let active = true;
-    setLoading(true);
-    setError(null);
+  // Save notifications to localStorage whenever they change
+  const saveToLocalStorage = useCallback((notifs) => {
+    try {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifs));
+    } catch (error) {
+      console.error("Error saving notifications:", error);
+    }
+  }, []);
 
-    // Settle the silent auth bridge first so the first snapshot runs under a
-    // known auth state, then attach the realtime listener.
-    ensureFirebaseAuth().finally(() => {
-      if (!active) return;
-      unsubRef.current = subscribeToNotifications(userId, {
-        onData: (items) => {
-          if (!active) return;
-          setNotifications(items);
-          setLoading(false);
-        },
-        onError: (err) => {
-          if (!active) return;
-          setError(err);
-          setLoading(false);
-        },
+  // Add a new notification (prepend to show newest first)
+  const addNotification = useCallback(
+    (notificationData) => {
+      const notification = {
+        id: notificationData.id || `notif_${Date.now()}`,
+        category: notificationData.category || "general",
+        priority: notificationData.priority || "medium",
+        isRead: false,
+        icon: notificationData.icon || "🔔",
+        title: notificationData.title || "Notification",
+        message: notificationData.message || "",
+        timestamp: notificationData.timestamp || new Date().toLocaleString(),
+        actionLabel: notificationData.actionLabel || null,
+        actionUrl: notificationData.actionUrl || null,
+      };
+
+      setNotifications((prev) => {
+        const updated = [notification, ...prev];
+        saveToLocalStorage(updated);
+        return updated;
       });
-    });
-
-    return () => {
-      active = false;
-      if (unsubRef.current) {
-        unsubRef.current();
-        unsubRef.current = null;
-      }
-    };
-  }, [userId, enabled]);
-
-  const unreadCount = useMemo(
-    () => notifications.reduce((acc, n) => (n.isRead ? acc : acc + 1), 0),
-    [notifications]
+    },
+    [saveToLocalStorage]
   );
 
+  // Mark a notification as read
   const markAsRead = useCallback(
-    (id) => svcMarkAsRead(userId, id).catch(setError),
-    [userId]
+    (id) => {
+      setNotifications((prev) => {
+        const updated = prev.map((notif) =>
+          notif.id === id ? { ...notif, isRead: true } : notif
+        );
+        saveToLocalStorage(updated);
+        return updated;
+      });
+    },
+    [saveToLocalStorage]
   );
 
+  // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
-    const ids = notifications.filter((n) => !n.isRead).map((n) => n.id);
-    return svcMarkAllAsRead(userId, ids).catch(setError);
-  }, [userId, notifications]);
+    setNotifications((prev) => {
+      const updated = prev.map((notif) => ({ ...notif, isRead: true }));
+      saveToLocalStorage(updated);
+      return updated;
+    });
+  }, [saveToLocalStorage]);
 
+  // Dismiss (delete) a notification
   const dismiss = useCallback(
-    (id) => svcDelete(userId, id).catch(setError),
-    [userId]
+    (id) => {
+      setNotifications((prev) => {
+        const updated = prev.filter((notif) => notif.id !== id);
+        saveToLocalStorage(updated);
+        return updated;
+      });
+    },
+    [saveToLocalStorage]
   );
 
+  // Clear all notifications
   const clearAll = useCallback(() => {
-    const ids = notifications.map((n) => n.id);
-    return svcClearAll(userId, ids).catch(setError);
-  }, [userId, notifications]);
+    setNotifications([]);
+    saveToLocalStorage([]);
+  }, [saveToLocalStorage]);
+
+  // Calculate unread count
+  const unreadCount = notifications.filter((notif) => !notif.isRead).length;
 
   return {
     notifications,
     loading,
-    error,
     unreadCount,
+    addNotification,
     markAsRead,
     markAllAsRead,
     dismiss,
     clearAll,
   };
-}
-
-export default useNotifications;
+};

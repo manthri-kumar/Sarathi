@@ -14,6 +14,7 @@ const categories = [
   { id: "events", label: "Events", color: "#8b5cf6" },
   { id: "ai", label: "AI", color: "#22c55e" },
 ];
+
 /* =========================================================
    COMPONENT
 ========================================================= */
@@ -93,8 +94,9 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
   const handleNotificationClick = useCallback(
     (notification) => {
       handleMarkAsRead(notification.id);
-      // In real app, would navigate to notification.actionUrl
-      console.log("Navigate to:", notification.actionUrl);
+      if (notification.actionUrl) {
+        window.location.href = notification.actionUrl;
+      }
     },
     [handleMarkAsRead]
   );
@@ -175,7 +177,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
           </>
         ) : (
           <div className="notification-empty">
-            <p>No notifications</p>
+            <p>No notifications yet</p>
           </div>
         )}
       </div>
