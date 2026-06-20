@@ -32,10 +32,6 @@ router.get("/test-groq", async (req, res) => {
   }
 });
 
-
-router.get("/history", templeController.getTempleHistory);
-
-
 // Temple chat — log middleware then controller
 router.post("/chat", (req, res, next) => {
   console.log("[ROUTE] POST /api/temples/chat hit ✓", {
@@ -46,4 +42,3 @@ router.post("/chat", (req, res, next) => {
 }, templeChat);
 
 module.exports = router;
-
