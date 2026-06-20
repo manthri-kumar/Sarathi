@@ -146,7 +146,22 @@ function AuthPage() {
     return (
       <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
 
-        
+        {/* Story-bar dots — top like your reference image */}
+        <div className="splash-story-bar">
+          {SPLASH_IMAGES.map((_, i) => (
+            <div key={i} className="splash-story-segment">
+              <div
+                className="splash-story-fill"
+                style={{
+                  animationDelay: `${i * 1.6}s`,
+                  animationPlayState: i <= activeSlide ? "running" : "paused",
+                  width: i < activeSlide ? "100%" : i === activeSlide ? undefined : "0%",
+                  animation: i === activeSlide ? "storyFill 1.6s linear forwards" : "none",
+                }}
+              />
+            </div>
+          ))}
+        </div>
 
         {/* Background — solid dark green like your image, no photos needed */}
         <div className="splash-bg" />
