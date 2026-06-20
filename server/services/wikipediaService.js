@@ -1,231 +1,266 @@
-"use strict";
-
 /**
- * Sarathi Wikipedia Service
- * ─────────────────────────
- * Fetches FULL Wikipedia articles (not just summaries) for temples.
- * Uses the MediaWiki extracts API to get complete plaintext articles.
- * Caches results in memory for 24 hours to avoid redundant API calls.
- *
- * Exports:
- *   getTempleWikiData(templeName) → { title, extract, url } | null
+ * wikipediaService.js
+ * Shared utility for fetching temple history from Wikipedia.
+ * Used by BOTH temple chat controller AND temple history endpoint.
+ * NO AI generation — only factual Wikipedia content.
  */
 
-const axios = require("axios");
-
-/* ── In-memory cache ─────────────────────────────────────────── */
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const wikiCache    = new Map(); // key: normalised temple name → { data, expiry }
-
-const getCached = (key) => {
-  const entry = wikiCache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiry) { wikiCache.delete(key); return null; }
-  return entry.data;
-};
-
-const setCache = (key, data) => {
-  wikiCache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
-};
-
-/* ── Helpers ─────────────────────────────────────────────────── */
-const WIKI_API = "https://en.wikipedia.org/w/api.php";
+const https = require("https");
 
 /**
- * Build search query variants from the raw Google Places name.
- * Wikipedia titles never match Places names exactly, so we try
- * progressively simpler forms until we get a hit.
+ * Perform a simple HTTPS GET and return parsed JSON.
  */
-const buildSearchVariants = (templeName) => {
-  const variants = new Set();
-  variants.add(templeName);
+function httpsGetJSON(url) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, (res) => {
+        let raw = "";
+        res.on("data", (chunk) => (raw += chunk));
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(raw));
+          } catch (e) {
+            reject(new Error("Failed to parse JSON from: " + url));
+          }
+        });
+      })
+      .on("error", reject);
+  });
+}
 
-  // Strip leading honorifics
-  const stripped = templeName
-    .replace(/^(Sri\s+Sri\s+Sri\s+|Sri\s+Sri\s+|Shri\s+|Sri\s+|Sree\s+)/i, "")
-    .replace(/\s+(vari\s+devasthanam|devasthanam|mandir|swamy\s+temple|swami\s+temple|temple)$/i, "")
+/**
+ * Search Wikipedia for a temple and return the best matching page title.
+ * @param {string} templeName
+ * @returns {Promise<string|null>} Wikipedia page title or null
+ */
+async function searchWikipediaTitle(templeName) {
+  // Clean the temple name — remove emoji, flags, special chars that break URL
+  const cleanName = templeName
+    .replace(/[\u{1F300}-\u{1FFFF}]/gu, "")  // emoji
+    .replace(/[^\w\s,()-]/g, "")              // non-ASCII symbols
+    .replace(/\s+/g, " ")
     .trim();
 
-  variants.add(stripped);
-  variants.add(`${stripped} temple`);
-  variants.add(`${stripped} Hindu temple`);
+  const searchQuery = encodeURIComponent(cleanName + " temple");
+  const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${searchQuery}&srlimit=5&format=json&origin=*`;
 
-  // Just the core name (first 2-3 meaningful words)
-  const stopWords = new Set([
-    "sri", "shri", "sree", "swamy", "swami", "temple", "mandir",
-    "devasthanam", "vari", "the", "of", "and", "goddess", "lord",
-  ]);
-  const meaningful = stripped
-    .split(/\s+/)
-    .filter((w) => !stopWords.has(w.toLowerCase()) && w.length > 2)
-    .slice(0, 3);
+  try {
+    const data = await httpsGetJSON(searchUrl);
+    const results = data?.query?.search;
+    if (!results || results.length === 0) return null;
 
-  if (meaningful.length) {
-    variants.add(meaningful.join(" "));
-    variants.add(`${meaningful.join(" ")} temple`);
-  }
+    // Prefer results that contain "temple", "mandir", "kovil", "devasthanam"
+    const templeKeywords = ["temple", "mandir", "kovil", "devasthanam", "shrine", "math", "mutt"];
+    const preferred = results.find((r) =>
+      templeKeywords.some((kw) => r.title.toLowerCase().includes(kw))
+    );
 
-  return [...variants];
-};
-
-/**
- * Step 1 — OpenSearch: find the best matching Wikipedia page title.
- */
-const findPageTitle = async (templeName) => {
-  for (const query of buildSearchVariants(templeName)) {
-    try {
-      const res = await axios.get(WIKI_API, {
-        params: {
-          action: "opensearch",
-          search: query,
-          limit:  5,
-          namespace: 0,
-          format: "json",
-          origin: "*",
-        },
-        timeout: 8000,
-      });
-
-      const titles = res.data?.[1] || [];
-      const urls   = res.data?.[3] || [];
-
-      if (!titles.length) continue;
-
-      console.log(`[WIKI] OpenSearch "${query}" → [${titles.slice(0, 3).join(", ")}]`);
-
-      // Prefer temple/devasthanam results
-      const idx = titles.findIndex((t, i) =>
-        t.toLowerCase().includes("temple") ||
-        t.toLowerCase().includes("devasthanam") ||
-        t.toLowerCase().includes("mandir") ||
-        urls[i]?.toLowerCase().includes("temple")
-      );
-
-      const chosen = idx >= 0 ? titles[idx] : titles[0];
-      console.log(`[WIKI] Chosen title: "${chosen}"`);
-      return chosen;
-    } catch (err) {
-      console.warn(`[WIKI] OpenSearch failed for "${query}": ${err.message}`);
-    }
-  }
-  return null;
-};
-
-/**
- * Step 2 — Fetch the FULL article text via MediaWiki extracts API.
- * explaintext=1 returns clean plaintext (no wikimarkup).
- * exsectionformat=plain keeps section headings as plain text.
- */
-const fetchFullArticle = async (pageTitle) => {
-  console.log(`[WIKI] Fetching full article: "${pageTitle}"`);
-
-  const res = await axios.get(WIKI_API, {
-    params: {
-      action:         "query",
-      prop:           "extracts|info",
-      exlimit:        1,
-      explaintext:    1,           // clean plaintext
-      exsectionformat: "plain",    // == Section headings as plain text
-      titles:         pageTitle,
-      inprop:         "url",
-      format:         "json",
-      origin:         "*",
-    },
-    timeout: 15000,
-  });
-
-  const pages = res.data?.query?.pages || {};
-  const page  = Object.values(pages)[0];
-
-  if (!page || page.missing !== undefined || !page.extract) {
-    console.log(`[WIKI] No extract found for "${pageTitle}"`);
+    return preferred ? preferred.title : results[0].title;
+  } catch (err) {
+    console.error("[Wikipedia] Search error:", err.message);
     return null;
   }
-
-  console.log(`[WIKI] Full article fetched — length: ${page.extract.length} chars`);
-
-  return {
-    title:   page.title,
-    extract: page.extract,
-    url:     page.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
-  };
-};
+}
 
 /**
- * Step 3 (fallback) — Use the REST summary API if the full article is empty.
+ * Fetch the full Wikipedia extract for a given page title.
+ * @param {string} title
+ * @returns {Promise<{extract: string, url: string}|null>}
  */
-const fetchSummaryFallback = async (pageTitle) => {
-  console.log(`[WIKI] Summary fallback for: "${pageTitle}"`);
+async function fetchWikipediaExtract(title) {
+  const encodedTitle = encodeURIComponent(title);
+  const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=false&explaintext=true&titles=${encodedTitle}&format=json&origin=*`;
+
   try {
-    const res = await axios.get(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`,
-      { timeout: 8000 }
-    );
-    const d = res.data;
-    if (!d?.extract) return null;
+    const data = await httpsGetJSON(extractUrl);
+    const pages = data?.query?.pages;
+    if (!pages) return null;
+
+    const page = Object.values(pages)[0];
+    if (!page || page.missing !== undefined || !page.extract) return null;
+
     return {
-      title:   d.title,
-      extract: d.extract,
-      url:     d.content_urls?.desktop?.page || null,
+      extract: page.extract,
+      url: `https://en.wikipedia.org/wiki/${encodedTitle}`,
+      title: page.title,
     };
   } catch (err) {
-    console.warn(`[WIKI] Summary fallback failed: ${err.message}`);
+    console.error("[Wikipedia] Extract fetch error:", err.message);
     return null;
   }
-};
+}
 
-/* ── Main export ─────────────────────────────────────────────── */
 /**
- * getTempleWikiData(templeName)
- * Returns { title, extract, url } or null.
- * extract is the FULL article text (up to ~50 000 chars for major temples).
+ * Extract history-relevant sections from a full Wikipedia extract.
+ * Wikipedia plain-text extracts use "\n\n== Section Title ==\n\n" format.
+ * We pull the intro plus any sections matching history keywords.
+ *
+ * @param {string} fullExtract
+ * @returns {string}
  */
-const getTempleWikiData = async (templeName) => {
-  if (!templeName?.trim()) return null;
+function extractHistorySections(fullExtract) {
+  if (!fullExtract) return "";
 
-  const cacheKey = templeName.trim().toLowerCase();
-  const cached   = getCached(cacheKey);
-  if (cached) {
-    console.log(`[WIKI] Cache hit for "${templeName}"`);
-    return cached;
+  // Split into sections by Wikipedia's == Heading == markers
+  const sectionRegex = /\n={2,3}[^=]+={2,3}\n/g;
+  const sectionBoundaries = [];
+  let match;
+
+  while ((match = sectionRegex.exec(fullExtract)) !== null) {
+    sectionBoundaries.push({ index: match.index, title: match[0].trim() });
+  }
+
+  // Always include the intro (text before first heading)
+  const introEnd = sectionBoundaries.length > 0 ? sectionBoundaries[0].index : fullExtract.length;
+  const intro = fullExtract.substring(0, introEnd).trim();
+
+  if (sectionBoundaries.length === 0) {
+    // No sections — return full extract trimmed to 4000 chars
+    return fullExtract.substring(0, 4000).trim();
+  }
+
+  // History-relevant section title keywords
+  const historyKeywords = [
+    "history",
+    "historical",
+    "origin",
+    "legend",
+    "mythology",
+    "founding",
+    "background",
+    "antiquity",
+    "ancient",
+    "heritage",
+    "significance",
+    "importance",
+    "overview",
+    "description",
+    "architecture",
+    "construction",
+    "renovation",
+    "dynasty",
+    "era",
+  ];
+
+  const historySections = [];
+
+  sectionBoundaries.forEach((section, i) => {
+    const titleLower = section.title.toLowerCase();
+    const isHistorySection = historyKeywords.some((kw) => titleLower.includes(kw));
+
+    if (isHistorySection) {
+      const start = section.index + section.title.length;
+      const end =
+        i + 1 < sectionBoundaries.length
+          ? sectionBoundaries[i + 1].index
+          : fullExtract.length;
+
+      const sectionContent = fullExtract
+        .substring(start, end)
+        .replace(/\n={2,3}[^=]+={2,3}\n/g, "") // remove sub-headings
+        .trim();
+
+      if (sectionContent.length > 50) {
+        // Strip the == markers from the title for display
+        const cleanTitle = section.title.replace(/={2,3}/g, "").trim();
+        historySections.push(`${cleanTitle}\n\n${sectionContent}`);
+      }
+    }
+  });
+
+  // Build final content: intro + matching sections
+  const parts = [intro];
+  if (historySections.length > 0) {
+    parts.push(...historySections);
+  } else if (sectionBoundaries.length > 0) {
+    // No explicitly named history sections — include first 2 sections as context
+    const firstTwo = sectionBoundaries.slice(0, 2);
+    firstTwo.forEach((section, i) => {
+      const start = section.index + section.title.length;
+      const end =
+        i + 1 < firstTwo.length
+          ? firstTwo[i + 1].index
+          : sectionBoundaries.length > 2
+          ? sectionBoundaries[i + 2]?.index || fullExtract.length
+          : fullExtract.length;
+
+      const content = fullExtract.substring(start, end).trim();
+      if (content.length > 50) {
+        const cleanTitle = section.title.replace(/={2,3}/g, "").trim();
+        parts.push(`${cleanTitle}\n\n${content}`);
+      }
+    });
+  }
+
+  return parts.join("\n\n").substring(0, 5000).trim();
+}
+
+/**
+ * PRIMARY EXPORT — Fetch temple history from Wikipedia.
+ *
+ * This function is used by BOTH:
+ *   1. Temple chat controller (for AI context enrichment)
+ *   2. Temple history API endpoint (for HistoryTab display)
+ *
+ * @param {string} templeName - Full temple name as displayed in the UI
+ * @returns {Promise<{
+ *   content: string,
+ *   sources: string[],
+ *   found: boolean,
+ *   wikiTitle: string|null
+ * }>}
+ */
+async function getTempleWikipediaHistory(templeName) {
+  if (!templeName || typeof templeName !== "string") {
+    return { content: "", sources: [], found: false, wikiTitle: null };
   }
 
   try {
-    console.log(`[WIKI] Starting lookup for: "${templeName}"`);
+    // Step 1: Find the best Wikipedia page title for this temple
+    const title = await searchWikipediaTitle(templeName);
 
-    const pageTitle = await findPageTitle(templeName);
-    if (!pageTitle) {
-      console.log("[WIKI] No page title found");
-      return null;
+    if (!title) {
+      console.log(`[Wikipedia] No page found for: ${templeName}`);
+      return { content: "", sources: [], found: false, wikiTitle: null };
     }
 
-    let data = await fetchFullArticle(pageTitle);
+    console.log(`[Wikipedia] Found page: "${title}" for temple: "${templeName}"`);
 
-    // Fallback: if full article gave nothing, use REST summary
-    if (!data || data.extract.trim().length < 100) {
-      console.log("[WIKI] Full article too short — trying summary fallback");
-      data = await fetchSummaryFallback(pageTitle);
+    // Step 2: Fetch the full extract
+    const result = await fetchWikipediaExtract(title);
+
+    if (!result || !result.extract) {
+      console.log(`[Wikipedia] Empty extract for: ${title}`);
+      return { content: "", sources: [], found: false, wikiTitle: title };
     }
 
-    if (!data) {
-      console.log("[WIKI] Both full article and summary failed");
-      return null;
+    // Step 3: Extract history-relevant sections
+    const historyContent = extractHistorySections(result.extract);
+
+    if (!historyContent || historyContent.length < 50) {
+      console.log(`[Wikipedia] Insufficient history content for: ${title}`);
+      return { content: "", sources: [], found: false, wikiTitle: title };
     }
 
-    console.log(`[WIKI] Success — "${data.title}", extract: ${data.extract.length} chars`);
-    setCache(cacheKey, data);
-    return data;
+    const sources = [
+      `Wikipedia: ${result.title} — ${result.url}`,
+    ];
+
+    return {
+      content: historyContent,
+      sources,
+      found: true,
+      wikiTitle: result.title,
+    };
   } catch (err) {
-    console.error(`[WIKI] Fatal error for "${templeName}": ${err.message}`);
-    return null;
+    console.error(`[Wikipedia] getTempleWikipediaHistory error for "${templeName}":`, err.message);
+    return { content: "", sources: [], found: false, wikiTitle: null };
   }
+}
+
+module.exports = {
+  getTempleWikipediaHistory,
+  searchWikipediaTitle,
+  fetchWikipediaExtract,
+  extractHistorySections,
 };
-
-/* ── Cache management helpers (optional debug use) ───────────── */
-const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache cleared"); };
-const getWikiCacheStats = () => ({
-  size:    wikiCache.size,
-  entries: [...wikiCache.keys()],
-});
-
-module.exports = { getTempleWikiData, clearWikiCache, getWikiCacheStats };
