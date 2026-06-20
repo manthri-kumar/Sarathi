@@ -202,7 +202,7 @@ body {
 .hero-pill:hover {
   transform: translateY(-4px);
   background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(74, 222, 128, 0.35);
+  border-color: rgba(74, 222, 109, 0.35);
 }
 
 .hp-icon { font-size: 1.15rem; line-height: 1; }
@@ -271,7 +271,7 @@ body {
   height: 54px;
   object-fit: contain;
   filter:
-    drop-shadow(0 0 10px rgba(74, 222, 128, 0.35))
+    drop-shadow(0 0 10px rgba(79, 222, 74, 0.35))
     drop-shadow(0 0 20px rgba(22, 163, 74, 0.25));
   transition: all 0.3s ease;
 }
@@ -342,7 +342,7 @@ body {
   left: 5px;
   width: calc(50% - 5px);
   border-radius: 999px;
-  background: linear-gradient(90deg, #16a34a, #22c55e);
+  background: linear-gradient(90deg, #16a316, #2dc522);
   box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
@@ -392,7 +392,7 @@ body {
 .auth-card input::placeholder { color: rgba(148, 163, 184, 0.7); }
 
 .auth-card input:focus {
-  border: 1px solid #4ade80;
+  border: 1px solid #4ade4c;
   background: rgba(34, 197, 94, 0.06);
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
 }
@@ -412,7 +412,7 @@ body {
   transition: color 0.2s ease;
 }
 
-.forgot-link:hover { color: #86efac; text-decoration: underline; }
+.forgot-link:hover { color: #86ef88; text-decoration: underline; }
 
 /* ===== PRIMARY BUTTON ===== */
 .auth-btn {
@@ -420,7 +420,7 @@ body {
   width: 100%;
   height: 58px;
   margin-top: 8px;
-  background: linear-gradient(90deg, #16a34a, #22c55e);
+  background: linear-gradient(90deg, #1ba316, #38c522);
   color: #04210f;
   border: none;
   border-radius: 16px;
@@ -434,7 +434,7 @@ body {
 
 .auth-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px rgba(34, 197, 94, 0.34);
+  box-shadow: 0 18px 40px rgba(34, 197, 48, 0.34);
 }
 
 .auth-btn:active { transform: scale(0.975); }
