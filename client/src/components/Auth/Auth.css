@@ -698,7 +698,7 @@ body {
 }
 
 /* ============================================================
-   RESPONSIVE
+   RESPONSIVE — DESKTOP & TABLET (unchanged)
    ============================================================ */
 @media (max-width: 1200px) {
   .auth-card { max-width: 500px; padding: 42px; }
@@ -708,30 +708,118 @@ body {
   .auth-card { max-width: 480px; padding: 38px 32px; }
 }
 
+/* ============================================================
+   RESPONSIVE — MOBILE (compact, single-viewport fit)
+   ============================================================ */
 @media (max-width: 768px) {
   .main-container { flex-direction: column; }
   .left-panel { display: none; }
-  .mobile-brand { display: flex; }
 
   .right-panel {
-    padding: 48px 20px 40px;
+    padding: 16px;
+    padding-top: 20px;
     justify-content: flex-start;
-    min-height: 100vh;
+    align-items: center;
+    min-height: 100dvh;
   }
 
+  /* Brand — 25% smaller logo, tight rhythm */
+  .mobile-brand {
+    display: flex;
+    margin-bottom: 14px;
+  }
+
+  .brand-logo,
+  .brand-mark {
+    width: 58px;
+    height: 58px;
+  }
+
+  .brand-mark { filter: drop-shadow(0 0 18px rgba(34, 197, 94, 0.3)); }
+
+  .brand-name {
+    margin: 8px 0 2px;
+    font-size: 24px;
+  }
+
+  .brand-tagline { font-size: 12px; }
+
+  /* Card — dense but premium */
   .auth-card {
-    width: 100%;
-    max-width: 460px;
-    padding: 32px 26px;
+    width: calc(100vw - 32px);
+    max-width: none;
+    padding: 24px;
+    border-radius: 22px;
   }
 
-  .auth-card:hover { transform: none; }
+  .auth-card:hover { transform: none; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
+
+  .auth-card h2 { font-size: 26px; margin: 0 0 2px; }
+  .auth-subtitle { font-size: 13px; margin: 0 0 2px; }
+
+  /* Toggle — 52px */
+  .toggle { margin: 14px 0; padding: 4px; }
+  .toggle::before { top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); }
+  .toggle button { padding: 12px; font-size: 14px; }
+
+  /* Inputs — 54px, tight spacing */
+  .auth-card input {
+    height: 54px;
+    margin: 8px 0;
+    font-size: 14.5px;
+    border-radius: 14px;
+  }
+
+  .forgot-row { margin: 0 2px 4px; }
+  .forgot-link { font-size: 12.5px; }
+
+  /* Buttons — 54px */
+  .auth-btn {
+    height: 54px;
+    margin-top: 8px;
+    font-size: 15px;
+    border-radius: 14px;
+  }
+
+  .divider { margin: 14px 0; }
+
+  .google-icon-btn {
+    height: 54px;
+    border-radius: 14px;
+    margin-top: 4px;
+  }
+  .google-icon-btn::after { font-size: 14px; }
+
+  .switch-text { margin-top: 12px; font-size: 12.5px; }
+
+  /* Trust — compact chips ~70px */
+  .trust-row {
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+
+  .trust-item {
+    min-height: 70px;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 12px;
+  }
+
+  .trust-item span { font-size: 1.05rem; }
+  .trust-item p { font-size: 9px; line-height: 1.2; }
 }
 
-@media (max-width: 400px) {
-  .auth-card { padding: 28px 22px; }
-  .auth-card input { height: 56px; }
-  .auth-btn, .google-icon-btn { height: 54px; }
-  .brand-name { font-size: 30px; }
-  .trust-item p { font-size: 9.5px; }
+/* Smaller phones — squeeze further */
+@media (max-width: 380px) {
+  .right-panel { padding: 12px; padding-top: 16px; }
+  .auth-card { width: calc(100vw - 24px); padding: 20px; }
+  .brand-logo, .brand-mark { width: 52px; height: 52px; }
+  .brand-name { font-size: 22px; }
+  .auth-card h2 { font-size: 24px; }
+  .auth-card input { height: 52px; margin: 7px 0; }
+  .auth-btn, .google-icon-btn { height: 52px; }
+  .trust-item { min-height: 64px; }
+  .trust-item p { font-size: 8.5px; }
 }
