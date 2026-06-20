@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { X, Search, Settings, Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import "./NotificationDropdown.css";
 import { useNotifications } from "../../hooks/useNotifications";
 
@@ -10,9 +11,6 @@ const categories = [
   { id: "all", label: "All", color: "#22c55e" },
   { id: "travel", label: "Travel", color: "#3b82f6" },
   { id: "temple", label: "Temple", color: "#f59e0b" },
-  { id: "weather", label: "Weather", color: "#06b6d4" },
-  { id: "events", label: "Events", color: "#8b5cf6" },
-  { id: "ai", label: "AI", color: "#22c55e" },
 ];
 
 /* =========================================================
@@ -20,6 +18,7 @@ const categories = [
 ========================================================= */
 const NotificationDropdown = ({ isOpen, onClose }) => {
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   const {
     notifications,
@@ -95,10 +94,23 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
     (notification) => {
       handleMarkAsRead(notification.id);
       if (notification.actionUrl) {
-        window.location.href = notification.actionUrl;
+        onClose();
+        navigate(notification.actionUrl);
       }
     },
-    [handleMarkAsRead]
+    [handleMarkAsRead, navigate, onClose]
+  );
+
+  const handleActionButtonClick = useCallback(
+    (e, notification) => {
+      e.stopPropagation();
+      handleMarkAsRead(notification.id);
+      if (notification.actionUrl) {
+        onClose();
+        navigate(notification.actionUrl);
+      }
+    },
+    [handleMarkAsRead, navigate, onClose]
   );
 
   if (!isOpen) return null;
@@ -172,12 +184,17 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
                 onMarkAsRead={handleMarkAsRead}
                 onDismiss={handleDismiss}
                 onClick={() => handleNotificationClick(notification)}
+                onActionClick={(e) => handleActionButtonClick(e, notification)}
               />
             ))}
           </>
         ) : (
           <div className="notification-empty">
-            <p>No notifications yet</p>
+            <div className="notification-empty-icon">🔔</div>
+            <p className="notification-empty-title">No Notifications Yet</p>
+            <p className="notification-empty-subtitle">
+              Your travel updates and temple activities will appear here.
+            </p>
           </div>
         )}
       </div>
@@ -212,7 +229,30 @@ const NotificationCard = React.memo(function NotificationCard({
   onMarkAsRead,
   onDismiss,
   onClick,
+  onActionClick,
 }) {
+  const getCategoryBadgeColor = (category) => {
+    switch (category) {
+      case "travel":
+        return "#3b82f6";
+      case "temple":
+        return "#f59e0b";
+      default:
+        return "#22c55e";
+    }
+  };
+
+  const getCategoryLabel = (category) => {
+    switch (category) {
+      case "travel":
+        return "Travel";
+      case "temple":
+        return "Temple";
+      default:
+        return category.charAt(0).toUpperCase() + category.slice(1);
+    }
+  };
+
   return (
     <div
       className={`notification-card ${
@@ -232,14 +272,27 @@ const NotificationCard = React.memo(function NotificationCard({
         <h4 className="notification-title">{notification.title}</h4>
         <p className="notification-msg">{notification.message}</p>
         <div className="notification-footer-info">
-          <span className="notification-time">{notification.timestamp}</span>
-          {notification.actionLabel && (
+          <div className="notification-meta">
+            <span className="notification-time">{notification.timestamp}</span>
+            {notification.category && (
+              <span
+                className="notification-category-badge"
+                style={{
+                  backgroundColor: `${getCategoryBadgeColor(
+                    notification.category
+                  )}20`,
+                  color: getCategoryBadgeColor(notification.category),
+                  borderColor: getCategoryBadgeColor(notification.category),
+                }}
+              >
+                {getCategoryLabel(notification.category)}
+              </span>
+            )}
+          </div>
+          {notification.actionLabel && notification.actionUrl && (
             <button
               className="notification-action"
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkAsRead(notification.id);
-              }}
+              onClick={onActionClick}
             >
               {notification.actionLabel} →
             </button>

@@ -3,7 +3,7 @@ import "./Itinerary.css";
 import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
 import { useNavigate } from "react-router-dom";
-import { useNotifications } from "../hooks/useNotifications";
+import { createTripConfirmationNotification, createDraftSavedNotification } from "../services/notificationService";
 
 const Itinerary = () => {
   const [city, setCity] = useState("");
@@ -17,7 +17,6 @@ const Itinerary = () => {
 
   const touchStartX = useRef(0);
   const navigate = useNavigate();
-  const { addNotification } = useNotifications();
 
   useEffect(() => {
     const savedFinal = JSON.parse(localStorage.getItem("finalPlan")) || [];
@@ -162,18 +161,8 @@ const Itinerary = () => {
         });
       }
 
-      // Create notification after successful trip confirmation
-      addNotification({
-        id: `trip_confirmed_${Date.now()}`,
-        category: "travel",
-        priority: "high",
-        icon: "✈️",
-        title: "Trip Confirmed",
-        message: `Your itinerary with ${finalPlan.length} destination${finalPlan.length !== 1 ? "s" : ""} has been confirmed successfully.`,
-        timestamp: new Date().toLocaleString(),
-        actionLabel: "View Trip",
-        actionUrl: "/my-trips",
-      });
+      // Create trip confirmation notification
+      createTripConfirmationNotification(finalPlan.length);
 
       localStorage.removeItem("finalPlan");
       navigate("/my-trips");
@@ -189,18 +178,8 @@ const Itinerary = () => {
       JSON.stringify([...oldSaved, ...finalPlan])
     );
 
-    // Create notification after saving draft
-    addNotification({
-      id: `draft_saved_${Date.now()}`,
-      category: "travel",
-      priority: "medium",
-      icon: "💾",
-      title: "Draft Saved",
-      message: "Your itinerary draft has been saved successfully.",
-      timestamp: new Date().toLocaleString(),
-      actionLabel: null,
-      actionUrl: null,
-    });
+    // Create draft saved notification
+    createDraftSavedNotification();
 
     alert("Trip saved successfully to drafts!");
   };
