@@ -13,7 +13,7 @@
  * Paste your original implementations back into those stubs.
  */
 
-const { getTempleWikipediaHistory } = require("../utils/wikipediaService");
+const { getTempleWikipediaHistory } = require("../services/wikipediaService");
 
 // ─── Paste your original requires here ──────────────────────────────────────
 // Example:
