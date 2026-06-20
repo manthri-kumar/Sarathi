@@ -18,8 +18,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 // Import new dropdown components
 import InboxDropdown from "./InboxDropdown";
-import NotificationDropdown from "../NotificationDropdown/NotificationDropdown";
-// Explore search context (drives city search only on the Explore route)
+import NotificationDropdown from "./NotificationDropdown";// Explore search context (drives city search only on the Explore route)
 import { useExploreSearchContext } from "../../pages/ExploreSearchContext";
 
 const Navbar = ({ toggleSidebar }) => {
