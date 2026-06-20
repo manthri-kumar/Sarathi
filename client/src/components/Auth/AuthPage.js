@@ -236,39 +236,7 @@ function AuthPage() {
         </div>
 
         {/* Cinematic mountain silhouettes + fog */}
-        <div className="mountains" aria-hidden="true">
-          <svg className="mtn mtn-3" viewBox="0 0 1440 300" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="mtnFar" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#103024" />
-                <stop offset="100%" stopColor="#060d12" />
-              </linearGradient>
-            </defs>
-            <path fill="url(#mtnFar)" d="M0,180 L160,120 L320,170 L520,90 L720,160 L920,100 L1140,170 L1300,120 L1440,160 L1440,300 L0,300 Z" />
-          </svg>
-
-          <svg className="mtn mtn-2" viewBox="0 0 1440 300" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="mtnMid" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0a2418" />
-                <stop offset="100%" stopColor="#04080c" />
-              </linearGradient>
-            </defs>
-            <path fill="url(#mtnMid)" d="M0,220 L200,160 L400,210 L600,150 L820,210 L1040,150 L1240,210 L1440,170 L1440,300 L0,300 Z" />
-          </svg>
-
-          <svg className="mtn mtn-1" viewBox="0 0 1440 300" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="mtnNear" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#07140e" />
-                <stop offset="100%" stopColor="#020403" />
-              </linearGradient>
-            </defs>
-            <path fill="url(#mtnNear)" d="M0,260 L240,200 L460,255 L680,190 L900,255 L1120,200 L1340,255 L1440,225 L1440,300 L0,300 Z" />
-          </svg>
-
-          <div className="fog" />
-        </div>
+        
       </div>
 
       {/* RIGHT PANEL */}
