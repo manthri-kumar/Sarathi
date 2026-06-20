@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/components/Auth/AuthPage.jsx
+import React, { useState, useEffect, useRef } from "react";
 import "./Auth.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +25,20 @@ function AuthPage() {
   const [activeSlide, setActiveSlide] = useState(0);
 
   const navigate = useNavigate();
+
+  /* ── Cosmetic mouse-follow glow (no state, no logic) ── */
+  const containerRef = useRef(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const move = (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    el.addEventListener("mousemove", move);
+    return () => el.removeEventListener("mousemove", move);
+  }, [isGoogleRedirect, showSplash]);
 
   /* ── Splash: mobile/tablet only, once per session ── */
   useEffect(() => {
@@ -146,23 +161,6 @@ function AuthPage() {
     return (
       <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
 
-        {/* Story-bar dots — top like your reference image */}
-        <div className="splash-story-bar">
-          {SPLASH_IMAGES.map((_, i) => (
-            <div key={i} className="splash-story-segment">
-              <div
-                className="splash-story-fill"
-                style={{
-                  animationDelay: `${i * 1.6}s`,
-                  animationPlayState: i <= activeSlide ? "running" : "paused",
-                  width: i < activeSlide ? "100%" : i === activeSlide ? undefined : "0%",
-                  animation: i === activeSlide ? "storyFill 1.6s linear forwards" : "none",
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
         {/* Background — solid dark green like your image, no photos needed */}
         <div className="splash-bg" />
 
@@ -191,11 +189,29 @@ function AuthPage() {
      RENDER: Auth page
   ════════════════════════════════════════ */
   return (
-    <div className="main-container auth-fade-in">
+    <div className="main-container auth-fade-in" ref={containerRef}>
+
+      {/* Cosmetic cursor-follow glow */}
+      <div className="cursor-glow" aria-hidden="true" />
 
       {/* LEFT PANEL */}
       <div className="left-panel">
+
+        {/* Decorative background FX */}
+        <div className="left-fx" aria-hidden="true">
+          <div className="contours" />
+          <span className="particle" />
+          <span className="particle" />
+          <span className="particle" />
+          <span className="particle" />
+          <span className="particle" />
+          <span className="particle" />
+          <span className="particle" />
+          <span className="particle" />
+        </div>
+
         <div className="left-top"><h1>Sarathi</h1></div>
+
         <div className="left-content">
           <h2>Plan Smarter. Travel Better.</h2>
           <p className="desc">
@@ -204,6 +220,66 @@ function AuthPage() {
             recommendations, and experience travel that adapts to you.
           </p>
           <button className="explore-btns">Start Exploring →</button>
+
+          {/* Feature cards */}
+          <div className="feature-cards">
+            <div className="feature-card">
+              <span className="fc-icon">🧭</span>
+              <div className="fc-text">
+                <h4>Smart Itineraries</h4>
+                <p>AI-built day plans</p>
+              </div>
+            </div>
+            <div className="feature-card">
+              <span className="fc-icon">💎</span>
+              <div className="fc-text">
+                <h4>Hidden Gems</h4>
+                <p>Discover the unseen</p>
+              </div>
+            </div>
+            <div className="feature-card">
+              <span className="fc-icon">⚡</span>
+              <div className="fc-text">
+                <h4>Real-Time Updates</h4>
+                <p>Live travel insights</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cinematic mountain silhouettes + fog */}
+        <div className="mountains" aria-hidden="true">
+          <svg className="mtn mtn-3" viewBox="0 0 1440 300" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="mtnFar" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#103024" />
+                <stop offset="100%" stopColor="#060d12" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#mtnFar)" d="M0,180 L160,120 L320,170 L520,90 L720,160 L920,100 L1140,170 L1300,120 L1440,160 L1440,300 L0,300 Z" />
+          </svg>
+
+          <svg className="mtn mtn-2" viewBox="0 0 1440 300" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="mtnMid" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0a2418" />
+                <stop offset="100%" stopColor="#04080c" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#mtnMid)" d="M0,220 L200,160 L400,210 L600,150 L820,210 L1040,150 L1240,210 L1440,170 L1440,300 L0,300 Z" />
+          </svg>
+
+          <svg className="mtn mtn-1" viewBox="0 0 1440 300" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="mtnNear" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#07140e" />
+                <stop offset="100%" stopColor="#020403" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#mtnNear)" d="M0,260 L240,200 L460,255 L680,190 L900,255 L1120,200 L1340,255 L1440,225 L1440,300 L0,300 Z" />
+          </svg>
+
+          <div className="fog" />
         </div>
       </div>
 
@@ -212,7 +288,7 @@ function AuthPage() {
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
           <p className="auth-subtitle">
-            {isLogin ? "Sign in to continue" : "Create your account"}
+            {isLogin ? "Sign in to continue" : "Create your account to get started"}
           </p>
 
           {googleError && (
@@ -261,6 +337,13 @@ function AuthPage() {
               <>Already have an account? <span onClick={() => setIsLogin(true)}>Login</span></>
             )}
           </p>
+
+          {/* Trust indicators */}
+          <div className="trust-row">
+            <div className="trust-item"><span>🔒</span><p>Secure &amp; Private</p></div>
+            <div className="trust-item"><span>⚡</span><p>Fast &amp; Reliable</p></div>
+            <div className="trust-item"><span>🌍</span><p>Trusted by Travelers</p></div>
+          </div>
         </div>
       </div>
     </div>
