@@ -5,12 +5,6 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
 
-const SPLASH_IMAGES = [
-  "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&q=80",
-  "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-];
-
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "" });
@@ -22,7 +16,6 @@ function AuthPage() {
 
   const [showSplash, setShowSplash] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
-  
 
   const navigate = useNavigate();
 
@@ -49,14 +42,13 @@ function AuthPage() {
       setShowSplash(true);
       sessionStorage.setItem("sarathi_splash_seen", "true");
 
+      const fadeTimer = setTimeout(() => setSplashFadingOut(true), 3200);
+      const removeTimer = setTimeout(() => setShowSplash(false), 4100);
 
-     const fadeTimer = setTimeout(() => setSplashFadingOut(true), 3200);
-const removeTimer = setTimeout(() => setShowSplash(false), 4100);
-
-return () => {
-  clearTimeout(fadeTimer);
-  clearTimeout(removeTimer);
-};
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(removeTimer);
+      };
     }
   }, [isGoogleRedirect]);
 
