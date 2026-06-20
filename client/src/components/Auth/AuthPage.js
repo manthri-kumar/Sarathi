@@ -1,9 +1,14 @@
-// src/components/Auth/AuthPage.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./Auth.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
+
+const SPLASH_IMAGES = [
+  "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&q=80",
+  "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80",
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
+];
 
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
@@ -16,22 +21,9 @@ function AuthPage() {
 
   const [showSplash, setShowSplash] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   const navigate = useNavigate();
-
-  /* ── Cosmetic mouse-follow glow (no state, no logic) ── */
-  const containerRef = useRef(null);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const move = (e) => {
-      const r = el.getBoundingClientRect();
-      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      el.style.setProperty("--my", `${e.clientY - r.top}px`);
-    };
-    el.addEventListener("mousemove", move);
-    return () => el.removeEventListener("mousemove", move);
-  }, [isGoogleRedirect, showSplash]);
 
   /* ── Splash: mobile/tablet only, once per session ── */
   useEffect(() => {
@@ -42,10 +34,15 @@ function AuthPage() {
       setShowSplash(true);
       sessionStorage.setItem("sarathi_splash_seen", "true");
 
-      const fadeTimer = setTimeout(() => setSplashFadingOut(true), 3200);
+      const slideInterval = setInterval(() => {
+        setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
+      }, 1600);
+
+      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 3200);
       const removeTimer = setTimeout(() => setShowSplash(false), 4100);
 
       return () => {
+        clearInterval(slideInterval);
         clearTimeout(fadeTimer);
         clearTimeout(removeTimer);
       };
@@ -149,6 +146,8 @@ function AuthPage() {
     return (
       <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
 
+        
+
         {/* Background — solid dark green like your image, no photos needed */}
         <div className="splash-bg" />
 
@@ -177,29 +176,11 @@ function AuthPage() {
      RENDER: Auth page
   ════════════════════════════════════════ */
   return (
-    <div className="main-container auth-fade-in" ref={containerRef}>
-
-      {/* Cosmetic cursor-follow glow */}
-      <div className="cursor-glow" aria-hidden="true" />
+    <div className="main-container auth-fade-in">
 
       {/* LEFT PANEL */}
       <div className="left-panel">
-
-        {/* Decorative background FX */}
-        <div className="left-fx" aria-hidden="true">
-          <div className="contours" />
-          <span className="particle" />
-          <span className="particle" />
-          <span className="particle" />
-          <span className="particle" />
-          <span className="particle" />
-          <span className="particle" />
-          <span className="particle" />
-          <span className="particle" />
-        </div>
-
         <div className="left-top"><h1>Sarathi</h1></div>
-
         <div className="left-content">
           <h2>Plan Smarter. Travel Better.</h2>
           <p className="desc">
@@ -208,35 +189,7 @@ function AuthPage() {
             recommendations, and experience travel that adapts to you.
           </p>
           <button className="explore-btns">Start Exploring →</button>
-
-          {/* Feature cards */}
-          <div className="feature-cards">
-            <div className="feature-card">
-              <span className="fc-icon">🧭</span>
-              <div className="fc-text">
-                <h4>Smart Itineraries</h4>
-                <p>AI-built day plans</p>
-              </div>
-            </div>
-            <div className="feature-card">
-              <span className="fc-icon">💎</span>
-              <div className="fc-text">
-                <h4>Hidden Gems</h4>
-                <p>Discover the unseen</p>
-              </div>
-            </div>
-            <div className="feature-card">
-              <span className="fc-icon">⚡</span>
-              <div className="fc-text">
-                <h4>Real-Time Updates</h4>
-                <p>Live travel insights</p>
-              </div>
-            </div>
-          </div>
         </div>
-
-        {/* Cinematic mountain silhouettes + fog */}
-        
       </div>
 
       {/* RIGHT PANEL */}
@@ -244,7 +197,7 @@ function AuthPage() {
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
           <p className="auth-subtitle">
-            {isLogin ? "Sign in to continue" : "Create your account to get started"}
+            {isLogin ? "Sign in to continue" : "Create your account"}
           </p>
 
           {googleError && (
@@ -293,13 +246,6 @@ function AuthPage() {
               <>Already have an account? <span onClick={() => setIsLogin(true)}>Login</span></>
             )}
           </p>
-
-          {/* Trust indicators */}
-          <div className="trust-row">
-            <div className="trust-item"><span>🔒</span><p>Secure &amp; Private</p></div>
-            <div className="trust-item"><span>⚡</span><p>Fast &amp; Reliable</p></div>
-            <div className="trust-item"><span>🌍</span><p>Trusted by Travelers</p></div>
-          </div>
         </div>
       </div>
     </div>

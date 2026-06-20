@@ -1,548 +1,237 @@
-/* ============================================================
-   SARATHI · AUTH — Dark Premium Luxury SaaS redesign (CSS)
-   Navy base · emerald accents · glass · cinematic mountains
-   ============================================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
-
-:root {
-  --navy-0: #050816;
-  --navy-1: #08111f;
-  --navy-2: #0c1628;
-  --navy-3: #101c30;
-  --emerald: #67cc0f78;
-  --emerald-2: #68de4a;
-  --emerald-3: #74d55e;
-  --emerald-deep: #1ba316;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --glass: rgba(255, 255, 255, 0.04);
-  --glass-brd: rgba(255, 255, 255, 0.08);
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 body {
   margin: 0;
-  font-family: 'Inter', 'Poppins', sans-serif;
-  background: var(--navy-0);
+  font-family: 'Poppins', sans-serif;
 }
 
-/* ============================================================
-   LAYERED CINEMATIC BACKGROUND
-   ============================================================ */
+/* MAIN */
 .main-container {
   display: flex;
   height: 100vh;
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(1200px 850px at 10% 12%, rgba(37, 197, 34, 0.16), transparent 60%),
-    radial-gradient(900px 700px at 92% 88%, rgba(27, 163, 22, 0.1), transparent 60%),
-    linear-gradient(135deg, var(--navy-2), var(--navy-0) 65%);
-  color: var(--text);
 }
 
-/* huge emerald glow top-left */
-.main-container::before {
-  content: "";
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  top: -180px;
-  left: -140px;
-  background: radial-gradient(circle, rgba(79, 222, 74, 0.22), transparent 65%);
-  filter: blur(70px);
-  border-radius: 50%;
-  z-index: 0;
-  animation: floatLight 16s var(--ease) infinite alternate;
-  pointer-events: none;
-}
-
-/* noise texture overlay */
-.main-container::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-@keyframes floatLight {
-  from { transform: translate(0, 0) scale(1); }
-  to   { transform: translate(70px, 60px) scale(1.14); }
-}
-
-/* mouse-follow glow */
-.cursor-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 560px;
-  height: 560px;
-  transform: translate(calc(var(--mx, 50%) - 280px), calc(var(--my, 50%) - 280px));
-  background: radial-gradient(circle, rgba(74, 222, 74, 0.1), transparent 60%);
-  filter: blur(40px);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  transition: transform 0.15s ease-out;
-}
-
-/* ============================================================
-   LEFT PANEL — marketing hero
-   ============================================================ */
+/* LEFT PANEL */
 .left-panel {
   flex: 1;
-  background: transparent;
+  background: radial-gradient(circle at left, #1a4a1a, #020402);
   color: white;
   padding: 60px 80px;
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  z-index: 1;
 }
 
-.left-panel::after {
-  content: "";
-  position: absolute;
-  width: 440px;
-  height: 440px;
-  bottom: -120px;
-  right: -60px;
-  background: radial-gradient(circle, rgba(34, 197, 56, 0.16), transparent 65%);
-  filter: blur(80px);
-  z-index: 0;
-  animation: floatLight 20s var(--ease) infinite alternate-reverse;
-  pointer-events: none;
-}
-
-/* decorative FX wrapper */
-.left-fx {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.contours {
-  position: absolute;
-  inset: 0;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Cg fill='none' stroke='%234ade80' stroke-width='1'%3E%3Cpath d='M0 40 Q100 20 200 40 T400 40'/%3E%3Cpath d='M0 90 Q100 70 200 90 T400 90'/%3E%3Cpath d='M0 140 Q100 120 200 140 T400 140'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 460px auto;
-}
-
-.particle {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--emerald-2);
-  opacity: 0.35;
-  filter: blur(0.5px);
-  animation: drift 12s var(--ease) infinite;
-}
-.particle:nth-child(2) { left: 14%; top: 30%; animation-delay: 0s;  }
-.particle:nth-child(3) { left: 28%; top: 65%; animation-delay: 1.5s; width: 4px; height: 4px; }
-.particle:nth-child(4) { left: 42%; top: 22%; animation-delay: 3s;  }
-.particle:nth-child(5) { left: 56%; top: 55%; animation-delay: 4.5s; width: 6px; height: 6px; }
-.particle:nth-child(6) { left: 68%; top: 35%; animation-delay: 2s;  }
-.particle:nth-child(7) { left: 80%; top: 60%; animation-delay: 5.5s; width: 4px; height: 4px; }
-.particle:nth-child(8) { left: 36%; top: 48%; animation-delay: 6.5s; }
-.particle:nth-child(9) { left: 60%; top: 18%; animation-delay: 3.8s; }
-
-@keyframes drift {
-  0%   { transform: translateY(0) translateX(0); opacity: 0.15; }
-  50%  { transform: translateY(-26px) translateX(10px); opacity: 0.5; }
-  100% { transform: translateY(0) translateX(0); opacity: 0.15; }
-}
-
+/* TOP LEFT */
 .left-top {
   position: absolute;
   top: 40px;
   left: 80px;
-  z-index: 3;
 }
 
 .left-top h1 {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  background: linear-gradient(90deg, var(--emerald-2), var(--emerald-3));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 25px;
+  color: #b6ff00;
 }
 
+/* CENTER CONTENT */
 .left-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  position: relative;
-  z-index: 2;
 }
 
+/* HEADING */
 .left-content h2 {
-  position: relative;
-  font-size: 80px;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  margin-bottom: 28px;
-  line-height: 1.02;
-  background: linear-gradient(118deg, #ffffff 32%, var(--emerald-2) 72%, var(--emerald-3));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 48px;
+  margin-bottom: 40px;
+  line-height: 1.2;
 }
 
-.left-content h2::before {
-  content: "";
-  position: absolute;
-  left: -10px;
-  top: 6%;
-  width: 62%;
-  height: 84%;
-  background: radial-gradient(circle, rgba(34, 197, 34, 0.22), transparent 70%);
-  filter: blur(55px);
-  z-index: -1;
-  pointer-events: none;
-}
-
+/* DESCRIPTION */
 .desc {
-  color: var(--muted);
-  max-width: 640px;
+  color: #aaa;
+  max-width: 700px;
   line-height: 1.8;
-  font-size: 15.5px;
-  font-weight: 400;
+  font-size: 15px;
+
 }
 
 /* ===== EXPLORE BUTTON (LEFT SIDE) ===== */
 .explore-btns {
   width: 240px;
-  margin-top: 34px;
-  padding: 16px;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, var(--emerald-deep), var(--emerald), var(--emerald-2));
-  color: #052104;
-  border: none;
-  border-radius: 14px;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 15px;
+  margin-top: 30px;
+  padding: 14px;
+
+background: linear-gradient(90deg, #b6ff00, #84ff00);
+  color: black;  border: none;
+  border-radius: 12px;
+
+  font-weight: bold;
+  color: black; /* 🔥 better contrast */
+
   cursor: pointer;
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
-  margin-bottom: 30px;
-  box-shadow: 0 12px 30px rgba(34, 197, 34, 0.3);
+  transition: all 0.3s ease;
+  margin-bottom: 40px;
 }
 
 .explore-btns:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 46px rgba(34, 197, 50, 0.46);
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(182,255,0,0.5);
 }
 
-.explore-btns:active {
-  transform: translateY(-1px) scale(0.99);
-}
-
-/* ===== FEATURE CARDS ===== */
-.feature-cards {
-  display: flex;
-  gap: 14px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-  max-width: 640px;
-}
-
-.feature-card {
-  flex: 1;
-  min-width: 170px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--glass-brd);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  transition: transform 0.3s var(--ease), border-color 0.3s var(--ease), background 0.3s var(--ease);
-  animation: authFadeIn 0.6s ease both;
-}
-
-.feature-card:hover {
-  transform: translateY(-4px);
-  background: rgba(34, 197, 42, 0.08);
-  border-color: rgba(84, 222, 74, 0.35);
-}
-
-.fc-icon {
-  font-size: 1.25rem;
-  line-height: 1;
-}
-
-.fc-text h4 {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.fc-text p {
-  margin: 2px 0 0;
-  font-size: 11.5px;
-  color: var(--muted);
-}
-
-/* ===== MOUNTAINS + FOG ===== */
-.mountains {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 48%;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.mtn {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.mtn-3 { opacity: 0.85; }
-.mtn-2 { opacity: 0.95; }
-.mtn-1 { opacity: 1; }
-
-.fog {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 34%;
-  height: 140px;
-  background: linear-gradient(to top, rgba(8, 17, 31, 0), rgba(74, 222, 128, 0.06), rgba(8, 17, 31, 0));
-  filter: blur(20px);
-  z-index: 2;
-}
-
-/* ============================================================
-   RIGHT PANEL + GLASS AUTH CARD
-   ============================================================ */
-.right-panel {
-  flex: 1;
-  background: transparent;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px;
-  box-sizing: border-box;
-  min-width: 0;
-  z-index: 1;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 560px;
-  box-sizing: border-box;
-  padding: 44px 44px;
-  background: var(--glass);
-  border: 1px solid var(--glass-brd);
-  border-radius: 28px;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  text-align: center;
-  color: var(--text);
-  box-shadow:
-    0 40px 100px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(34, 197, 94, 0.05);
-  animation: cardFloat 6.5s ease-in-out infinite, authFadeIn 0.55s ease both;
-  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
-}
-
-.auth-card:hover {
-  transform: translateY(-8px);
-  box-shadow:
-    0 56px 130px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10),
-    0 0 70px rgba(34, 197, 48, 0.18);
-}
-
-@keyframes cardFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-7px); }
-}
-
-.auth-card h2 {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-  margin: 0 0 6px;
-}
-
-.auth-subtitle {
-  font-size: 14px;
-  color: var(--muted);
-  margin: 0 0 4px;
-}
-
-/* ============================================================
-   SEGMENTED TOGGLE (Apple-style animated slider)
-   ============================================================ */
-.toggle {
-  position: relative;
-  display: flex;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-brd);
-  border-radius: 40px;
-  padding: 5px;
-  margin: 24px 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.toggle::before {
-  content: "";
-  position: absolute;
-  top: 5px;
-  bottom: 5px;
-  left: 5px;
-  width: calc(50% - 5px);
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--emerald), var(--emerald-2));
-  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.4);
-  transition: transform 0.35s var(--ease);
-  z-index: 0;
-}
-
-.toggle:has(button:last-child.active)::before {
-  transform: translateX(100%);
-}
-
-.toggle button {
-  flex: 1;
-  position: relative;
-  z-index: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  background: transparent;
-  color: var(--muted);
-  font-family: inherit;
-  font-weight: 600;
-  font-size: 14px;
-  transition: color 0.3s var(--ease);
-}
-
-.toggle button.active {
-  background: transparent;
-  color: #042109;
-}
-
-.toggle button:hover {
-  color: #ffffff;
-}
-
-.toggle button.active:hover {
-  color: #042108;
-}
-
-/* ============================================================
-   INPUTS
-   ============================================================ */
-.auth-card input {
-  width: 100%;
-  height: 60px;
-  box-sizing: border-box;
-  padding: 0 18px;
-  margin: 12px 0;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.035);
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 15px;
-  outline: none;
-  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease), background 0.25s var(--ease);
-}
-
-.auth-card input::placeholder {
-  color: rgba(148, 163, 184, 0.7);
-  font-weight: 400;
-}
-
-.auth-card input:focus {
-  border: 1px solid var(--emerald-2);
-  background: rgba(34, 197, 34, 0.06);
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
-}
-
-/* ============================================================
-   PRIMARY BUTTON (with shine sweep)
-   ============================================================ */
+/* ===== AUTH BUTTON ===== */
 .auth-btn {
-  position: relative;
-  overflow: hidden;
   width: 100%;
-  height: 60px;
-  margin-top: 8px;
-  background: linear-gradient(90deg, var(--emerald), var(--emerald-2));
-  color: #04210f;
-  border: none;
-  border-radius: 16px;
-  font-family: inherit;
-  font-weight: 800;
-  font-size: 15.5px;
-  cursor: pointer;
-  transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease);
-  box-shadow: 0 14px 34px rgba(78, 197, 34, 0.34);
-}
+  padding: 12px;
 
-.auth-btn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -120%;
-  width: 80%;
-  height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
-  transform: skewX(-20deg);
-  transition: left 0.6s var(--ease);
+  background: linear-gradient(90deg, #b6ff00, #84ff00);
+  color: black;
+
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .auth-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 48px rgba(34, 197, 40, 0.5);
+  box-shadow: 0 10px 30px rgba(182,255,0,0.5);
+}
+.toggle button.active {
+  background: linear-gradient(90deg, #b6ff00, #84ff00);
+  color: black;
+}
+/* ===== TOGGLE ACTIVE BUTTON ===== */
+.toggle button.active {
+  background: linear-gradient(90deg, #b6ff00, #84ff00); /* 🔥 GREEN */
+  color: black;
 }
 
-.auth-btn:hover::before {
-  left: 130%;
+/* ===== LOGIN LINK ===== */
+.switch-text span {
+  color: #b6ff00; /* already correct but reinforced */
 }
 
+/* RIGHT PANEL */
+.right-panel {
+  flex: 1;
+  background: #020402;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* CARD */
+.auth-card {
+  width: 360px;
+  padding: 35px;
+  background: #0b0f0b;
+  border-radius: 20px;
+  box-shadow: 0 0 40px rgba(170,255,0,0.15);
+  text-align: center;
+  color: white;
+  transition: all 0.4s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 
+    0 0 80px rgba(170,255,0,0.25),
+    0 0 120px rgba(0,255,0,0.1);
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* 🔥 TOGGLE (SMOOTH) */
+/* TOGGLE CONTAINER */
+.toggle {
+  display: flex;
+  background: #0f0f0f;
+  border-radius: 40px;
+  padding: 4px;
+  margin: 20px 0;
+  width: 100%;
+}
+
+/* BUTTON BASE */
+.toggle button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: #aaa;
+  font-weight: 500;
+
+  transition: all 0.4s ease;
+}
+
+/* ACTIVE SIDE (GREEN HALF) */
+.toggle button.active {
+  background: linear-gradient(90deg, #b6ff00, #7fff00);
+  color: black;
+}
+
+/* HOVER */
+.toggle button:hover {
+  color: rgb(255, 255, 255);
+}
+
+/* INPUTS */
+.auth-card input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 10px;
+  border: 1px solid #222;
+  background: #050805;
+  color: white;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+/* INPUT FOCUS */
+.auth-card input:focus {
+  border: 3px solid #b6ff00;
+  box-shadow: 0 0 10px rgba(183, 255, 1, 0.3);
+}
+
+/* BUTTON */
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(90deg, #b6ff00, #7fff00);
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* BUTTON HOVER */
+.auth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(182,255,0,0.4);
+}
+
+/* BUTTON CLICK */
 .auth-btn:active {
-  transform: scale(0.975);
-  box-shadow: 0 10px 22px rgba(72, 197, 34, 0.32);
+  transform: scale(0.97);
 }
 
-/* ============================================================
-   DIVIDER
-   ============================================================ */
+/* DIVIDER */
 .divider {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 22px 0;
-  color: var(--muted);
+  margin: 20px 0;
+  color: #aaa;
   font-size: 13px;
 }
 
@@ -551,101 +240,11 @@ body {
   content: "";
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.12);
+  background: #333;
   margin: 0 10px;
 }
 
-/* ============================================================
-   GOOGLE BUTTON — full-width glass "Continue with Google"
-   ============================================================ */
-.google-icon-btn {
-  width: 100%;
-  height: 60px;
-  box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-brd);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 4px auto 0;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: transform 0.2s var(--ease), background 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
-}
-
-.google-icon-btn img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-.google-icon-btn::after {
-  content: "Continue with Google";
-  color: #ffffff;
-  font-family: inherit;
-  font-weight: 600;
-  font-size: 14.5px;
-}
-
-.google-icon-btn:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(34, 197, 94, 0.35);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
-}
-
-.google-icon-btn:active {
-  transform: scale(0.985);
-}
-
-/* ============================================================
-   TRUST INDICATORS
-   ============================================================ */
-.trust-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.trust-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 6px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: transform 0.25s var(--ease), border-color 0.25s var(--ease);
-}
-
-.trust-item:hover {
-  transform: translateY(-2px);
-  border-color: rgba(74, 222, 128, 0.3);
-}
-
-.trust-item span {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.trust-item p {
-  margin: 0;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: center;
-}
-
-/* ============================================================
-   SOCIAL (legacy classes preserved)
-   ============================================================ */
+/* SOCIAL */
 .social-icons {
   display: flex;
   justify-content: center;
@@ -654,49 +253,76 @@ body {
 .icon {
   width: 45px;
   height: 45px;
-  background: rgba(255, 255, 255, 0.05);
+  background: #111;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.3s var(--ease), background 0.3s var(--ease);
+  transition: all 0.3s ease;
 }
 
 .icon:hover {
   transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.1);
+  background: #222;
 }
 
-/* ============================================================
-   SWITCH TEXT
-   ============================================================ */
+/* SWITCH */
 .switch-text {
-  margin-top: 18px;
-  font-size: 13.5px;
-  color: var(--muted);
+  margin-top: 15px;
 }
 
 .switch-text span {
-  color: var(--emerald-2);
-  font-weight: 600;
+  color: #b6ff00;
   cursor: pointer;
-  transition: color 0.2s var(--ease);
 }
 
-.switch-text span:hover {
-  color: var(--emerald-3);
+/* MOBILE */
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    display: none;
+  }
 }
 
-/* ============================================================
-   GOOGLE AUTH FULL-SCREEN LOADER
-   ============================================================ */
+.google-icon-btn {
+  width: 50px;
+  height: 50px;
+
+  background: #000000;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 10px auto;
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+}
+
+.google-icon-btn img {
+  width: 40px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.google-icon-btn:hover {
+  transform: scale(1.1);
+  background: #000000;
+  box-shadow: 0 0 12px rgba(53, 53, 53, 0.25);
+}
+
+/* ─── Google Auth Full-Screen Loader ─────────────────────────────── */
+
 .google-auth-loader {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(800px 600px at 30% 30%, rgba(34, 197, 94, 0.22), transparent 60%),
-    linear-gradient(135deg, var(--navy-2), var(--navy-0));
+  background: linear-gradient(135deg, #023b12, #4a8d07, #000000);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -713,8 +339,8 @@ body {
 .spinner-ring {
   width: 56px;
   height: 56px;
-  border: 4px solid rgba(255, 255, 255, 0.12);
-  border-top-color: var(--emerald-2);
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.85s linear infinite;
 }
@@ -725,10 +351,10 @@ body {
 
 .loader-title {
   font-size: 1.3rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin: 0;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 .loader-subtitle {
@@ -737,35 +363,25 @@ body {
   margin: 0;
 }
 
-/* ============================================================
-   AUTH ERROR BANNER
-   ============================================================ */
+/* ─── Google Auth Error Banner ────────────────────────────────────── */
+
 .auth-error-banner {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #fca5a5;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px 14px;
   font-size: 0.875rem;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   text-align: center;
 }
 
-/* ============================================================
-   AUTH PAGE ENTRY ANIMATION
-   ============================================================ */
-.auth-fade-in {
-  animation: authFadeIn 0.5s ease forwards;
-}
 
-@keyframes authFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* ════════════════════════════════════════════════
+   SPLASH SCREEN
+   Mobile & tablet only — JS guards desktop
+════════════════════════════════════════════════ */
 
-/* ============================================================
-   SPLASH SCREEN — mobile & tablet only (JS guards desktop)
-   ============================================================ */
 .splash-screen {
   position: fixed;
   inset: 0;
@@ -779,8 +395,14 @@ body {
   overflow: hidden;
 }
 
-.splash-in  { animation: splashFadeIn 0.5s ease forwards; }
-.splash-out { animation: splashFadeOut 0.6s ease forwards; }
+/* ── Fade animations ── */
+.splash-in {
+  animation: splashFadeIn 0.5s ease forwards;
+}
+
+.splash-out {
+  animation: splashFadeOut 0.6s ease forwards;
+}
 
 @keyframes splashFadeIn {
   from { opacity: 0; }
@@ -792,45 +414,22 @@ body {
   to   { opacity: 0; }
 }
 
-.splash-story-bar {
+/* ── Background — dark green exactly like your image ── */
+.splash-bg {
   position: absolute;
-  top: 18px;
-  left: 16px;
-  right: 16px;
-  display: flex;
-  gap: 6px;
-  z-index: 3;
+  inset: 0;
+   background: radial-gradient(circle at left, #1a4a1a, #020402);
+  z-index: 0;
 }
 
-.splash-story-segment {
-  flex: 1;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  overflow: hidden;
-}
 
-.splash-story-fill {
-  display: block;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--emerald-2), var(--emerald-3));
-}
 
 @keyframes storyFill {
   from { width: 0%; }
   to   { width: 100%; }
 }
 
-.splash-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(700px 500px at 30% 25%, rgba(34, 197, 94, 0.22), transparent 60%),
-    linear-gradient(160deg, var(--navy-2), var(--navy-0));
-  z-index: 0;
-}
-
+/* ── Center content — title exactly center of screen ── */
 .splash-center {
   position: relative;
   z-index: 2;
@@ -849,14 +448,11 @@ body {
 
 .splash-title {
   font-size: 2.8rem;
-  font-weight: 800;
+  font-weight: 700;
+  color: #ffffff;
   letter-spacing: -0.01em;
   margin: 0 0 10px 0;
   line-height: 1;
-  background: linear-gradient(120deg, #ffffff 40%, var(--emerald-3));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .splash-sub {
@@ -867,78 +463,29 @@ body {
   letter-spacing: 0.01em;
 }
 
-.splash-skip {
-  position: absolute;
-  bottom: 28px;
-  right: 24px;
-  z-index: 3;
-  padding: 9px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: background 0.25s var(--ease), transform 0.2s var(--ease);
+
+/* ── Auth page entry animation ── */
+.auth-fade-in {
+  animation: authFadeIn 0.5s ease forwards;
 }
 
-.splash-skip:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
+@keyframes authFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-@media (max-width: 1200px) {
-  .left-content h2 { font-size: 64px; }
-  .auth-card { max-width: 500px; }
-}
 
-@media (max-width: 1024px) {
-  .left-content h2 { font-size: 54px; }
-  .left-panel { padding: 56px 52px; }
-  .auth-card { max-width: 460px; padding: 38px 32px; }
-  .feature-card { min-width: 150px; }
-}
+/* ════════════════════════════════════════════════
+   AUTH ERROR BANNER
+════════════════════════════════════════════════ */
 
-@media (max-width: 768px) {
-  .main-container {
-    flex-direction: column;
-  }
-
-  .left-panel {
-    display: none;
-  }
-
-  .cursor-glow {
-    display: none;
-  }
-
-  .right-panel {
-    padding: 22px;
-    min-height: 100vh;
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 460px;
-    padding: 32px 24px;
-    animation: authFadeIn 0.5s ease both;
-  }
-
-  .auth-card:hover {
-    transform: none;
-  }
-}
-
-@media (max-width: 400px) {
-  .auth-card input { height: 54px; }
-  .auth-btn,
-  .google-icon-btn { height: 54px; }
-  .trust-item p { font-size: 9.5px; }
+.auth-error-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  margin-bottom: 12px;
+  text-align: center;
 }
