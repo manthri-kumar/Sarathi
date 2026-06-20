@@ -6,12 +6,6 @@ import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
 import sarathiLogo from "../../assets/sarathi-logo.png";
 
-const SPLASH_IMAGES = [
-  "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&q=80",
-  "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-];
-
 const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
 
 function AuthPage() {
@@ -25,7 +19,6 @@ function AuthPage() {
 
   const [showSplash, setShowSplash] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
-  const [activeSlide, setActiveSlide] = useState(0);
 
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -42,15 +35,10 @@ function AuthPage() {
       setShowSplash(true);
       sessionStorage.setItem("sarathi_splash_seen", "true");
 
-      const slideInterval = setInterval(() => {
-        setActiveSlide(prev => (prev + 1) % SPLASH_IMAGES.length);
-      }, 1600);
-
       const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 3200);
       const removeTimer = setTimeout(() => setShowSplash(false), 4100);
 
       return () => {
-        clearInterval(slideInterval);
         clearTimeout(fadeTimer);
         clearTimeout(removeTimer);
       };
@@ -177,42 +165,30 @@ function AuthPage() {
   if (showSplash) {
     return (
       <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
-
-        {/* Story-bar dots — top like your reference image */}
-       
-
-        {/* Background — solid dark green like your image, no photos needed */}
         <div className="splash-bg" />
-
-        {/* Center content */}
         <div className="splash-center">
           <h1 className="splash-title">Sarathi</h1>
           <p className="splash-sub">Your Journey, Our Guidance</p>
         </div>
-
-        {/* Skip */}
         <button
           className="splash-skip"
           onClick={() => {
             setSplashFadingOut(true);
             setTimeout(() => setShowSplash(false), 500);
           }}
-        >
-        
-        </button>
-
+        />
       </div>
     );
   }
 
-  /* Inline brand mark (no asset dependency) */
-const BrandMark = (
-  <img
-    src={sarathiLogo}
-    alt="Sarathi Logo"
-    className="brand-mark"
-  />
-);
+  /* Inline brand mark */
+  const BrandMark = (
+    <img
+      src={sarathiLogo}
+      alt="Sarathi Logo"
+      className="brand-mark"
+    />
+  );
 
   /* ════════════════════════════════════════
      RENDER: Auth page
@@ -223,7 +199,6 @@ const BrandMark = (
       {/* LEFT PANEL — premium hero */}
       <div className="left-panel">
 
-        {/* Layered background */}
         <div className="lp-bg" aria-hidden="true">
           <div className="lp-glow" />
           <div className="lp-mesh" />
@@ -245,8 +220,7 @@ const BrandMark = (
 
           <p className="desc">
             Sarathi is a travel companion that helps users discover temples, attractions,
-             and hidden destinations through personalized recommendations, real-time insights, and smart trip planning.
-
+            and hidden destinations through personalized recommendations, real-time insights, and smart trip planning.
           </p>
 
           <button className="explore-btns">Start Exploring →</button>
@@ -276,7 +250,6 @@ const BrandMark = (
           </div>
         </div>
 
-        {/* Cinematic mountain silhouettes */}
         <div className="lp-mountains" aria-hidden="true">
           <svg className="lp-mtn lp-mtn-3" viewBox="0 0 1440 320" preserveAspectRatio="none">
             <path fill="#06140d" d="M0,200 L180,130 L340,190 L520,110 L720,180 L920,120 L1140,190 L1320,140 L1440,180 L1440,320 L0,320 Z" />
@@ -292,7 +265,6 @@ const BrandMark = (
 
       {/* RIGHT PANEL */}
       <div className="right-panel">
-
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
           <p className="auth-subtitle">
@@ -333,7 +305,6 @@ const BrandMark = (
             {isLogin && (
               <div className="forgot-row">
                 <button type="button" className="forgot-link" onClick={openForgot}>
-                  Forgot Password?
                 </button>
               </div>
             )}
