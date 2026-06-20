@@ -4,6 +4,7 @@ import "./Auth.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import googleLogo from "../../assets/google.png";
+import sarathiLogo from "../../assets/sarathi-logo.png";
 
 const SPLASH_IMAGES = [
   "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&q=80",
@@ -211,7 +212,7 @@ function AuthPage() {
             setTimeout(() => setShowSplash(false), 500);
           }}
         >
-          Skip
+        
         </button>
 
       </div>
@@ -219,30 +220,13 @@ function AuthPage() {
   }
 
   /* Inline brand mark (no asset dependency) */
-  const BrandMark = (
-    <svg className="brand-mark" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#86efac" />
-          <stop offset="55%" stopColor="#4ade80" />
-          <stop offset="100%" stopColor="#16a34a" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M40 6 C25 6 13 18 13 33 C13 50 33 66 40 74 C47 66 67 50 67 33 C67 18 55 6 40 6 Z"
-        fill="url(#brandGrad)"
-      />
-      <circle cx="40" cy="32" r="13" fill="#04210f" opacity="0.9" />
-      <path
-        d="M46 25 C42 24 36 25 36 30 C36 34 44 34 44 38 C44 43 38 43 34 41"
-        stroke="#86efac"
-        strokeWidth="3"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <path d="M55 16 l1.6 3.4 L60 21 l-3.4 1.6 L55 26 l-1.6-3.4 L50 21 l3.4-1.6 Z" fill="#86efac" />
-    </svg>
-  );
+const BrandMark = (
+  <img
+    src={sarathiLogo}
+    alt="Sarathi Logo"
+    className="brand-mark"
+  />
+);
 
   /* ════════════════════════════════════════
      RENDER: Auth page
@@ -283,21 +267,21 @@ function AuthPage() {
 
           <div className="hero-pills">
             <div className="hero-pill">
-              <span className="hp-icon">🧭</span>
+              <span className="hp-icon"></span>
               <div className="hp-text">
                 <h4>Smart Itineraries</h4>
                 <p>AI-built travel plans</p>
               </div>
             </div>
             <div className="hero-pill">
-              <span className="hp-icon">💎</span>
+              <span className="hp-icon"></span>
               <div className="hp-text">
                 <h4>Hidden Gems</h4>
                 <p>Discover unseen places</p>
               </div>
             </div>
             <div className="hero-pill">
-              <span className="hp-icon">⚡</span>
+              <span className="hp-icon"></span>
               <div className="hp-text">
                 <h4>Live Updates</h4>
                 <p>Real-time travel insights</p>

@@ -98,11 +98,14 @@ body {
 
 .left-logo { display: inline-flex; }
 .left-top .brand-mark {
-  width: 30px;
-  height: 30px;
-  filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.4));
-}
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
 
+  filter:
+    drop-shadow(0 0 12px rgba(74,222,128,.35))
+    drop-shadow(0 0 24px rgba(22,163,74,.25));
+}
 .left-top h1 {
   font-size: 22px;
   font-weight: 800;
@@ -262,12 +265,20 @@ body {
   min-width: 0;
 }
 
-/* Brand mark base (used by desktop logo) */
 .brand-mark {
-  width: 80px;
-  height: 80px;
-  filter: drop-shadow(0 0 25px rgba(34, 197, 94, 0.35));
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 10px rgba(74, 222, 128, 0.35))
+    drop-shadow(0 0 20px rgba(22, 163, 74, 0.25));
+  transition: all 0.3s ease;
 }
+
+.brand-mark:hover {
+  transform: scale(1.05);
+}
+
 
 /* ===== AUTH CARD — glass ===== */
 .auth-card {
