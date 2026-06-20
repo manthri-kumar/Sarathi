@@ -821,26 +821,7 @@ body {
   letter-spacing: 0.01em;
 }
 
-.splash-skip {
-  position: absolute;
-  bottom: 28px;
-  right: 24px;
-  z-index: 3;
-  padding: 9px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: background 0.25s ease, transform 0.2s ease;
-}
 
-.splash-skip:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
 
 /* ── Auth page entry animation ── */
 .auth-fade-in { animation: authFadeIn 0.5s ease forwards; }
