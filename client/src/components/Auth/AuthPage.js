@@ -258,8 +258,9 @@ const BrandMark = (
           </h2>
 
           <p className="desc">
-            Sarathi is an AI-powered travel companion that creates personalized itineraries,
-            discovers hidden destinations, and helps travelers make smarter decisions in real time.
+            Sarathi is a travel companion that helps users discover temples, attractions,
+             and hidden destinations through personalized recommendations, real-time insights, and smart trip planning.
+
           </p>
 
           <button className="explore-btns">Start Exploring →</button>
