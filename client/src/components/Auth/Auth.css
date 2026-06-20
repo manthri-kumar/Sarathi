@@ -48,7 +48,7 @@ body {
   height: 520px;
   top: -160px;
   left: -120px;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.28), transparent 65%);
+  background: radial-gradient(circle, rgba(52, 211, 81, 0.415), transparent 65%);
   filter: blur(60px);
   border-radius: 50%;
   z-index: 0;
@@ -94,7 +94,7 @@ body {
   height: 420px;
   bottom: -120px;
   right: -60px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.20), transparent 65%);
+  background: radial-gradient(circle, rgba(16, 185, 16, 0.2), transparent 65%);
   filter: blur(70px);
   border-radius: 50%;
   z-index: -1;
@@ -147,7 +147,7 @@ body {
   top: 10%;
   width: 60%;
   height: 80%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.22), transparent 70%);
+  background: radial-gradient(circle, rgba(33, 185, 16, 0.22), transparent 70%);
   filter: blur(50px);
   z-index: -1;
   pointer-events: none;
@@ -181,7 +181,7 @@ body {
 
 .explore-btns:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 44px rgba(16, 185, 129, 0.45);
+  box-shadow: 0 18px 44px rgba(41, 185, 16, 0.45);
 }
 
 .explore-btns:active {
@@ -213,7 +213,7 @@ body {
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(16, 185, 129, 0.06);
+    0 0 0 1px rgba(24, 185, 16, 0.06);
   animation: cardFloat 6s ease-in-out infinite, authFadeIn 0.5s ease both;
   transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
@@ -223,7 +223,7 @@ body {
   box-shadow:
     0 44px 110px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.10),
-    0 0 60px rgba(16, 185, 129, 0.18);
+    0 0 60px rgba(16, 185, 64, 0.18);
 }
 
 @keyframes cardFloat {
