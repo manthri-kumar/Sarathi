@@ -34,8 +34,8 @@ body {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(1100px 800px at 12% 18%, rgba(16, 185, 129, 0.18), transparent 60%),
-    radial-gradient(900px 700px at 88% 82%, rgba(20, 184, 166, 0.12), transparent 60%),
+    radial-gradient(1100px 800px at 12% 18%, rgba(53, 185, 16, 0.18), transparent 60%),
+    radial-gradient(900px 700px at 88% 82%, rgba(45, 184, 20, 0.12), transparent 60%),
     linear-gradient(135deg, var(--navy-1), var(--navy-0) 60%);
   color: var(--text);
 }
