@@ -16,17 +16,17 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         }
       : { text: "Hi 👋 I'm Sarathi AI. Ask me anything!", sender: "bot" };
 
-  const [messages,        setMessages]        = useState([getInitialMessage()]);
-  const [input,           setInput]           = useState("");
-  const [typing,          setTyping]          = useState(false);
-  const [showQuickActions, setShowQuickActions] = useState(true); // ← NEW
+  const [messages, setMessages] = useState([getInitialMessage()]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const chatEndRef = useRef(null);
 
   // Reset when switching temple
   useEffect(() => {
     setMessages([getInitialMessage()]);
     setInput("");
-    setShowQuickActions(true); // reset to expanded for new temple
+    setShowQuickActions(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templeContext?.name]);
 
@@ -49,7 +49,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     const msg = (text || input).trim();
     if (!msg || typing) return;
 
-    // Auto-collapse quick actions on the user's first message
     setMessages((prev) => {
       if (prev.filter((m) => m.sender === "user").length === 0) {
         setShowQuickActions(false);
@@ -66,27 +65,28 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
       const payload = isTempleMode
         ? {
-            message:    msg,
+            message: msg,
             templeName: templeContext.name,
-            address:    templeContext.address || "",
-            rating:     templeContext.rating   || null,
-            openNow:    templeContext.openNow  ?? null,
-            deity:      templeContext.deity    || null,
-            enriched:   templeContext.enriched || null,
+            address: templeContext.address || "",
+            rating: templeContext.rating || null,
+            openNow: templeContext.openNow ?? null,
+            deity: templeContext.deity || null,
+            enriched: templeContext.enriched || null,
           }
         : {
             message: msg,
-            lat:     localStorage.getItem("lat"),
-            lng:     localStorage.getItem("lng"),
-            city:    localStorage.getItem("city"),
+            userId: JSON.parse(localStorage.getItem("user"))?._id || "user1",
+            lat: localStorage.getItem("lat"),
+            lng: localStorage.getItem("lng"),
+            city: localStorage.getItem("city"),
           };
 
       console.log("[CHAT] →", endpoint, payload);
 
       const res = await fetch(endpoint, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
 
       console.log("[CHAT] HTTP", res.status);
@@ -113,7 +113,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         setMessages((prev) => [
           ...prev,
           {
-            text:   data.reply || "I couldn't retrieve a response. Please try again.",
+            text: data.reply || "I couldn't retrieve a response. Please try again.",
             sender: "bot",
           },
         ]);
@@ -244,8 +244,63 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
+            {/* ── TRIP SUMMARY (Phase 1) ── */}
+            {msg.type === "tripSummary" && (
+              <div className="trip-summary-card">
+                <div className="summary-head">
+                  <span>📋 Trip Summary</span>
+                  <strong>₹{msg.summary.costs.total.toLocaleString()}</strong>
+                </div>
+
+                <div className="summary-grid">
+                  {[
+                    ["From", msg.summary.from],
+                    ["To", msg.summary.to],
+                    ["Travelers", msg.summary.travellers],
+                    ["Days", msg.summary.days],
+                    ["Transport", msg.summary.transport],
+                    ["Hotel", msg.summary.hotelType],
+                    ...(msg.summary.distanceKm ? [["Distance", `${msg.summary.distanceKm} km`]] : []),
+                    ...(msg.summary.travelTime ? [["Travel time", msg.summary.travelTime]] : []),
+                  ].map(([k, v]) => (
+                    <div key={k} className="summary-row">
+                      <span>{k}</span>
+                      <span>{v}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="summary-costs">
+                  <div className="summary-row"><span>🚕 Transport</span><span>₹{msg.summary.costs.transport.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>🏨 Hotel</span><span>₹{msg.summary.costs.hotel.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>🍴 Food</span><span>₹{msg.summary.costs.food.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>🎟 Activities</span><span>₹{msg.summary.costs.activities.toLocaleString()}</span></div>
+                </div>
+
+                <button className="summary-confirm" onClick={() => sendMessage("confirm trip")}>
+                  ✅ Confirm &amp; Generate Itinerary
+                </button>
+
+                <div className="summary-edits">
+                  <button onClick={() => sendMessage("edit budget")}>Budget</button>
+                  <button onClick={() => sendMessage("edit destination")}>Destination</button>
+                  <button onClick={() => sendMessage("edit travellers")}>Travelers</button>
+                  <button onClick={() => sendMessage("edit days")}>Days</button>
+                  <button onClick={() => sendMessage("edit transport")}>Transport</button>
+                  <button onClick={() => sendMessage("edit hotel")}>Hotel</button>
+                </div>
+              </div>
+            )}
+
             {msg.type === "itinerary" && (
               <div className="itinerary-box">
+                {msg.route && (
+                  <div className="budget-card">
+                    <div className="budget-row"><span>📍 {msg.route.from} → {msg.route.to}</span></div>
+                    <div className="budget-row"><span>Distance</span><span>{msg.route.distanceKm} km</span></div>
+                    <div className="budget-row"><span>Travel time</span><span>{msg.route.duration}</span></div>
+                  </div>
+                )}
                 {msg.budget && (
                   <div className="budget-card">
                     <div className="budget-total">
@@ -253,9 +308,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                       <strong>₹{msg.budget.total.toLocaleString()}</strong>
                     </div>
                     {[
-                      ["🏨 Hotel",      msg.budget.hotel],
-                      ["🍴 Food",       msg.budget.food],
-                      ["🚕 Transport",  msg.budget.transport],
+                      ["🏨 Hotel", msg.budget.hotel],
+                      ["🍴 Food", msg.budget.food],
+                      ["🚕 Transport", msg.budget.transport],
                       ["🎟 Activities", msg.budget.activities],
                     ].map(([label, val]) => (
                       <div key={label} className="budget-row">
@@ -276,7 +331,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                           <small>{item.bestTime}</small>
                           <button
                             onClick={() => navigateTo(item.place)}
-                            style={{ marginTop:"5px", padding:"5px 10px", background:"#22c55e", border:"none", borderRadius:"6px", cursor:"pointer" }}
+                            style={{ marginTop: "5px", padding: "5px 10px", background: "#22c55e", border: "none", borderRadius: "6px", cursor: "pointer" }}
                           >
                             Navigate
                           </button>
@@ -337,28 +392,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       {/* ── FOOTER ── */}
       <div className="chat-footer">
 
-        {/* ── Temple mode: persistent collapsible quick actions ── */}
         {isTempleMode && (
           <div className="chat-quick-actions-wrap">
-
-            {/* Toggle row — always visible, even when collapsed */}
             <button
               className="chat-quick-toggle"
               onClick={() => setShowQuickActions((prev) => !prev)}
               aria-expanded={showQuickActions}
               aria-label="Toggle quick questions"
             >
-              <span className="chat-quick-toggle-label">
-                💬 Quick Questions
-              </span>
-              <span
-                className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}
-              >
-                ▲
-              </span>
+              <span className="chat-quick-toggle-label">💬 Quick Questions</span>
+              <span className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}>▲</span>
             </button>
 
-            {/* Animated collapse container — never unmounted */}
             <div
               className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
               aria-hidden={!showQuickActions}
@@ -379,11 +424,9 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 ))}
               </div>
             </div>
-
           </div>
         )}
 
-        {/* ── General mode: quick action buttons (unchanged) ── */}
         {!isTempleMode && (
           <div className="quick-actions">
             <button onClick={() => sendMessage("plan trip")}>✈️ Trip</button>
@@ -412,9 +455,11 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             aria-label="Send"
           >
             ➤
+
           </button>
         </div>
       </div>
+      
 
     </div>
   );
