@@ -1,8 +1,9 @@
 const axios = require("axios");
 
+/* Fuel prices — adjust to your region / move to env later */
 const FUEL_PRICE = { petrol: 110, diesel: 96, cng: 90, ev: 0 };
 const FUEL_UNIT = { petrol: "L", diesel: "L", cng: "kg", ev: "kWh" };
-const EV_RATE_PER_KM = 1.2;
+const EV_RATE_PER_KM = 1.2; // ₹/km for EV (mileage step skipped)
 
 /* ============ DISTANCE MATRIX ============ */
 const getRoute = async (origin, destination) => {
@@ -20,6 +21,19 @@ const getRoute = async (origin, destination) => {
   }
 };
 
+/* ============ TRAIN (Phase-1 estimate) ============ */
+// distance-scaled class fares. Replace with RapidAPI later → set source:"rapidapi"
+const TRAIN_CLASSES = ["General", "Sleeper", "3AC", "2AC", "1AC"];
+const trainFareEstimate = (klass, km) => {
+  const d = km || 300;
+  const perKm = { General: 0.45, Sleeper: 0.75, "3AC": 2.0, "2AC": 2.9, "1AC": 4.8 };
+  const base = { General: 60, Sleeper: 90, "3AC": 250, "2AC": 380, "1AC": 600 };
+  return Math.round(base[klass] + d * perKm[klass]);
+};
+const trainClassMenu = (km) =>
+  "🚆 Choose travel class:\n" +
+  TRAIN_CLASSES.map((c, i) => `${i + 1}️⃣ ${c} (~₹${trainFareEstimate(c, km).toLocaleString("en-IN")})`).join("\n");
+
 /* ============ BUS (distance-based) ============ */
 const BUS_TYPES = ["Ordinary", "Express", "Super Luxury", "Sleeper", "AC Sleeper"];
 const busFare = (type, km) => {
@@ -36,7 +50,7 @@ const busMenu = (km) =>
 const FLIGHT_CLASSES = ["Economy", "Premium Economy", "Business"];
 const flightFare = (klass, km) => {
   const d = km || 500;
-  const baseEconomy = 1800 + d * 4.5;
+  const baseEconomy = 1800 + d * 4.5; // distance-scaled economy base
   const mult = { Economy: 1, "Premium Economy": 1.6, Business: 2.8 };
   return Math.round(baseEconomy * mult[klass]);
 };
@@ -47,8 +61,8 @@ const flightMenu = (km) =>
 /* ============ CAR (fuel + toll + parking) ============ */
 const carBreakdown = (km, fuelType, mileage) => {
   const d = km || 300;
-  const toll = Math.round(d * 1.0);
-  const parking = 100;
+  const toll = Math.round(d * 1.0);      // ~₹1/km toll estimate
+  const parking = 100;                    // flat parking estimate
   let fuelCost, fuelNeeded;
 
   if (fuelType === "ev") {
@@ -67,6 +81,7 @@ const carBreakdown = (km, fuelType, mileage) => {
 
 module.exports = {
   getRoute,
+  TRAIN_CLASSES, trainFareEstimate, trainClassMenu,
   BUS_TYPES, busFare, busMenu,
   FLIGHT_CLASSES, flightFare, flightMenu,
   carBreakdown,
