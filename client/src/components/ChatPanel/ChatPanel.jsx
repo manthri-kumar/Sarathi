@@ -258,7 +258,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                     ["To", msg.summary.to],
                     ["Travelers", msg.summary.travellers],
                     ["Days", msg.summary.days],
-                    ["Transport", msg.summary.transport],
                     ["Hotel", msg.summary.hotelType],
                     ...(msg.summary.distanceKm ? [["Distance", `${msg.summary.distanceKm} km`]] : []),
                     ...(msg.summary.travelTime ? [["Travel time", msg.summary.travelTime]] : []),
@@ -270,8 +269,53 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                   ))}
                 </div>
 
+                {/* Structured transport */}
+                {msg.summary.transportDetails?.fare && (
+                  <div className="summary-costs">
+                    <div className="summary-row">
+                      <span>🚍 {msg.summary.transport}</span>
+                      <span>
+                        {msg.summary.transportDetails.option}
+                        {msg.summary.transportDetails.klass ? ` · ${msg.summary.transportDetails.klass}` : ""}
+                      </span>
+                    </div>
+                    <div className="summary-row">
+                      <span>Fare {msg.summary.transportDetails.source === "estimated" ? "(est.)" : ""}</span>
+                      <span>₹{msg.summary.transportDetails.fare.toLocaleString()}/person</span>
+                    </div>
+                    {msg.summary.transportDetails.breakdown && (
+                      <>
+                        {msg.summary.transportDetails.breakdown.fuelNeeded != null && (
+                          <div className="summary-row">
+                            <span>Fuel needed</span>
+                            <span>
+                              {msg.summary.transportDetails.breakdown.fuelNeeded}{" "}
+                              {msg.summary.transportDetails.breakdown.fuelUnit}
+                            </span>
+                          </div>
+                        )}
+                        <div className="summary-row">
+                          <span>Fuel cost</span>
+                          <span>₹{msg.summary.transportDetails.breakdown.fuelCost.toLocaleString()}</span>
+                        </div>
+                        <div className="summary-row">
+                          <span>Toll (est.)</span>
+                          <span>₹{msg.summary.transportDetails.breakdown.toll}</span>
+                        </div>
+                        <div className="summary-row">
+                          <span>Parking (est.)</span>
+                          <span>₹{msg.summary.transportDetails.breakdown.parking}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <div className="summary-costs">
-                  <div className="summary-row"><span>🚕 Transport</span><span>₹{msg.summary.costs.transport.toLocaleString()}</span></div>
+                  <div className="summary-row">
+                    <span>🚕 Transport (×{msg.summary.travellers})</span>
+                    <span>₹{msg.summary.costs.transport.toLocaleString()}</span>
+                  </div>
                   <div className="summary-row"><span>🏨 Hotel</span><span>₹{msg.summary.costs.hotel.toLocaleString()}</span></div>
                   <div className="summary-row"><span>🍴 Food</span><span>₹{msg.summary.costs.food.toLocaleString()}</span></div>
                   <div className="summary-row"><span>🎟 Activities</span><span>₹{msg.summary.costs.activities.toLocaleString()}</span></div>
@@ -283,11 +327,11 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
                 <div className="summary-edits">
                   <button onClick={() => sendMessage("edit budget")}>Budget</button>
-                  <button onClick={() => sendMessage("edit destination")}>Destination</button>
-                  <button onClick={() => sendMessage("edit travellers")}>Travelers</button>
                   <button onClick={() => sendMessage("edit days")}>Days</button>
+                  <button onClick={() => sendMessage("edit travellers")}>Travelers</button>
                   <button onClick={() => sendMessage("edit transport")}>Transport</button>
                   <button onClick={() => sendMessage("edit hotel")}>Hotel</button>
+                  <button onClick={() => sendMessage("edit destination")}>Destination</button>
                 </div>
               </div>
             )}
@@ -301,6 +345,23 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                     <div className="budget-row"><span>Travel time</span><span>{msg.route.duration}</span></div>
                   </div>
                 )}
+
+                {msg.transportDetails?.fare && (
+                  <div className="budget-card">
+                    <div className="budget-row">
+                      <span>🚍 {msg.transportDetails.type}</span>
+                      <span>
+                        {msg.transportDetails.option}
+                        {msg.transportDetails.klass ? ` · ${msg.transportDetails.klass}` : ""}
+                      </span>
+                    </div>
+                    <div className="budget-row">
+                      <span>Fare {msg.transportDetails.source === "estimated" ? "(est.)" : ""}</span>
+                      <span>₹{msg.transportDetails.fare.toLocaleString()}/person</span>
+                    </div>
+                  </div>
+                )}
+
                 {msg.budget && (
                   <div className="budget-card">
                     <div className="budget-total">
@@ -328,7 +389,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                         <img src={item.place?.image} alt="" />
                         <div>
                           <p>{item.place?.name}</p>
-                          <small>{item.bestTime}</small>
+                          <small>{item.bestTime}{item.visitDuration ? ` · ${item.visitDuration}` : ""}</small>
                           <button
                             onClick={() => navigateTo(item.place)}
                             style={{ marginTop: "5px", padding: "5px 10px", background: "#22c55e", border: "none", borderRadius: "6px", cursor: "pointer" }}
@@ -455,7 +516,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             aria-label="Send"
           >
             ➤
-            
           </button>
         </div>
       </div>
