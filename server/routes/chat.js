@@ -3,11 +3,12 @@ const router = express.Router();
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const ChatSession = require("../models/ChatSession");
-const T = require("../services/TransportService");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-/* ================= SESSION ================= */
+/* ============================================================
+   PERSISTENT STATE  (item 8) — replaces `let sessions = {}`
+   ============================================================ */
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
   if (!s) s = await ChatSession.create({ userId, step: null, trip: {} });
@@ -18,12 +19,15 @@ const saveSession = async (s) => {
   s.markModified("trip");
   await s.save();
 };
+const resetSession = async (userId) => {
+  await ChatSession.deleteOne({ userId });
+};
 
-/* ================= STATE MACHINE ================= */
+/* ============================================================
+   STATE MACHINE
+   ============================================================ */
 const ACTIVE = new Set([
-  "source", "travellers", "days", "budget", "destination",
-  "transport", "train_class", "car_fuel", "car_mileage", "bus_type", "flight_class",
-  "hotel", "summary",
+  "source", "travellers", "days", "budget", "destination", "transport", "hotel", "summary",
 ]);
 
 const QUESTION = {
@@ -32,14 +36,15 @@ const QUESTION = {
   days: "📅 How many days?",
   budget: "What's your total budget?\n\nExamples: ₹5000 · ₹10000 · ₹25000\nType 'skip' to omit.",
   destination: "📍 What's your destination?",
-  transport: "🚆 Choose transport:\n1️⃣ Train  2️⃣ Car  3️⃣ Bus  4️⃣ Flight",
-  car_fuel: "⛽ Fuel type:\n1️⃣ Petrol  2️⃣ Diesel  3️⃣ CNG  4️⃣ EV",
-  car_mileage: "🚗 Vehicle mileage? (e.g. 18 for 18 km/l)",
+  transport: "🚆 Choose transport:\n1️⃣ Flight  2️⃣ Train  3️⃣ Bus  4️⃣ Car",
   hotel: "🏨 Hotel type:\n1️⃣ Budget  2️⃣ Standard  3️⃣ Luxury\n\nOr type 'no' if you don't need a hotel.",
 };
 
-/* ================= EXTRACTION ================= */
-const clean = (s) => s.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ");
+/* ============================================================
+   SLOT EXTRACTION (item 1) — Gemini + regex fallback
+   ============================================================ */
+const clean = (s) =>
+  s.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ");
 
 const regexExtract = (msg = "") => {
   const m = msg.toLowerCase();
@@ -69,23 +74,51 @@ const extractTripSlots = async (msg = "") => {
     const prompt = `Extract trip details from: "${msg}"
 Return ONLY JSON, null for anything not stated:
 {"destination":null,"source":null,"budget":null,"days":null,"travellers":null,"tripType":null}`;
-    const r = await model.generateContent(prompt);
-    const p = JSON.parse(r.response.text().replace(/```json|```/g, "").trim());
+    const result = await model.generateContent(prompt);
+    const parsed = JSON.parse(result.response.text().replace(/```json|```/g, "").trim());
     return {
-      destination: p.destination || fallback.destination,
-      source: p.source || fallback.source,
-      budget: p.budget || fallback.budget,
-      days: p.days || fallback.days,
-      travellers: p.travellers || fallback.travellers,
-      tripType: p.tripType || fallback.tripType || "general",
+      destination: parsed.destination || fallback.destination,
+      source: parsed.source || fallback.source,
+      budget: parsed.budget || fallback.budget,
+      days: parsed.days || fallback.days,
+      travellers: parsed.travellers || fallback.travellers,
+      tripType: parsed.tripType || fallback.tripType || "general",
     };
-  } catch (e) {
-    console.log("SLOT EXTRACT fallback:", e.message);
+  } catch (err) {
+    console.log("SLOT EXTRACT fallback:", err.message);
     return fallback;
   }
 };
 
-/* ================= PLACES / FOOD / NEARBY ================= */
+/* ============================================================
+   DISTANCE MATRIX (items 3,4) — real, distance-based costs
+   ============================================================ */
+const getRoute = async (origin, destination) => {
+  try {
+    if (!origin || !destination) return null;
+    const res = await axios.get(
+      "https://maps.googleapis.com/maps/api/distancematrix/json",
+      { params: { origins: origin, destinations: destination, key: process.env.GOOGLE_API_KEY } }
+    );
+    const el = res.data?.rows?.[0]?.elements?.[0];
+    if (!el || el.status !== "OK") return null;
+    return { km: Math.round(el.distance.value / 1000), durationText: el.duration.text };
+  } catch {
+    return null;
+  }
+};
+
+// per-person estimate derived from real distance (no hardcoded flat rates)
+const transportCostByDistance = (transport, km) => {
+  if (!km) return { bus: 800, train: 1500, car: 2500, flight: 5000 }[transport] || 1500; // fallback only if API fails
+  let t = transport;
+  if (t === "flight" && km < 300) t = "train"; // no flights for short hops
+  const perKm = { bus: 1.4, train: 1.0, car: 11, flight: 6 };
+  const base = { bus: 100, train: 80, car: 0, flight: 2500 };
+  return Math.round((base[t] || 0) + km * (perKm[t] || 1));
+};
+
+/* ================= PLACES / FOOD / NEARBY (unchanged behavior) ================= */
 const getBestTime = (name = "") => {
   name = name.toLowerCase();
   if (name.includes("beach")) return "Evening 🌇";
@@ -135,7 +168,6 @@ const detectIntent = (msg = "") => {
   return "general";
 };
 
-/* ================= NEXT STEP ================= */
 const nextStep = (trip) => {
   if (!trip.source) return "source";
   if (!trip.travellers) return "travellers";
@@ -143,25 +175,17 @@ const nextStep = (trip) => {
   if (trip.budget === undefined) return "budget";
   if (!trip.destination) return "destination";
   if (!trip.transport) return "transport";
-  if (!trip.transportDetails?.fare) return "transport"; // transport chosen but not finalized
   if (!trip.hotelType) return "hotel";
-  return "summary";
+  return "summary"; // all collected → confirm before generating
 };
 
-/* ensure distance is cached once destination+source known */
-const ensureRoute = async (trip) => {
-  if (trip.distanceKm == null) {
-    const route = await T.getRoute(trip.source, trip.destination);
-    trip.distanceKm = route?.km || null;
-    trip.travelTime = route?.durationText || null;
-  }
-  return { km: trip.distanceKm, durationText: trip.travelTime };
-};
-
-/* ================= COST ENGINE ================= */
-const calcCosts = (trip) => {
-  const { days, budget, travellers, hotelType } = trip;
-  const transportPerPerson = trip.transportDetails?.fare || 0;
+/* ============================================================
+   COST ENGINE — single source of truth (items 4,6,7)
+   ============================================================ */
+const calcCosts = async (trip) => {
+  const { source, destination, days, budget, travellers, transport, hotelType } = trip;
+  const route = await getRoute(source, destination);
+  const transportPerPerson = transportCostByDistance(transport, route?.km);
 
   const hotelRates = { none: 0, budget: 1200, standard: 2500, luxury: 6000 };
   const foodPerPerson = { none: 500, budget: 400, standard: 700, luxury: 1200 };
@@ -173,28 +197,32 @@ const calcCosts = (trip) => {
   const activitiesCost = budget ? Math.floor(budget * 0.15) : 1000;
   const totalCost = hotelCost + foodCost + transportCost + activitiesCost;
 
-  return { hotelCost, foodCost, transportCost, activitiesCost, roomsNeeded, totalCost, hotelRates, foodPerPerson, transportPerPerson };
+  return { route, transportPerPerson, hotelCost, foodCost, transportCost, activitiesCost, roomsNeeded, totalCost, hotelRates, foodPerPerson };
 };
 
-const buildSummary = (trip) => {
-  const c = calcCosts(trip);
+/* SUMMARY card (item 5) */
+const buildSummary = async (trip) => {
+  const c = await calcCosts(trip);
   return {
     type: "tripSummary",
     summary: {
       from: trip.source, to: trip.destination,
       travellers: trip.travellers, days: trip.days,
-      transport: trip.transport,
-      transportDetails: trip.transportDetails,
-      hotelType: trip.hotelType,
+      transport: trip.transport, hotelType: trip.hotelType,
       budget: trip.budget || null,
-      distanceKm: trip.distanceKm, travelTime: trip.travelTime,
-      costs: { transport: c.transportCost, hotel: c.hotelCost, food: c.foodCost, activities: c.activitiesCost, total: c.totalCost },
+      distanceKm: c.route?.km || null,
+      travelTime: c.route?.durationText || null,
+      costs: {
+        transport: c.transportCost, hotel: c.hotelCost,
+        food: c.foodCost, activities: c.activitiesCost, total: c.totalCost,
+      },
     },
   };
 };
 
+/* ITINERARY (item 9) */
 const buildItinerary = async (trip) => {
-  const c = calcCosts(trip);
+  const c = await calcCosts(trip);
   const { destination, days, budget } = trip;
 
   let places = [];
@@ -213,7 +241,7 @@ const buildItinerary = async (trip) => {
         hotelRate: c.hotelRates[trip.hotelType], foodRate: c.foodPerPerson[trip.hotelType],
         transportRate: c.transportPerPerson, days, travellers: trip.travellers,
         roomsNeeded: c.roomsNeeded, hotelType: trip.hotelType, transport: trip.transport,
-        distanceKm: trip.distanceKm,
+        distanceKm: c.route?.km || null,
       },
     };
   }
@@ -223,14 +251,9 @@ const buildItinerary = async (trip) => {
   let i = 0;
   for (let d = 1; d <= days; d++) {
     const schedule = [];
-    for (let sIdx = 0; sIdx < timeSlots.length && i < places.length; sIdx++) {
-      schedule.push({
-        time: timeSlots[sIdx],
-        place: places[i],
-        bestTime: places[i].bestTime,
-        visitDuration: "1–2 hrs",
-        estimatedCost: places.length ? Math.floor(c.activitiesCost / places.length) : 0,
-      });
+    for (let s = 0; s < timeSlots.length && i < places.length; s++) {
+      schedule.push({ time: timeSlots[s], place: places[i], bestTime: places[i].bestTime,
+        estimatedCost: places.length ? Math.floor(c.activitiesCost / places.length) : 0 });
       i++;
     }
     itinerary.push({ day: d, schedule });
@@ -238,8 +261,7 @@ const buildItinerary = async (trip) => {
 
   return {
     type: "itinerary",
-    route: trip.distanceKm ? { distanceKm: trip.distanceKm, duration: trip.travelTime, from: trip.source, to: trip.destination } : null,
-    transportDetails: trip.transportDetails,
+    route: c.route ? { distanceKm: c.route.km, duration: c.route.durationText, from: trip.source, to: trip.destination } : null,
     budget: {
       total: budget || c.totalCost,
       hotel: c.hotelCost, food: c.foodCost, transport: c.transportCost, activities: c.activitiesCost,
@@ -251,30 +273,15 @@ const buildItinerary = async (trip) => {
   };
 };
 
-/* advance after a field is set */
+/* advance machine after a field is set */
 const advance = async (s, res, prefix = "") => {
   s.step = nextStep(s.trip);
-
-  // entering transport for the first time → show transport menu
-  if (s.step === "transport" && !s.trip.transport) {
-    await saveSession(s);
-    return res.json({ reply: prefix + QUESTION.transport });
-  }
   if (s.step === "summary") {
     await saveSession(s);
-    return res.json(buildSummary(s.trip));
+    return res.json(await buildSummary(s.trip));
   }
   await saveSession(s);
   return res.json({ reply: prefix + QUESTION[s.step] });
-};
-
-/* finalize transport selection → store details, then advance */
-const finalizeTransport = async (s, res, details) => {
-  s.trip.transportDetails = details;
-  s.step = nextStep(s.trip);
-  if (s.step === "summary") { await saveSession(s); return res.json(buildSummary(s.trip)); }
-  await saveSession(s);
-  return res.json({ reply: QUESTION[s.step] });
 };
 
 /* ================= MAIN ROUTE ================= */
@@ -285,15 +292,20 @@ router.post("/", async (req, res) => {
     const lower = raw.toLowerCase();
     const s = await loadSession(userId);
 
-    /* ===== EDIT COMMANDS — reuse trip, never reset ===== */
+    /* ===== EDIT COMMANDS (items 6,7) — reuse stored trip, never reset ===== */
     if (lower === "update budget" && s.trip?.destination) {
-      s.trip.budget = undefined; s.step = "budget"; await saveSession(s);
+      s.trip.budget = undefined;
+      s.step = "budget";
+      await saveSession(s);
       return res.json({ reply: "💰 Enter your new budget amount.\n\nExamples:\n₹15000\n₹20000\n₹30000" });
     }
     if (lower === "change plan" && s.trip?.destination) {
-      s.trip.destination = ""; s.step = "destination"; await saveSession(s);
+      s.trip.destination = "";
+      s.step = "destination";
+      await saveSession(s);
       return res.json({ reply: "📍 Enter a different destination." });
     }
+    // Trip Summary actions
     if (lower === "confirm trip" && s.step === "summary") {
       const payload = await buildItinerary(s.trip);
       s.step = payload.type === "itinerary" ? "completed" : "blocked";
@@ -304,12 +316,9 @@ router.post("/", async (req, res) => {
       const field = lower.replace("edit ", "").trim();
       const map = {
         budget: ["budget", undefined], destination: ["destination", ""],
-        travellers: ["travellers", null], days: ["days", null], hotel: ["hotelType", ""],
+        travellers: ["travellers", null], days: ["days", null],
+        transport: ["transport", ""], hotel: ["hotelType", ""],
       };
-      if (field === "transport") {
-        s.trip.transport = ""; s.trip.transportDetails = {}; s.step = "transport";
-        await saveSession(s); return res.json({ reply: QUESTION.transport });
-      }
       if (map[field]) {
         const [key, blank] = map[field];
         s.trip[key] = blank;
@@ -345,16 +354,16 @@ router.post("/", async (req, res) => {
           budget: slots.budget ?? undefined,
           tripType: slots.tripType || "general",
           transport: "", hotelType: "",
-          distanceKm: null, travelTime: null,
-          transportDetails: {}, carFuelType: null,
         };
-        const ack = slots.destination ? `Great choice — ${slots.destination} is a solid pick.\n\n` : "Let's plan your trip ✈️\n\n";
+        const ack = slots.destination
+          ? `Great choice — ${slots.destination} is a solid pick.\n\n`
+          : "Let's plan your trip ✈️\n\n";
         return advance(s, res, ack);
       }
       return res.json({ reply: "Try: plan trip to Vizag · food near me · best temples near me 😊" });
     }
 
-    /* ===== BASIC STEPS ===== */
+    /* ===== ACTIVE STEPS ===== */
     if (s.step === "source") {
       s.trip.source = ["current", "use current", "📍"].some((x) => lower.includes(x)) && city ? city : clean(raw);
       return advance(s, res);
@@ -380,70 +389,12 @@ router.post("/", async (req, res) => {
       return advance(s, res, prefix);
     }
     if (s.step === "destination") { s.trip.destination = clean(raw); return advance(s, res); }
-
-    /* ===== TRANSPORT SELECTION ===== */
     if (s.step === "transport") {
-      const m = { "1": "train", "2": "car", "3": "bus", "4": "flight" };
-      const t = m[raw] || ["train", "car", "bus", "flight"].find((x) => lower.includes(x));
-      if (!t) return res.json({ reply: "❌ Reply 1 (Train) · 2 (Car) · 3 (Bus) · 4 (Flight)" });
-      s.trip.transport = t;
-      const route = await ensureRoute(s.trip);
-
-      if (t === "train") { s.step = "train_class"; await saveSession(s); return res.json({ reply: T.trainClassMenu(route.km) }); }
-      if (t === "bus")   { s.step = "bus_type";    await saveSession(s); return res.json({ reply: T.busMenu(route.km) }); }
-      if (t === "flight"){ s.step = "flight_class";await saveSession(s); return res.json({ reply: T.flightMenu(route.km) }); }
-      if (t === "car")   { s.step = "car_fuel";    await saveSession(s); return res.json({ reply: QUESTION.car_fuel }); }
+      const m = { "1": "flight", "2": "train", "3": "bus", "4": "car" };
+      const t = m[raw] || ["flight", "train", "bus", "car"].find((x) => lower.includes(x));
+      if (!t) return res.json({ reply: "❌ Reply 1 (Flight) · 2 (Train) · 3 (Bus) · 4 (Car)" });
+      s.trip.transport = t; return advance(s, res);
     }
-
-    if (s.step === "train_class") {
-      const idx = parseInt(raw) - 1;
-      const klass = T.TRAIN_CLASSES[idx] || T.TRAIN_CLASSES.find((c) => lower.includes(c.toLowerCase()));
-      if (!klass) return res.json({ reply: "❌ Reply 1 (General) · 2 (Sleeper) · 3 (3AC) · 4 (2AC) · 5 (1AC)" });
-      const fare = T.trainFareEstimate(klass, s.trip.distanceKm);
-      return finalizeTransport(s, res, { type: "train", option: "Train", klass, fare, source: "estimated", breakdown: null });
-    }
-
-    if (s.step === "bus_type") {
-      const idx = parseInt(raw) - 1;
-      const type = T.BUS_TYPES[idx] || T.BUS_TYPES.find((b) => lower.includes(b.toLowerCase()));
-      if (!type) return res.json({ reply: "❌ Reply 1–5 to choose a bus type." });
-      const fare = T.busFare(type, s.trip.distanceKm);
-      return finalizeTransport(s, res, { type: "bus", option: type, klass: null, fare, source: "estimated", breakdown: null });
-    }
-
-    if (s.step === "flight_class") {
-      const idx = parseInt(raw) - 1;
-      const klass = T.FLIGHT_CLASSES[idx] || T.FLIGHT_CLASSES.find((f) => lower.includes(f.toLowerCase()));
-      if (!klass) return res.json({ reply: "❌ Reply 1 (Economy) · 2 (Premium Economy) · 3 (Business)" });
-      const fare = T.flightFare(klass, s.trip.distanceKm);
-      return finalizeTransport(s, res, { type: "flight", option: klass, klass: null, fare, source: "estimated", breakdown: null });
-    }
-
-    if (s.step === "car_fuel") {
-      const m = { "1": "petrol", "2": "diesel", "3": "cng", "4": "ev" };
-      const f = m[raw] || ["petrol", "diesel", "cng", "ev"].find((x) => lower.includes(x));
-      if (!f) return res.json({ reply: "❌ Reply 1 (Petrol) · 2 (Diesel) · 3 (CNG) · 4 (EV)" });
-      s.trip.carFuelType = f;
-      if (f === "ev") {
-        const b = T.carBreakdown(s.trip.distanceKm, "ev", null);
-        return finalizeTransport(s, res, {
-          type: "car", option: "EV", klass: null, fare: b.total, source: "estimated", breakdown: b,
-        });
-      }
-      s.step = "car_mileage"; await saveSession(s);
-      return res.json({ reply: QUESTION.car_mileage });
-    }
-
-    if (s.step === "car_mileage") {
-      const mileage = parseFloat(raw.replace(/[^\d.]/g, ""));
-      if (!mileage || mileage < 3) return res.json({ reply: "🚗 Enter a valid mileage (e.g. 18)." });
-      const b = T.carBreakdown(s.trip.distanceKm, s.trip.carFuelType, mileage);
-      return finalizeTransport(s, res, {
-        type: "car", option: s.trip.carFuelType.toUpperCase(), klass: null, fare: b.total, source: "estimated", breakdown: b,
-      });
-    }
-
-    /* ===== HOTEL ===== */
     if (s.step === "hotel") {
       let h;
       if (["no", "skip", "no hotel", "none"].includes(lower)) h = "none";
@@ -451,8 +402,8 @@ router.post("/", async (req, res) => {
       if (!h) return res.json({ reply: "❌ Reply 1 (Budget) · 2 (Standard) · 3 (Luxury), or 'no'." });
       s.trip.hotelType = h; return advance(s, res);
     }
-
     if (s.step === "summary") {
+      // any free text at summary → re-show summary with a hint
       return res.json({ reply: "Tap Confirm to generate your itinerary, or an Edit button to change a detail." });
     }
 
