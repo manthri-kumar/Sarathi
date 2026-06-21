@@ -460,6 +460,8 @@ router.post("/", async (req, res) => {
   } catch (err) {
     console.error("CHAT ERROR:", err);
     return res.status(500).json({ reply: "Something went wrong ❌" });
+
+    
   }
 });
 
