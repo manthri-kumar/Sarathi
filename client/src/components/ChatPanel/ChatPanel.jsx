@@ -455,11 +455,10 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             aria-label="Send"
           >
             ➤
-
+            
           </button>
         </div>
       </div>
-      
 
     </div>
   );

@@ -219,9 +219,15 @@
 .trip-summary-card .summary-costs {
   padding-top: 8px; border-top: 1px solid rgba(34, 197, 94, 0.1);
 }
-.trip-summary-card .summary-row { display: flex; justify-content: space-between; align-items: center; }
-.trip-summary-card .summary-row span:first-child { font-size: 0.76rem; color: #6aad7a; }
-.trip-summary-card .summary-row span:last-child { font-size: 0.76rem; color: #e8f5e9; font-weight: 500; text-transform: capitalize; }
+.trip-summary-card .summary-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.trip-summary-card .summary-row span:first-child { font-size: 0.76rem; color: #6aad7a; flex-shrink: 0; }
+.trip-summary-card .summary-row span:last-child {
+  font-size: 0.76rem; color: #e8f5e9; font-weight: 500;
+  text-align: right; word-break: break-word;
+}
+/* opt-in capitalization for plain words (hotel type etc.) */
+.trip-summary-card .summary-row span.cap { text-transform: capitalize; }
+
 .summary-confirm {
   width: 100%; padding: 11px; margin-top: 2px;
   background: #22c55e; color: #000; border: none; border-radius: 10px;
