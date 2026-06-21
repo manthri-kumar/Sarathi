@@ -14,18 +14,21 @@ const ChatSessionSchema = new mongoose.Schema(
       transport: { type: String, default: "" }, // train|car|bus|flight
       hotelType: { type: String, default: "" },
 
+      // distance cache (avoids re-hitting Distance Matrix on edits)
       distanceKm: { type: Number, default: null },
       travelTime: { type: String, default: null },
 
+      // structured transport result
       transportDetails: {
-        type: { type: String, default: null },
-        option: { type: String, default: null },
-        klass: { type: String, default: null },
-        fare: { type: Number, default: null },
-        source: { type: String, default: null }, // "Distance Based" | "RapidAPI"
-        breakdown: { type: mongoose.Schema.Types.Mixed, default: null },
+        type: { type: String, default: null },     // train|car|bus|flight
+        option: { type: String, default: null },    // e.g. "Super Luxury" / "Economy"
+        klass: { type: String, default: null },      // e.g. "Sleeper"
+        fare: { type: Number, default: null },        // per-person ₹
+        source: { type: String, default: null },      // estimated|rapidapi
+        breakdown: { type: mongoose.Schema.Types.Mixed, default: null }, // car details
       },
 
+      // car sub-inputs (held while collecting)
       carFuelType: { type: String, default: null },
     },
     updatedAt: { type: Date, default: Date.now },
