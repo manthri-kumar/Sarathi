@@ -4,7 +4,6 @@ const FUEL_PRICE = { petrol: 110, diesel: 96, cng: 90, ev: 0 };
 const FUEL_UNIT = { petrol: "L", diesel: "L", cng: "kg", ev: "kWh" };
 const EV_RATE_PER_KM = 1.2;
 
-/* ============ DISTANCE MATRIX ============ */
 const getRoute = async (origin, destination) => {
   try {
     if (!origin || !destination) return null;
@@ -20,7 +19,6 @@ const getRoute = async (origin, destination) => {
   }
 };
 
-/* ============ BUS (distance-based) ============ */
 const BUS_TYPES = ["Ordinary", "Express", "Super Luxury", "Sleeper", "AC Sleeper"];
 const busFare = (type, km) => {
   const d = km || 300;
@@ -32,7 +30,6 @@ const busMenu = (km) =>
   "🚌 Choose bus type:\n" +
   BUS_TYPES.map((t, i) => `${i + 1}️⃣ ${t} (~₹${busFare(t, km).toLocaleString("en-IN")})`).join("\n");
 
-/* ============ FLIGHT (distance-banded) ============ */
 const FLIGHT_CLASSES = ["Economy", "Premium Economy", "Business"];
 const flightFare = (klass, km) => {
   const d = km || 500;
@@ -44,13 +41,11 @@ const flightMenu = (km) =>
   "✈️ Choose cabin class:\n" +
   FLIGHT_CLASSES.map((c, i) => `${i + 1}️⃣ ${c} (~₹${flightFare(c, km).toLocaleString("en-IN")})`).join("\n");
 
-/* ============ CAR (fuel + toll + parking) ============ */
 const carBreakdown = (km, fuelType, mileage) => {
   const d = km || 300;
   const toll = Math.round(d * 1.0);
   const parking = 100;
   let fuelCost, fuelNeeded;
-
   if (fuelType === "ev") {
     fuelNeeded = null;
     fuelCost = Math.round(d * EV_RATE_PER_KM);

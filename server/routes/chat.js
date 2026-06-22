@@ -3,7 +3,6 @@ const router = express.Router();
 const ChatSession = require("../models/ChatSession");
 const C = require("../services/ConversationService");
 
-/* ================= SESSION ================= */
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
   if (!s) s = await ChatSession.create({ userId, step: null, trip: {} });
@@ -37,7 +36,6 @@ const finalizeTransport = async (s, res, details) => {
   return res.json({ reply: C.QUESTION[s.step] });
 };
 
-/* ================= MAIN ROUTE ================= */
 router.post("/", async (req, res) => {
   try {
     const { message, userId = "user1", lat, lng, city } = req.body;
@@ -45,7 +43,7 @@ router.post("/", async (req, res) => {
     const lower = raw.toLowerCase();
     const s = await loadSession(userId);
 
-    /* ===== EDIT COMMANDS — reuse trip, never reset ===== */
+    /* ===== EDIT COMMANDS ===== */
     if (lower === "update budget" && s.trip?.destination) {
       s.trip.budget = undefined; s.step = "budget"; await saveSession(s);
       return res.json({ reply: "💰 Sure — what's your new budget?\n\nExamples:\n₹15000\n₹20000\n₹30000" });
@@ -81,7 +79,7 @@ router.post("/", async (req, res) => {
 
     const inFlow = s.trip?.destination !== undefined && C.ACTIVE.has(s.step);
 
-    /* ===== DUAL-MODE: off-topic question while mid-flow ===== */
+    /* ===== DUAL-MODE: off-topic mid-flow ===== */
     if (inFlow && !C.looksLikeStepAnswer(s.step, raw)) {
       const answer = await C.askAI(raw, city);
       const reprompt = s.step === "summary"
@@ -124,7 +122,6 @@ router.post("/", async (req, res) => {
         return advance(s, res, ack);
       }
 
-      // general → natural Groq answer (dual-mode B, no flow active)
       return res.json({ reply: await C.askAI(raw, city) });
     }
 
@@ -158,14 +155,13 @@ router.post("/", async (req, res) => {
       return advance(s, res, `Lovely — ${s.trip.destination} it is.\n\n`);
     }
 
-    /* ===== TRANSPORT SELECTION ===== */
+    /* ===== TRANSPORT ===== */
     if (s.step === "transport") {
       const m = { "1": "train", "2": "car", "3": "bus", "4": "flight" };
       const t = m[raw] || ["train", "car", "bus", "flight"].find((x) => lower.includes(x));
       if (!t) return res.json({ reply: "❌ Reply 1 (Train) · 2 (Car) · 3 (Bus) · 4 (Flight)" });
       s.trip.transport = t;
       const route = await C.ensureRoute(s.trip);
-
       if (t === "train")  { s.step = "train_class"; await saveSession(s); return res.json({ reply: C.Train.trainClassMenu(route.km) }); }
       if (t === "bus")    { s.step = "bus_type";    await saveSession(s); return res.json({ reply: C.T.busMenu(route.km) }); }
       if (t === "flight") { s.step = "flight_class";await saveSession(s); return res.json({ reply: C.T.flightMenu(route.km) }); }
@@ -229,7 +225,6 @@ router.post("/", async (req, res) => {
       return res.json({ reply: "Tap Confirm to generate your itinerary, or an Edit button to change a detail." });
     }
 
-    // fallback inside flow → natural answer, preserve state
     return res.json({ reply: await C.askAI(raw, city) });
   } catch (err) {
     console.error("CHAT ERROR:", err);

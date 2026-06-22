@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const AI = require("./AIService");
+const askGroq = require("./askGroq");
 const T = require("./TransportService");
 const Train = require("./TrainService");
 const Planner = require("./TripPlannerService");
@@ -26,6 +26,30 @@ const QUESTION = {
 
 const clean = (s) => s.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ");
 
+/* ================= JSON HELPERS (Groq returns a string) ================= */
+const stripControlTokens = (s) =>
+  s.replace(/<\|[^>]*\|>/g, "").replace(/```json|```/g, "").trim();
+
+const extractJSONBlock = (s) => {
+  if (!s) return null;
+  const text = stripControlTokens(s);
+  const start = text.search(/[{[]/);
+  if (start === -1) return null;
+  const open = text[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === open) depth++;
+    else if (text[i] === close) {
+      depth--;
+      if (depth === 0) {
+        try { return JSON.parse(text.slice(start, i + 1)); } catch { return null; }
+      }
+    }
+  }
+  return null;
+};
+
 /* ================= REGEX SLOT FALLBACK ================= */
 const regexExtract = (msg = "") => {
   const m = msg.toLowerCase();
@@ -48,7 +72,62 @@ const regexExtract = (msg = "") => {
   return out;
 };
 
-const extractTripSlots = (msg = "") => AI.extractTripSlots(msg, regexExtract(msg));
+/* ================= SLOT EXTRACTION (Groq + regex fallback) ================= */
+const extractTripSlots = async (msg = "") => {
+  const fallback = regexExtract(msg);
+  try {
+    const prompt = `Extract trip details from this message and respond with ONLY a JSON object, no prose.
+Keys: destination, source, budget, days, travellers, tripType.
+Use null for anything not stated. budget/days/travellers are numbers or null.
+tripType is one of: temple, family, weekend, budget, general.
+
+Message: "${msg}"`;
+    const text = await askGroq(prompt);
+    const p = extractJSONBlock(text);
+    if (!p || typeof p !== "object") return { ...fallback, tripType: fallback.tripType || "general" };
+    return {
+      destination: p.destination || fallback.destination,
+      source: p.source || fallback.source,
+      budget: p.budget || fallback.budget,
+      days: p.days || fallback.days,
+      travellers: p.travellers || fallback.travellers,
+      tripType: p.tripType || fallback.tripType || "general",
+    };
+  } catch (e) {
+    console.log("SLOT EXTRACT → regex fallback:", e.message);
+    return { ...fallback, tripType: fallback.tripType || "general" };
+  }
+};
+
+/* ================= GENERAL TRAVEL Q&A (dual-mode B) ================= */
+const askAI = async (raw, contextCity) => {
+  try {
+    const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant. Answer the user's question helpfully and concisely in 2-4 sentences.${
+      contextCity ? ` The user is near ${contextCity}.` : ""
+    } Give only the final answer, no internal reasoning.
+
+User: "${raw}"`;
+    const text = await askGroq(prompt);
+    return stripControlTokens(text) || "I can help with travel questions and trip planning — could you rephrase that?";
+  } catch (e) {
+    console.log("askAI failed:", e.message);
+    return "I can help with travel questions and trip planning — could you rephrase that?";
+  }
+};
+
+/* ================= FOOD ================= */
+const getFoodFromAI = async (city) => {
+  try {
+    const prompt = `Respond with ONLY a JSON object shaped exactly as {"dishes":[{"name":"...","description":"..."}]} containing 6 famous local dishes from ${city}. No prose.`;
+    const text = await askGroq(prompt);
+    const p = extractJSONBlock(text);
+    if (Array.isArray(p)) return p;
+    return p?.dishes || [];
+  } catch (e) {
+    console.log("getFoodFromAI failed:", e.message);
+    return [];
+  }
+};
 
 /* ================= DUAL-MODE CLASSIFIER ================= */
 const looksLikeStepAnswer = (step, raw) => {
@@ -81,9 +160,7 @@ const looksLikeStepAnswer = (step, raw) => {
   }
 };
 
-const askAI = (raw, contextCity) => AI.chat(raw, contextCity);
-
-/* ================= PLACES / FOOD / NEARBY ================= */
+/* ================= NEARBY ================= */
 const fetchNearby = async (lat, lng, keyword, city) => {
   try {
     if (lat && lng) {
@@ -99,8 +176,6 @@ const fetchNearby = async (lat, lng, keyword, city) => {
     return [];
   } catch { return []; }
 };
-
-const getFoodFromAI = (city) => AI.foodDishes(city);
 
 const detectIntent = (msg = "") => {
   msg = msg.toLowerCase();
@@ -140,5 +215,5 @@ module.exports = {
   looksLikeStepAnswer, askAI,
   fetchNearby, getFoodFromAI, detectIntent,
   nextStep, ensureRoute,
-  T, Train, Planner, AI,
+  T, Train, Planner,
 };
