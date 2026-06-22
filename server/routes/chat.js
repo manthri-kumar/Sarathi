@@ -49,6 +49,60 @@ router.post("/", async (req, res) => {
     const raw = message.trim();
     const lower = raw.toLowerCase();
     const s = await loadSession(userId);
+    /* ===== DATE / DAY / TIME HANDLER ===== */
+
+const now = new Date(
+  new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Kolkata",
+  })
+);
+const currentDay = now.toLocaleDateString("en-IN", {
+  weekday: "long",
+});
+
+const currentDate = now.toLocaleDateString("en-IN", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+const currentTime = now.toLocaleTimeString("en-IN", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+if (
+  /^(day|today day|what day is today|which day is today)$/i.test(lower)
+) {
+  return res.json({
+    reply: `📅 Today is **${currentDay}**.`,
+  });
+}
+
+if (
+  /today.?s date|current date|date today|what is today's date/i.test(lower)
+) {
+  return res.json({
+    reply: `📅 Today's date is **${currentDate}**.`,
+  });
+}
+
+if (
+  /current time|what time is it|time now|current time now/i.test(lower)
+) {
+  return res.json({
+    reply: `⏰ Current time is **${currentTime}**.`,
+  });
+}
+
+if (
+  /^(today|what is today|date and day)$/i.test(lower)
+) {
+  return res.json({
+    reply: `📅 Today is **${currentDay}, ${currentDate}**.`,
+  });
+}
 
     /* ===== EDIT / CONTROL COMMANDS (only meaningful with a real trip) ===== */
     if (lower === "update budget" && s.trip?.destination) {
