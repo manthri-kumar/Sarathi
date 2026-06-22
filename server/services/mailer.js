@@ -9,18 +9,27 @@ const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false,
-  family: 4,
+
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+
+  tls: {
+    rejectUnauthorized: false,
+    family: 4,
+  },
 });
 
-// Verify SMTP connection on server startup
-transporter.verify((error, success) => {
+// Verify SMTP connection when server starts
+transporter.verify((error) => {
   if (error) {
-    console.error("❌ SMTP ERROR:", error);
+    console.error("❌ SMTP VERIFY FAILED");
+    console.error(error);
   } else {
     console.log("✅ SMTP READY - Gmail connected");
   }
@@ -28,12 +37,15 @@ transporter.verify((error, success) => {
 
 const sendOtpEmail = async (toEmail, otp) => {
   try {
-    console.log(`📧 Sending OTP to ${toEmail}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log(`📧 Sending OTP to: ${toEmail}`);
+    console.log(`📨 Sender: ${process.env.EMAIL_USER}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     const mailOptions = {
       from: `"Sarathi" <${process.env.EMAIL_USER}>`,
       to: toEmail,
-      subject: "Sarathi Email Verification Code",
+      subject: "Sarathi Email Verification",
 
       text: `
 Welcome to Sarathi!
@@ -42,9 +54,9 @@ Your verification code is:
 
 ${otp}
 
-This code will expire in 5 minutes.
+This code expires in 5 minutes.
 
-If you did not request this code, please ignore this email.
+If you did not request this email, please ignore it.
 
 Team Sarathi
       `,
@@ -59,34 +71,31 @@ Team Sarathi
         color:#ffffff;
         font-family:Arial,sans-serif;
       ">
-        
-        <h2 style="
-          color:#22c55e;
-          margin-bottom:20px;
-        ">
+
+        <h2 style="color:#22c55e;">
           Sarathi Email Verification
         </h2>
 
         <p>Hello,</p>
 
         <p>
-          Thank you for creating an account on <strong>Sarathi</strong>.
+          Thank you for creating your Sarathi account.
         </p>
 
-        <p>Your verification code is:</p>
+        <p>Your verification code:</p>
 
         <div style="
-          margin:25px 0;
           text-align:center;
-          padding:20px;
+          padding:18px;
           border-radius:12px;
           background:rgba(34,197,94,0.08);
           border:1px solid rgba(34,197,94,0.25);
+          margin:20px 0;
         ">
           <span style="
-            font-size:38px;
+            font-size:36px;
             font-weight:800;
-            letter-spacing:10px;
+            letter-spacing:8px;
             color:#22c55e;
           ">
             ${otp}
@@ -94,17 +103,16 @@ Team Sarathi
         </div>
 
         <p>
-          This code will expire in
+          This code expires in
           <strong>5 minutes</strong>.
         </p>
 
         <p style="
           color:#94a3b8;
           font-size:13px;
-          margin-top:25px;
         ">
           If you did not request this code,
-          you can safely ignore this email.
+          please ignore this email.
         </p>
 
         <hr style="
@@ -124,15 +132,35 @@ Team Sarathi
       `,
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    console.log("🚀 Starting Gmail send...");
 
-    console.log("✅ MAIL SENT");
-    console.log("Message ID:", info.messageId);
+    const info = await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("SMTP_TIMEOUT_AFTER_15_SECONDS")),
+          15000
+        )
+      ),
+    ]);
+
+    console.log("✅ MAIL SENT SUCCESSFULLY");
+    console.log("📩 Message ID:", info.messageId);
 
     return info;
-
   } catch (error) {
-    console.error("❌ MAIL SEND FAILED:", error);
+    console.error("❌ MAIL SEND FAILED");
+    console.error("Error Name:", error.name);
+    console.error("Error Message:", error.message);
+
+    if (error.response) {
+      console.error("SMTP Response:", error.response);
+    }
+
+    if (error.code) {
+      console.error("Error Code:", error.code);
+    }
+
     throw error;
   }
 };
