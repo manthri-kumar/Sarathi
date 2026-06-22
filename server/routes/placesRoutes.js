@@ -4,12 +4,12 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 
-const { gatherAttractions, photoUrl, FALLBACK_IMG } = require("../services/attractionsService");
+const { gatherAttractions, photoUrl } = require("../services/attractionsService");
 const { dedupeAndRank } = require("../services/rankingService");
+const { isValidTouristAttraction } = require("../services/attractionFilter");
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-/* ---- Restaurants (unchanged contract) ---- */
 const fetchRestaurants = async (lat, lng) => {
   try {
     const res = await axios.get(
@@ -28,7 +28,6 @@ const fetchRestaurants = async (lat, lng) => {
   } catch (e) { console.error("restaurants:", e.message); return []; }
 };
 
-/* ---- Hotels (unchanged contract) ---- */
 const fetchHotels = async (lat, lng) => {
   try {
     const res = await axios.get(
@@ -75,9 +74,11 @@ router.get("/", async (req, res) => {
       fetchHotels(lat, lng),
     ]);
 
-    const places = dedupeAndRank(attractions).slice(0, 30);
+    const beforeCount = attractions.length;
+    const filtered = attractions.filter(isValidTouristAttraction);
+    const places = dedupeAndRank(filtered).slice(0, 30);
 
-    console.log(`[EXPLORE] ${locationName} | places:${places.length} food:${restaurants.length} hotels:${hotels.length}`);
+    console.log(`[EXPLORE] ${locationName} | raw:${beforeCount} → valid:${filtered.length} → shown:${places.length} | food:${restaurants.length} hotels:${hotels.length}`);
 
     return res.json({ locationName, places, restaurants, hotels });
   } catch (e) {
@@ -86,13 +87,12 @@ router.get("/", async (req, res) => {
   }
 });
 
-/* ===== CITY SEARCH (now curated-aware) ===== */
+/* ===== CITY SEARCH (filtered + curated-aware) ===== */
 router.get("/search", async (req, res) => {
   const { city } = req.query;
   if (!city) return res.status(400).json({ error: "City required" });
 
   try {
-    // geocode the city to a center point, then run the full pipeline
     const geo = await axios.get(
       "https://maps.googleapis.com/maps/api/geocode/json",
       { params: { address: city, key: GOOGLE_API_KEY }, timeout: 8000 }
@@ -101,7 +101,8 @@ router.get("/search", async (req, res) => {
     if (!loc) return res.json([]);
 
     const attractions = await gatherAttractions(loc.lat, loc.lng, city);
-    const places = dedupeAndRank(attractions).slice(0, 30);
+    const filtered = attractions.filter(isValidTouristAttraction);
+    const places = dedupeAndRank(filtered).slice(0, 30);
 
     return res.json(places);
   } catch (e) {

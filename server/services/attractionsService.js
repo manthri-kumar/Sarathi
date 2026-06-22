@@ -26,7 +26,6 @@ const photoUrl = (place, category = "place") => {
 
 const norm = (s = "") => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-/* ---- Google nearby by category ---- */
 const fetchGoogleCategory = async (lat, lng, type) => {
   try {
     const res = await axios.get(
@@ -47,6 +46,7 @@ const fetchGoogleCategory = async (lat, lng, type) => {
         image: photoUrl(p, "place"),
         source: "google",
         category: type,
+        types: p.types || [],
       }));
   } catch (e) {
     console.error("Google category failed:", type, e.message);
@@ -54,13 +54,9 @@ const fetchGoogleCategory = async (lat, lng, type) => {
   }
 };
 
-/* ---- Resolve a name (curated/wiki) to a real Google place ---- */
 const resolveByName = async (name, bias) => {
   try {
-    const params = {
-      query: name,
-      key: GOOGLE_API_KEY,
-    };
+    const params = { query: name, key: GOOGLE_API_KEY };
     if (bias?.lat && bias?.lng) {
       params.location = `${bias.lat},${bias.lng}`;
       params.radius = 60000;
@@ -79,6 +75,7 @@ const resolveByName = async (name, bias) => {
       lat: hit.geometry.location.lat,
       lng: hit.geometry.location.lng,
       image: photoUrl(hit, "place"),
+      types: hit.types || [],
     };
   } catch (e) {
     console.error("resolveByName failed:", name, e.message);
@@ -86,7 +83,6 @@ const resolveByName = async (name, bias) => {
   }
 };
 
-/* ---- Aggregate all three sources into one list ---- */
 const gatherAttractions = async (lat, lng, cityName) => {
   const bias = { lat, lng };
 
@@ -98,7 +94,6 @@ const gatherAttractions = async (lat, lng, cityName) => {
 
   const google = googleLists.flat();
 
-  // Resolve curated + wiki names to coordinates via Google
   const curatedResolved = await Promise.all(
     curatedRaw.map(async (c) => {
       const r = await resolveByName(c.name, bias);
@@ -114,6 +109,7 @@ const gatherAttractions = async (lat, lng, cityName) => {
         image: r?.image || FALLBACK_IMG.place,
         source: "curated",
         category: c.category || "attraction",
+        types: r?.types || [],
       };
     })
   );
@@ -121,7 +117,7 @@ const gatherAttractions = async (lat, lng, cityName) => {
   const wikiResolved = await Promise.all(
     wikiRaw.map(async (w) => {
       const r = await resolveByName(w.name, bias);
-      if (!r) return null; // wiki names with no Google match are dropped (too noisy)
+      if (!r) return null;
       return {
         id: r.place_id,
         place_id: r.place_id,
@@ -134,6 +130,7 @@ const gatherAttractions = async (lat, lng, cityName) => {
         image: r.image,
         source: "wikipedia",
         category: w.category || "attraction",
+        types: r.types || [],
       };
     })
   );
