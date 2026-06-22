@@ -88,9 +88,7 @@ const PlacesSection = ({
 
   </div>
 
-  <button className="view-destinations-btn">
-    View All →
-  </button>
+  
 
 </div>
 
