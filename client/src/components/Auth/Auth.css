@@ -934,3 +934,64 @@ body {
   .trust-item { min-height: 64px; }
   .trust-item p { font-size: 8.5px; }
 }
+
+/* ════════════════════════════════════════════════
+   OTP VERIFICATION MODAL
+════════════════════════════════════════════════ */
+.otp-modal { max-width: 440px; }
+
+.otp-inputs {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+
+.otp-box {
+  width: 100%;
+  height: 56px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+}
+
+.otp-box:focus {
+  border-color: #4ade80;
+  background: rgba(34, 197, 94, 0.07);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+}
+
+.otp-resend-row {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.otp-resend-wait {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.otp-resend-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #4ade80;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.otp-resend-btn:hover { color: #86efac; text-decoration: underline; }
+
+@media (max-width: 380px) {
+  .otp-box { height: 48px; font-size: 19px; }
+  .otp-inputs { gap: 6px; }
+}
