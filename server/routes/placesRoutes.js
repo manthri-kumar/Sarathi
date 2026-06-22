@@ -2,117 +2,287 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 
-/* 🔥 FETCH PLACES */
-const fetchPlaces = async (lat, lng, type, keyword) => {
-  const res = await axios.get(
-    "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-    {
-      params: {
-        location: `${lat},${lng}`,
-        radius: 10000,
-        type,
-        keyword,
-        key: process.env.GOOGLE_API_KEY
-      }
-    }
-  );
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-  return res.data.results
-    .filter(p => p.rating >= 4.0 && p.user_ratings_total >= 20)
-    .map(p => {
+/* ======================================================
+   PLACE IMAGE
+====================================================== */
+const getPlaceImage = (place, category) => {
+  if (place.photos?.length > 0) {
+    const ref = place.photos[0].photo_reference;
 
-      let image;
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${GOOGLE_API_KEY}`;
+  }
 
-      if (p.photos?.length > 0) {
-        const ref = p.photos[0].photo_reference;
-        image = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${process.env.GOOGLE_API_KEY}`;
-      }
+  const fallbackImages = {
+    restaurant:
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
+    lodging:
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945",
+    place:
+      "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+  };
 
-      if (!image) {
-        image =
-          type === "restaurant"
-            ? "https://images.unsplash.com/photo-1504674900247-0877df9cc836"
-            : type === "lodging"
-            ? "https://images.unsplash.com/photo-1566073771259-6a8506099945"
-            : "https://images.unsplash.com/photo-1501785888041-af3ef285b470";
-      }
-
-      return {
-        name: p.name,
-        vicinity: p.vicinity,
-        rating: p.rating,
-        lat: p.geometry.location.lat,
-        lng: p.geometry.location.lng,
-        image
-      };
-    });
+  return fallbackImages[category] || fallbackImages.place;
 };
 
-/* 🔥 LOCATION NAME (FIXED + FALLBACK) */
+/* ======================================================
+   FETCH PLACES
+====================================================== */
+const fetchPlacesByCategory = async (
+  lat,
+  lng,
+  type,
+  keyword = ""
+) => {
+  try {
+    const response = await axios.get(
+      "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+      {
+        params: {
+          location: `${lat},${lng}`,
+          radius: 50000,
+          type,
+          keyword,
+          key: GOOGLE_API_KEY,
+        },
+      }
+    );
+
+    if (!response.data.results) return [];
+
+    return response.data.results
+      .filter(
+        (place) =>
+          place.rating >= 3.8 &&
+          (place.user_ratings_total || 0) >= 5
+      )
+      .map((place) => ({
+        place_id: place.place_id,
+        name: place.name,
+        vicinity: place.vicinity,
+        rating: place.rating || 0,
+        totalRatings: place.user_ratings_total || 0,
+        lat: place.geometry.location.lat,
+        lng: place.geometry.location.lng,
+        image: getPlaceImage(place, "place"),
+      }));
+  } catch (error) {
+    console.error(
+      `Failed fetching ${keyword || type}:`,
+      error.message
+    );
+    return [];
+  }
+};
+
+/* ======================================================
+   FETCH RESTAURANTS
+====================================================== */
+const fetchRestaurants = async (lat, lng) => {
+  try {
+    const response = await axios.get(
+      "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+      {
+        params: {
+          location: `${lat},${lng}`,
+          radius: 20000,
+          type: "restaurant",
+          key: GOOGLE_API_KEY,
+        },
+      }
+    );
+
+    return (response.data.results || [])
+      .filter(
+        (r) =>
+          r.rating >= 3.8 &&
+          (r.user_ratings_total || 0) >= 5
+      )
+      .map((r) => ({
+        name: r.name,
+        vicinity: r.vicinity,
+        rating: r.rating,
+        totalRatings: r.user_ratings_total || 0,
+        lat: r.geometry.location.lat,
+        lng: r.geometry.location.lng,
+        image: getPlaceImage(r, "restaurant"),
+      }))
+      .slice(0, 20);
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+/* ======================================================
+   FETCH HOTELS
+====================================================== */
+const fetchHotels = async (lat, lng) => {
+  try {
+    const response = await axios.get(
+      "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+      {
+        params: {
+          location: `${lat},${lng}`,
+          radius: 20000,
+          type: "lodging",
+          key: GOOGLE_API_KEY,
+        },
+      }
+    );
+
+    return (response.data.results || [])
+      .filter(
+        (h) =>
+          h.rating >= 3.8 &&
+          (h.user_ratings_total || 0) >= 5
+      )
+      .map((h) => ({
+        name: h.name,
+        vicinity: h.vicinity,
+        rating: h.rating,
+        totalRatings: h.user_ratings_total || 0,
+        lat: h.geometry.location.lat,
+        lng: h.geometry.location.lng,
+        image: getPlaceImage(h, "lodging"),
+      }))
+      .slice(0, 20);
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+/* ======================================================
+   LOCATION NAME
+====================================================== */
 const getLocationName = async (lat, lng) => {
   try {
-    const res = await axios.get(
+    const response = await axios.get(
       "https://maps.googleapis.com/maps/api/geocode/json",
       {
         params: {
           latlng: `${lat},${lng}`,
-          key: process.env.GOOGLE_API_KEY
-        }
+          key: GOOGLE_API_KEY,
+        },
       }
     );
 
-    console.log("🔥 GEO STATUS:", res.data.status);
-
-    if (res.data.status !== "OK") {
-      return "Nearby Area"; // fallback
+    if (
+      response.data.status !== "OK" ||
+      !response.data.results?.length
+    ) {
+      return "Nearby Area";
     }
 
-    const result = res.data.results[0];
-
-    if (!result) return "Nearby Area";
-
-    return result.formatted_address.split(",")[0];
-
+    return response.data.results[0].formatted_address.split(",")[0];
   } catch (err) {
-    console.log("❌ GEO ERROR:", err.message);
+    console.error("Geocode error:", err.message);
     return "Nearby Area";
   }
 };
 
-/* 🔥 MAIN ROUTE */
+/* ======================================================
+   MAIN EXPLORE ROUTE
+====================================================== */
 router.get("/", async (req, res) => {
   const { lat, lng } = req.query;
 
   if (!lat || !lng) {
-    return res.status(400).json({ error: "Missing coordinates" });
+    return res.status(400).json({
+      error: "Missing coordinates",
+    });
   }
 
   try {
-    const [places, restaurants, hotels, locationName] = await Promise.all([
-      fetchPlaces(lat, lng, "tourist_attraction", "tourist"),
-      fetchPlaces(lat, lng, "restaurant", "food"),
-      fetchPlaces(lat, lng, "lodging", "hotel"),
-      getLocationName(lat, lng)
+    const categories = [
+      { type: "tourist_attraction", keyword: "tourist attraction" },
+      { type: "tourist_attraction", keyword: "temple" },
+      { type: "tourist_attraction", keyword: "view point" },
+      { type: "tourist_attraction", keyword: "lake" },
+      { type: "tourist_attraction", keyword: "waterfall" },
+      { type: "tourist_attraction", keyword: "historical place" },
+      { type: "park", keyword: "park" },
+      { type: "museum", keyword: "museum" },
+    ];
+
+    const [
+      categoryResults,
+      restaurants,
+      hotels,
+      locationName,
+    ] = await Promise.all([
+      Promise.all(
+        categories.map((c) =>
+          fetchPlacesByCategory(
+            lat,
+            lng,
+            c.type,
+            c.keyword
+          )
+        )
+      ),
+      fetchRestaurants(lat, lng),
+      fetchHotels(lat, lng),
+      getLocationName(lat, lng),
     ]);
 
-    res.json({
+    let places = categoryResults.flat();
+
+    const uniquePlaces = new Map();
+
+    places.forEach((place) => {
+      const key = place.place_id || place.name.toLowerCase();
+
+      if (!uniquePlaces.has(key)) {
+        uniquePlaces.set(key, place);
+      }
+    });
+
+    places = Array.from(uniquePlaces.values());
+
+    places.sort((a, b) => {
+      const scoreA =
+        a.rating * Math.log10(a.totalRatings + 1);
+
+      const scoreB =
+        b.rating * Math.log10(b.totalRatings + 1);
+
+      return scoreB - scoreA;
+    });
+
+    places = places.slice(0, 30);
+
+    console.log(
+      `Location: ${locationName} | Places: ${places.length}`
+    );
+
+    return res.json({
+      locationName,
       places,
       restaurants,
       hotels,
-      locationName
     });
+  } catch (error) {
+    console.error("Places API Error:", error);
 
-  } catch (err) {
-    console.error("❌ SERVER ERROR:", err.message);
-    res.status(500).json({ error: "Failed to fetch data" });
+    return res.status(500).json({
+      error: "Failed to fetch places",
+    });
   }
 });
-/* 🔥 SEARCH BY CITY NAME */
+
+/* ======================================================
+   CITY SEARCH
+====================================================== */
 router.get("/search", async (req, res) => {
   const { city } = req.query;
 
   if (!city) {
-    return res.status(400).json({ error: "City required" });
+    return res.status(400).json({
+      error: "City required",
+    });
   }
 
   try {
@@ -120,40 +290,32 @@ router.get("/search", async (req, res) => {
       "https://maps.googleapis.com/maps/api/place/textsearch/json",
       {
         params: {
-          query: `tourist attractions in ${city}`,
-          key: process.env.GOOGLE_API_KEY,
+          query: `top tourist attractions in ${city}`,
+          key: GOOGLE_API_KEY,
         },
       }
     );
 
-    const places = response.data.results.map((p) => {
-      let image;
-
-      if (p.photos?.length > 0) {
-        const ref = p.photos[0].photo_reference;
-        image = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${process.env.GOOGLE_API_KEY}`;
-      }
-
-      if (!image) {
-        image =
-          "https://images.unsplash.com/photo-1501785888041-af3ef285b470";
-      }
-
-      return {
-        name: p.name,
-        address: p.formatted_address,
-        rating: p.rating,
-        lat: p.geometry.location.lat,
-        lng: p.geometry.location.lng,
-        image,
-      };
-    });
+    const places = (response.data.results || []).map(
+      (place) => ({
+        name: place.name,
+        address: place.formatted_address,
+        rating: place.rating || 0,
+        totalRatings:
+          place.user_ratings_total || 0,
+        lat: place.geometry.location.lat,
+        lng: place.geometry.location.lng,
+        image: getPlaceImage(place, "place"),
+      })
+    );
 
     res.json(places);
-
   } catch (err) {
-    console.error("❌ SEARCH ERROR:", err.message);
-    res.status(500).json({ error: "Failed to search places" });
+    console.error(err);
+
+    res.status(500).json({
+      error: "Failed to search places",
+    });
   }
 });
 
