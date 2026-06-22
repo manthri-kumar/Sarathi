@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const askGroq = require("./groqService.js");
+const askGroq = require("./askGroq");
 const T = require("./TransportService");
 const Train = require("./TrainService");
 const Planner = require("./TripPlannerService");
@@ -26,7 +26,7 @@ const QUESTION = {
 
 const clean = (s) => s.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ");
 
-/* ================= JSON HELPERS (Groq returns a string) ================= */
+/* ================= JSON HELPERS ================= */
 const stripControlTokens = (s) =>
   s.replace(/<\|[^>]*\|>/g, "").replace(/```json|```/g, "").trim();
 
@@ -72,7 +72,6 @@ const regexExtract = (msg = "") => {
   return out;
 };
 
-/* ================= SLOT EXTRACTION (Groq + regex fallback) ================= */
 const extractTripSlots = async (msg = "") => {
   const fallback = regexExtract(msg);
   try {
@@ -99,7 +98,7 @@ Message: "${msg}"`;
   }
 };
 
-/* ================= GENERAL TRAVEL Q&A (dual-mode B) ================= */
+/* ================= GENERAL TRAVEL Q&A ================= */
 const askAI = async (raw, contextCity) => {
   try {
     const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant. Answer the user's question helpfully and concisely in 2-4 sentences.${
@@ -115,7 +114,6 @@ User: "${raw}"`;
   }
 };
 
-/* ================= FOOD ================= */
 const getFoodFromAI = async (city) => {
   try {
     const prompt = `Respond with ONLY a JSON object shaped exactly as {"dishes":[{"name":"...","description":"..."}]} containing 6 famous local dishes from ${city}. No prose.`;
@@ -129,7 +127,41 @@ const getFoodFromAI = async (city) => {
   }
 };
 
-/* ================= DUAL-MODE CLASSIFIER ================= */
+/* ================= INTENT DETECTION (BUG 2/6) =================
+   Order matters: trip-start beats place/food/hotel, food_items beats
+   food, and nearby is the broad "places to visit" bucket. */
+const detectIntent = (msg = "") => {
+  const m = msg.toLowerCase().trim();
+
+  // 1) Explicit trip planning — must win over "places/visit" words
+  if (
+    /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway)\b/.test(m) ||
+    /\b(trip|tour|holiday|vacation|getaway)\b.*\b(to|from)\b/.test(m) ||
+    m.startsWith("plan ") || m === "plan trip"
+  ) return "trip";
+
+  // 2) Named local dishes (AI-generated cards) — beats generic "food"
+  if (/\b(local food|local dish|local dishes|famous food|famous dish|famous dishes|what to eat|dishes? (in|of|to try)|cuisine|specialit(y|ies)|street food)\b/.test(m))
+    return "food_items";
+
+  // 3) Restaurants / where to eat (Places cards)
+  if (/\b(restaurant|restaurants|where to eat|places to eat|food near|eateries|dhaba|cafe|cafes|dining)\b/.test(m))
+    return "food";
+  if (/\bfood\b/.test(m)) return "food";
+
+  // 4) Hotels / stays (Places cards)
+  if (/\b(hotel|hotels|stay|stays|lodge|lodging|resort|resorts|accommodation|where to stay|place to stay)\b/.test(m))
+    return "hotel";
+
+  // 5) Attractions / things to do / places to visit (Places cards)
+  if (/\b(places? to visit|place to visit|best places?|tourist (place|places|spot|spots|attraction|attractions)|must[\s-]?visit|attractions?|things to do|sightseeing|sight seeing|visit in|explore|famous places?|landmarks?|temples? (near|in|to visit))\b/.test(m))
+    return "nearby";
+  if (/\bnear me\b/.test(m) || /\bnearby\b/.test(m)) return "nearby";
+
+  return "general";
+};
+
+/* ================= DUAL-MODE STEP CLASSIFIER ================= */
 const looksLikeStepAnswer = (step, raw) => {
   const lower = raw.toLowerCase().trim();
   if (lower.endsWith("?")) return false;
@@ -160,7 +192,30 @@ const looksLikeStepAnswer = (step, raw) => {
   }
 };
 
-/* ================= NEARBY ================= */
+/* ================= TRIP-ACTIVE VALIDATION (BUG 3/4) =================
+   A trip is active ONLY if the session is genuinely mid-planning:
+   step is a planning state AND real trip data has been collected.
+   An empty destination ("") or a stale step alone is NOT active. */
+const isTripActive = (s) => {
+  if (!s || !s.trip) return false;
+  if (!ACTIVE.has(s.step)) return false;
+
+  const t = s.trip;
+  const hasRealData =
+    (typeof t.source === "string" && t.source.trim() !== "") ||
+    (typeof t.destination === "string" && t.destination.trim() !== "") ||
+    t.travellers != null ||
+    t.days != null ||
+    t.budget !== undefined;
+
+  // step "source" is the very first prompt — valid even before data exists,
+  // but ONLY if we're truly at the start (no later state leaked in).
+  if (s.step === "source") return true;
+
+  return hasRealData;
+};
+
+/* ================= NEARBY / PLACES ================= */
 const fetchNearby = async (lat, lng, keyword, city) => {
   try {
     if (lat && lng) {
@@ -174,20 +229,17 @@ const fetchNearby = async (lat, lng, keyword, city) => {
       return res.data.results.slice(0, 6).map(Planner.formatPlace);
     }
     return [];
-  } catch { return []; }
+  } catch (e) { console.log("fetchNearby failed:", e.message); return []; }
 };
 
-const detectIntent = (msg = "") => {
-  msg = msg.toLowerCase();
-  if (/food item|what to eat|dish|famous food/.test(msg)) return "food_items";
-  if (msg.includes("food")) return "food";
-  if (msg.includes("near")) return "nearby";
-  if (msg.includes("hotel")) return "hotel";
-  if (msg.includes("trip") || msg.startsWith("plan")) return "trip";
-  return "general";
+/* Extract a place name from "...in <place>" / "...at <place>" for text search */
+const extractPlaceFromQuery = (msg = "") => {
+  const m = msg.toLowerCase();
+  const match = m.match(/\b(?:in|at|near|around|to)\s+([a-z\s]+?)(?:\s*\?|$)/);
+  return match ? clean(match[1]) : null;
 };
 
-/* ================= FLOW CONTROL ================= */
+/* ================= FLOW HELPERS ================= */
 const nextStep = (trip) => {
   if (!trip.source) return "source";
   if (!trip.travellers) return "travellers";
@@ -213,7 +265,7 @@ module.exports = {
   ACTIVE, QUESTION, clean,
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI,
-  fetchNearby, getFoodFromAI, detectIntent,
-  nextStep, ensureRoute,
+  fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
+  isTripActive, nextStep, ensureRoute,
   T, Train, Planner,
 };

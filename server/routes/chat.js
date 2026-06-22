@@ -22,7 +22,9 @@ const advance = async (s, res, prefix = "") => {
   }
   if (s.step === "summary") {
     await saveSession(s);
-    return res.json(C.Planner.buildSummary(s.trip));
+    const payload = C.Planner.buildSummary(s.trip);
+    console.log("[RESPONSE_TYPE]", payload.type);
+    return res.json(payload);
   }
   await saveSession(s);
   return res.json({ reply: prefix + C.QUESTION[s.step] });
@@ -31,7 +33,12 @@ const advance = async (s, res, prefix = "") => {
 const finalizeTransport = async (s, res, details) => {
   s.trip.transportDetails = details;
   s.step = C.nextStep(s.trip);
-  if (s.step === "summary") { await saveSession(s); return res.json(C.Planner.buildSummary(s.trip)); }
+  if (s.step === "summary") {
+    await saveSession(s);
+    const payload = C.Planner.buildSummary(s.trip);
+    console.log("[RESPONSE_TYPE]", payload.type);
+    return res.json(payload);
+  }
   await saveSession(s);
   return res.json({ reply: C.QUESTION[s.step] });
 };
@@ -43,7 +50,7 @@ router.post("/", async (req, res) => {
     const lower = raw.toLowerCase();
     const s = await loadSession(userId);
 
-    /* ===== EDIT COMMANDS ===== */
+    /* ===== EDIT / CONTROL COMMANDS (only meaningful with a real trip) ===== */
     if (lower === "update budget" && s.trip?.destination) {
       s.trip.budget = undefined; s.step = "budget"; await saveSession(s);
       return res.json({ reply: "💰 Sure — what's your new budget?\n\nExamples:\n₹15000\n₹20000\n₹30000" });
@@ -56,6 +63,7 @@ router.post("/", async (req, res) => {
       const payload = await C.Planner.buildItinerary(s.trip);
       s.step = payload.type === "itinerary" ? "completed" : "blocked";
       await saveSession(s);
+      console.log("[RESPONSE_TYPE]", payload.type);
       return res.json(payload);
     }
     if (lower.startsWith("edit ") && s.trip?.destination) {
@@ -77,55 +85,99 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const inFlow = s.trip?.destination !== undefined && C.ACTIVE.has(s.step);
+    /* ===== FLOW DETECTION (BUG 3/4) ===== */
+    const inFlow = C.isTripActive(s);
+    const intent = C.detectIntent(raw);
 
-    /* ===== DUAL-MODE: off-topic mid-flow ===== */
-    if (inFlow && !C.looksLikeStepAnswer(s.step, raw)) {
+    console.log("[INTENT]", raw, "=>", intent);
+    console.log("[FLOW]", {
+      step: s.step,
+      inFlow,
+      destination: s.trip?.destination,
+      source: s.trip?.source,
+    });
+
+    /* ===== STALE-SESSION SAFETY (BUG 4) =====
+       Not really mid-planning, but step is dirty → reset to IDLE.
+       Trip subdocument is preserved (not deleted). */
+    if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
+      s.step = null;
+      await saveSession(s);
+      console.log("[FLOW] stale planning step cleared → IDLE");
+    }
+
+    /* ===== EXPLICIT TRIP START (always allowed, even from IDLE) ===== */
+    if (!inFlow && intent === "trip") {
+      const slots = await C.extractTripSlots(raw);
+      s.trip = {
+        source: slots.source || (lat && lng ? city : null),
+        destination: slots.destination || "",
+        travellers: slots.travellers || null,
+        days: slots.days || null,
+        budget: slots.budget ?? undefined,
+        tripType: slots.tripType || "general",
+        transport: "", hotelType: "",
+        distanceKm: null, travelTime: null,
+        transportDetails: {}, carFuelType: null,
+      };
+      const ack = slots.destination
+        ? `Great choice — ${slots.destination} is a wonderful pick! Let's sort out the details.\n\n`
+        : "Let's plan your trip ✈️\n\n";
+      return advance(s, res, ack);
+    }
+
+    /* ===== NOT IN FLOW → places / food / hotel / general ===== */
+    if (!inFlow) {
+      if (intent === "food_items") {
+        const place = C.extractPlaceFromQuery(raw) || city || "your city";
+        const dishes = await C.getFoodFromAI(place);
+        if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
+        const payload = { type: "places", data: dishes.map((d) => ({
+          name: d.name, description: d.description, rating: 4.5, bestTime: "Anytime 🍽️",
+          image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}` })) };
+        console.log("[RESPONSE_TYPE]", payload.type);
+        return res.json(payload);
+      }
+
+      if (intent === "food") {
+        const placeCity = C.extractPlaceFromQuery(raw) || city;
+        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "restaurant", placeCity) };
+        console.log("[RESPONSE_TYPE]", payload.type);
+        return res.json(payload);
+      }
+
+      if (intent === "nearby") {
+        const placeCity = C.extractPlaceFromQuery(raw) || city;
+        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "tourist attraction", placeCity) };
+        console.log("[RESPONSE_TYPE]", payload.type);
+        return res.json(payload);
+      }
+
+      if (intent === "hotel") {
+        const placeCity = C.extractPlaceFromQuery(raw) || city;
+        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "hotel", placeCity) };
+        console.log("[RESPONSE_TYPE]", payload.type);
+        return res.json(payload);
+      }
+
+      // general → natural AI answer (dual-mode B). NEVER a trip prompt.
+      const reply = await C.askAI(raw, city);
+      console.log("[RESPONSE_TYPE]", "text");
+      return res.json({ reply });
+    }
+
+    /* ===== IN FLOW → dual-mode off-topic guard ===== */
+    if (!C.looksLikeStepAnswer(s.step, raw)) {
+      // Mid-planning but user asked something off-topic → answer, keep state.
       const answer = await C.askAI(raw, city);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
         : `\n\n${C.QUESTION[s.step]}`;
+      console.log("[RESPONSE_TYPE]", "text(dual-mode)");
       return res.json({ reply: `${answer}${reprompt}` });
     }
 
-    /* ===== Not mid-flow → intent routing / general chat ===== */
-    if (!inFlow) {
-      const intent = C.detectIntent(raw);
-
-      if (intent === "food_items") {
-        const dishes = await C.getFoodFromAI(city || "your city");
-        if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
-        return res.json({ type: "places", data: dishes.map((d) => ({
-          name: d.name, description: d.description, rating: 4.5, bestTime: "Anytime 🍽️",
-          image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}` })) });
-      }
-      if (intent === "food")   return res.json({ type: "places", data: await C.fetchNearby(lat, lng, "restaurant", city) });
-      if (intent === "nearby") return res.json({ type: "places", data: await C.fetchNearby(lat, lng, "tourist attraction", city) });
-      if (intent === "hotel")  return res.json({ type: "places", data: await C.fetchNearby(lat, lng, "hotel", city) });
-
-      if (intent === "trip") {
-        const slots = await C.extractTripSlots(raw);
-        s.trip = {
-          source: slots.source || (lat && lng ? city : null),
-          destination: slots.destination || "",
-          travellers: slots.travellers || null,
-          days: slots.days || null,
-          budget: slots.budget ?? undefined,
-          tripType: slots.tripType || "general",
-          transport: "", hotelType: "",
-          distanceKm: null, travelTime: null,
-          transportDetails: {}, carFuelType: null,
-        };
-        const ack = slots.destination
-          ? `Great choice — ${slots.destination} is a wonderful pick! Let's sort out the details.\n\n`
-          : "Let's plan your trip ✈️\n\n";
-        return advance(s, res, ack);
-      }
-
-      return res.json({ reply: await C.askAI(raw, city) });
-    }
-
-    /* ===== BASIC STEPS ===== */
+    /* ===== IN FLOW → step handlers ===== */
     if (s.step === "source") {
       s.trip.source = ["current", "use current", "📍"].some((x) => lower.includes(x)) && city ? city : C.clean(raw);
       return advance(s, res, "Got it 👍\n\n");
@@ -155,7 +207,6 @@ router.post("/", async (req, res) => {
       return advance(s, res, `Lovely — ${s.trip.destination} it is.\n\n`);
     }
 
-    /* ===== TRANSPORT ===== */
     if (s.step === "transport") {
       const m = { "1": "train", "2": "car", "3": "bus", "4": "flight" };
       const t = m[raw] || ["train", "car", "bus", "flight"].find((x) => lower.includes(x));
@@ -212,7 +263,6 @@ router.post("/", async (req, res) => {
       return finalizeTransport(s, res, { type: "car", option: s.trip.carFuelType.toUpperCase(), klass: null, fare: b.total, source: "Estimated", breakdown: b });
     }
 
-    /* ===== HOTEL ===== */
     if (s.step === "hotel") {
       let h;
       if (["no", "skip", "no hotel", "none"].includes(lower)) h = "none";
@@ -225,7 +275,8 @@ router.post("/", async (req, res) => {
       return res.json({ reply: "Tap Confirm to generate your itinerary, or an Edit button to change a detail." });
     }
 
-    return res.json({ reply: await C.askAI(raw, city) });
+    const reply = await C.askAI(raw, city);
+    return res.json({ reply });
   } catch (err) {
     console.error("CHAT ERROR:", err);
     return res.status(500).json({ reply: "Something went wrong ❌" });
