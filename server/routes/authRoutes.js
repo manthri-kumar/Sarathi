@@ -1,12 +1,23 @@
 const express = require("express");
 const router = express.Router();
 
-const { signup, login, googleLogin } = require("../controllers/authController");
+const {
+  signup,         // legacy, kept for safety
+  login,
+  googleLogin,
+  sendOtp,
+  resendOtp,
+  verifyOtp,
+} = require("../controllers/authController");
 
-router.post("/signup", signup);
+// New OTP-gated signup flow
+router.post("/send-otp", sendOtp);
+router.post("/verify-otp", verifyOtp);
+router.post("/resend-otp", resendOtp);
+
+// Unchanged
+router.post("/signup", signup); // legacy direct signup (still available)
 router.post("/login", login);
-router.post("/google", googleLogin); // 🔥 Google route
-
-
+router.post("/google", googleLogin);
 
 module.exports = router;
