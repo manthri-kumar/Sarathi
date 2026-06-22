@@ -5,7 +5,6 @@ import {
   Search,
   Bell,
   Languages,
-  Mail,
   User,
   Luggage,
   Heart,
@@ -16,7 +15,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import InboxDropdown from "./InboxDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { useExploreSearchContext } from "../../pages/ExploreSearchContext";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -37,7 +35,6 @@ const Navbar = ({ toggleSidebar }) => {
   const [activeIdx, setActiveIdx] = useState(-1);
   const [showLanguages, setShowLanguages] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] =
     useState(false);
   const [search, setSearch] = useState("");
@@ -232,22 +229,7 @@ const Navbar = ({ toggleSidebar }) => {
           </div>
 
           {/* Mail Icon */}
-          <div className="mail-wrapper">
-            <button
-              className="mail-icon"
-              onClick={() => setShowInboxDropdown(!showInboxDropdown)}
-              title="Messages"
-              aria-label="Open AI Inbox"
-            >
-              <Mail size={18} />
-              <span className="notification-dot"></span>
-            </button>
-
-            <InboxDropdown
-              isOpen={showInboxDropdown}
-              onClose={() => setShowInboxDropdown(false)}
-            />
-          </div>
+       
 
           {/* Notification Bell — live unread badge */}
           <div className="bell-wrapper">
@@ -408,22 +390,6 @@ const Navbar = ({ toggleSidebar }) => {
             )}
           </div>
 
-          <div className="mail-wrapper">
-            <button
-              className="mail-icon"
-              onClick={() => setShowInboxDropdown(!showInboxDropdown)}
-              title="Messages"
-              aria-label="Open AI Inbox"
-            >
-              <Mail size={18} />
-              <span className="notification-dot"></span>
-            </button>
-
-            <InboxDropdown
-              isOpen={showInboxDropdown}
-              onClose={() => setShowInboxDropdown(false)}
-            />
-          </div>
 
           {/* Mobile Bell — live unread badge */}
           <div className="bell-wrapper">
