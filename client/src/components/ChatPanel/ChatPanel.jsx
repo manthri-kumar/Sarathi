@@ -3,33 +3,24 @@ import "./ChatPanel.css";
 import MessageFormatter from "./MessageFormatter";
 
 const API_BASE =
-  process.env.REACT_APP_API_URL || "https://sarathi-backend-7u0y.onrender.com";
-
-/* Smart action chips shown after a general AI answer. */
-const ACTION_CHIPS = [
-  { label: "🌤 Weather", send: "what's the weather like there" },
-  { label: "📍 Nearby Places", send: "places near me" },
-  { label: "🍴 Food", send: "food near me" },
-  { label: "🏨 Hotels", send: "hotels near me" },
-  { label: "🚗 Transport", send: "how to travel there" },
-];
-
-const heroImage = (dest) =>
-  `https://source.unsplash.com/featured/600x300/?${encodeURIComponent((dest || "india travel") + ",landmark,travel")}`;
+  process.env.REACT_APP_API_URL ||
+  "https://sarathi-backend-7u0y.onrender.com";
 
 const ChatPanel = ({ closeChat, templeContext = null }) => {
   const isTempleMode = !!templeContext;
 
   const getInitialMessage = () =>
     isTempleMode
-      ? { text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`, sender: "bot" }
+      ? {
+          text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`,
+          sender: "bot",
+        }
       : { text: "Hi 👋 I'm Sarathi AI. Ask me anything!", sender: "bot" };
 
   const [messages, setMessages] = useState([getInitialMessage()]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
-  const [openBreakdown, setOpenBreakdown] = useState({});
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -59,117 +50,191 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     if (!msg || typing) return;
 
     setMessages((prev) => {
-      if (prev.filter((m) => m.sender === "user").length === 0) setShowQuickActions(false);
+      if (prev.filter((m) => m.sender === "user").length === 0) {
+        setShowQuickActions(false);
+      }
       return [...prev, { text: msg, sender: "user" }];
     });
     setInput("");
     setTyping(true);
 
     try {
-      const endpoint = isTempleMode ? `${API_BASE}/api/temples/chat` : `${API_BASE}/api/chat`;
+      const endpoint = isTempleMode
+        ? `${API_BASE}/api/temples/chat`
+        : `${API_BASE}/api/chat`;
+
       const payload = isTempleMode
         ? {
-            message: msg, templeName: templeContext.name, address: templeContext.address || "",
-            rating: templeContext.rating || null, openNow: templeContext.openNow ?? null,
-            deity: templeContext.deity || null, enriched: templeContext.enriched || null,
+            message: msg,
+            templeName: templeContext.name,
+            address: templeContext.address || "",
+            rating: templeContext.rating || null,
+            openNow: templeContext.openNow ?? null,
+            deity: templeContext.deity || null,
+            enriched: templeContext.enriched || null,
           }
         : {
             message: msg,
             userId: JSON.parse(localStorage.getItem("user"))?._id || "user1",
-            lat: localStorage.getItem("lat"), lng: localStorage.getItem("lng"), city: localStorage.getItem("city"),
+            lat: localStorage.getItem("lat"),
+            lng: localStorage.getItem("lng"),
+            city: localStorage.getItem("city"),
           };
 
+      console.log("[CHAT] →", endpoint, payload);
+
       const res = await fetch(endpoint, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
+      console.log("[CHAT] HTTP", res.status);
+
       let data;
-      try { data = await res.json(); }
-      catch { throw new Error(`Server returned a non-JSON response (HTTP ${res.status}). The backend may be starting up — please try again in a moment.`); }
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(
+          `Server returned a non-JSON response (HTTP ${res.status}). The backend may be starting up — please try again in a moment.`
+        );
+      }
 
-      if (!res.ok) throw new Error(data?.error || `Server error (HTTP ${res.status}). Please try again.`);
+      if (!res.ok) {
+        throw new Error(
+          data?.error || `Server error (HTTP ${res.status}). Please try again.`
+        );
+      }
 
+      console.log("[CHAT] ✓ Reply:", data.reply?.substring(0, 80));
       console.log("[MESSAGE TYPE]", data.type);
       setTyping(false);
 
       if (isTempleMode) {
-        setMessages((prev) => [...prev, { text: data.reply || "I couldn't retrieve a response. Please try again.", sender: "bot" }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: data.reply || "I couldn't retrieve a response. Please try again.",
+            sender: "bot",
+          },
+        ]);
       } else {
-        // attach action chips only to plain text answers (not cards)
-        const isPlainAnswer = !data.type && data.reply;
-        setMessages((prev) => [...prev, { ...data, sender: "bot", text: data.reply || "", showChips: isPlainAnswer }]);
+        setMessages((prev) => [
+          ...prev,
+          { ...data, sender: "bot", text: data.reply || "" },
+        ]);
       }
     } catch (err) {
+      console.error("[CHAT] ✗ Error:", err.message);
       setTyping(false);
+
       let userFacingError = err.message;
-      if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("ECONNREFUSED"))
-        userFacingError = "Unable to reach the server. Please check your connection or try again in a moment.";
-      else if (err.message.includes("503") || err.message.includes("502"))
-        userFacingError = "The AI service is temporarily unavailable. Please try again shortly.";
-      else if (err.message.includes("429"))
-        userFacingError = "Too many requests — the AI is busy. Please wait a few seconds and try again.";
-      setMessages((prev) => [...prev, { text: userFacingError, sender: "bot", isError: true }]);
+      if (
+        err.message.includes("Failed to fetch") ||
+        err.message.includes("NetworkError") ||
+        err.message.includes("ECONNREFUSED")
+      ) {
+        userFacingError =
+          "Unable to reach the server. Please check your connection or try again in a moment.";
+      } else if (err.message.includes("503") || err.message.includes("502")) {
+        userFacingError =
+          "The AI service is temporarily unavailable. Please try again shortly.";
+      } else if (err.message.includes("429")) {
+        userFacingError =
+          "Too many requests — the AI is busy. Please wait a few seconds and try again.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { text: userFacingError, sender: "bot", isError: true },
+      ]);
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   const templeSuggestions = [
-    "What is special about this temple?", "What are the darshan timings?",
-    "What festivals are celebrated here?", "Who is the presiding deity?", "How to reach this temple?",
+    "What is special about this temple?",
+    "What are the darshan timings?",
+    "What festivals are celebrated here?",
+    "Who is the presiding deity?",
+    "How to reach this temple?",
   ];
-
-  const transportEmoji = (t) => ({ car: "🚗", bus: "🚌", train: "🚆", flight: "✈️" }[t] || "🚍");
 
   return (
     <div className="chat-panel">
-      {/* HEADER */}
+
+      {/* ── HEADER ── */}
       <div className="chat-header">
         <div className="chat-header-left">
-          <span className="chat-header-avatar">{isTempleMode ? "🛕" : "🤖"}</span>
+          <span className="chat-header-avatar">
+            {isTempleMode ? "🛕" : "🤖"}
+          </span>
           <div className="chat-header-info">
-            <h3 className="chat-header-title">{isTempleMode ? "Temple Guide" : "Sarathi AI"}</h3>
+            <h3 className="chat-header-title">
+              {isTempleMode ? "Temple Guide" : "Sarathi AI"}
+            </h3>
             {isTempleMode && (
               <span className="chat-header-subtitle">
-                {templeContext.name.length > 34 ? templeContext.name.substring(0, 34) + "…" : templeContext.name}
+                {templeContext.name.length > 34
+                  ? templeContext.name.substring(0, 34) + "…"
+                  : templeContext.name}
               </span>
             )}
           </div>
         </div>
-        <button className="chat-close-btn" onClick={closeChat} aria-label="Close">✕</button>
+        <button className="chat-close-btn" onClick={closeChat} aria-label="Close">
+          ✕
+        </button>
       </div>
 
-      {/* BODY */}
+      {/* ── BODY ── */}
       <div className="chat-body">
         {messages.map((msg, i) => (
           <div key={i} className={`chat-row ${msg.sender}`}>
-            {msg.sender === "bot" && <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>}
+
+            {msg.sender === "bot" && (
+              <div className="chat-avatar">
+                {isTempleMode ? "🛕" : "✦"}
+              </div>
+            )}
 
             {(!msg.type || msg.type === undefined) && msg.text && (
-              <div className="chat-bubble-wrap">
-                <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
-                  {msg.isError || msg.sender === "user" ? (
-                    msg.text.split("\n").map((line, j) => (
-                      <React.Fragment key={j}>{line}{j < msg.text.split("\n").length - 1 && <br />}</React.Fragment>
-                    ))
-                  ) : (
-                    <MessageFormatter text={msg.text} />
-                  )}
-                  {msg.isError && (
-                    <button className="chat-retry-btn" onClick={() => {
-                      const lastUser = [...messages].reverse().find((m) => m.sender === "user");
+              <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
+                {msg.isError ? (
+                  msg.text.split("\n").map((line, j) => (
+                    <React.Fragment key={j}>
+                      {line}
+                      {j < msg.text.split("\n").length - 1 && <br />}
+                    </React.Fragment>
+                  ))
+                ) : msg.sender === "bot" ? (
+                  <MessageFormatter text={msg.text} />
+                ) : (
+                  msg.text.split("\n").map((line, j) => (
+                    <React.Fragment key={j}>
+                      {line}
+                      {j < msg.text.split("\n").length - 1 && <br />}
+                    </React.Fragment>
+                  ))
+                )}
+                {msg.isError && (
+                  <button
+                    className="chat-retry-btn"
+                    onClick={() => {
+                      const lastUser = [...messages].reverse().find(
+                        (m) => m.sender === "user"
+                      );
                       if (lastUser) sendMessage(lastUser.text);
-                    }}>↺ Retry</button>
-                  )}
-                </div>
-                {msg.showChips && !isTempleMode && (
-                  <div className="action-chips">
-                    {ACTION_CHIPS.map((c) => (
-                      <button key={c.label} className="action-chip" onClick={() => sendMessage(c.send)}>{c.label}</button>
-                    ))}
-                  </div>
+                    }}
+                  >
+                    ↺ Retry
+                  </button>
                 )}
               </div>
             )}
@@ -191,79 +256,109 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
-            {/* ── REDESIGNED TRIP SUMMARY ── */}
-            {msg.type === "tripSummary" && (() => {
-              const sm = msg.summary;
-              const td = sm.transportDetails || {};
-              const open = !!openBreakdown[i];
-              return (
-                <div className="trip-card">
-                  <div className="trip-hero" style={{ backgroundImage: `url(${heroImage(sm.to)})` }}>
-                    <div className="trip-hero-overlay">
-                      <h3 className="trip-hero-title">{sm.to}</h3>
-                      {sm.tagline && <p className="trip-hero-sub">{sm.tagline}</p>}
-                      {sm.rating != null && <div className="trip-hero-stars">{"⭐".repeat(Math.round(sm.rating))}</div>}
-                    </div>
-                  </div>
-
-                  <div className="trip-route">
-                    <span>📍 {sm.from} → {sm.to}</span>
-                    {td.fare != null && <span>{transportEmoji(sm.transport)} {td.option}{td.klass ? ` · ${td.klass}` : ""}</span>}
-                  </div>
-
-                  <div className="trip-quickfacts">
-                    {sm.distanceKm && <div className="qf"><span>📏</span><strong>{sm.distanceKm} km</strong></div>}
-                    {sm.travelTime && <div className="qf"><span>⏱</span><strong>{sm.travelTime}</strong></div>}
-                    <div className="qf"><span>👥</span><strong>{sm.travellers}</strong></div>
-                    <div className="qf"><span>📅</span><strong>{sm.days}d</strong></div>
-                  </div>
-
-                  {Array.isArray(sm.insights) && sm.insights.length > 0 && (
-                    <div className="trip-insights">
-                      {sm.insights.map((ins, k) => <span key={k} className="insight-badge">{ins}</span>)}
-                    </div>
-                  )}
-
-                  <div className="trip-budget">
-                    <span>💰 Estimated Budget</span>
-                    <strong>₹{sm.costs.total.toLocaleString()}</strong>
-                  </div>
-                  {sm.remaining != null && (
-                    <div className="trip-remaining" style={{ color: sm.remaining < 0 ? "#f87171" : "#22c55e" }}>
-                      {sm.remaining < 0 ? "Over budget by " : "Remaining "} ₹{Math.abs(sm.remaining).toLocaleString()}
-                    </div>
-                  )}
-
-                  <button className="trip-breakdown-toggle" onClick={() => setOpenBreakdown((o) => ({ ...o, [i]: !o[i] }))}>
-                    {open ? "▲ Hide cost breakdown" : "▼ View cost breakdown"}
-                  </button>
-                  {open && (
-                    <div className="trip-breakdown">
-                      <div className="bd-row"><span>🚕 Transport (×{sm.travellers})</span><span>₹{sm.costs.transport.toLocaleString()}</span></div>
-                      <div className="bd-row"><span>🏨 Hotel</span><span>₹{sm.costs.hotel.toLocaleString()}</span></div>
-                      <div className="bd-row"><span>🍴 Food</span><span>₹{sm.costs.food.toLocaleString()}</span></div>
-                      <div className="bd-row"><span>🎟 Activities</span><span>₹{sm.costs.activities.toLocaleString()}</span></div>
-                      {td.breakdown && (
-                        <>
-                          {td.breakdown.fuelNeeded != null && <div className="bd-row sub"><span>Fuel</span><span>{td.breakdown.fuelNeeded} {td.breakdown.fuelUnit} · ₹{td.breakdown.fuelCost.toLocaleString()}</span></div>}
-                          <div className="bd-row sub"><span>Toll (est.)</span><span>₹{td.breakdown.toll}</span></div>
-                          <div className="bd-row sub"><span>Parking (est.)</span><span>₹{td.breakdown.parking}</span></div>
-                        </>
-                      )}
-                      {td.fare != null && <div className="bd-row sub"><span>Fare source</span><span className="fare-source">{td.source}{sm.transport === "train" ? " · live coming next" : ""}</span></div>}
-                    </div>
-                  )}
-
-                  <button className="summary-confirm" onClick={() => sendMessage("confirm trip")}>✅ Confirm &amp; Generate Itinerary</button>
-
-                  <div className="trip-edit-chips">
-                    {["budget", "days", "travellers", "transport", "hotel", "destination"].map((f) => (
-                      <button key={f} onClick={() => sendMessage(`edit ${f}`)}>✏️ {f.charAt(0).toUpperCase() + f.slice(1)}</button>
-                    ))}
-                  </div>
+            {/* ── TRIP SUMMARY ── */}
+            {msg.type === "tripSummary" && (
+              <div className="trip-summary-card">
+                <div className="summary-head">
+                  <span>📋 Trip Summary</span>
+                  <strong>₹{msg.summary.costs.total.toLocaleString()}</strong>
                 </div>
-              );
-            })()}
+
+                <div className="summary-grid">
+                  {[
+                    ["From", msg.summary.from],
+                    ["To", msg.summary.to],
+                    ["Travelers", msg.summary.travellers],
+                    ["Days", msg.summary.days],
+                    ["Hotel", msg.summary.hotelType],
+                    ...(msg.summary.distanceKm ? [["Distance", `${msg.summary.distanceKm} km`]] : []),
+                    ...(msg.summary.travelTime ? [["Travel time", msg.summary.travelTime]] : []),
+                  ].map(([k, v]) => (
+                    <div key={k} className="summary-row">
+                      <span>{k}</span>
+                      <span>{v}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {msg.summary.transportDetails?.fare && (
+                  <div className="summary-costs">
+                    <div className="summary-row">
+                      <span>🚍 Transport</span>
+                      <span style={{ textTransform: "capitalize" }}>{msg.summary.transport}</span>
+                    </div>
+                    <div className="summary-row">
+                      <span>Option</span>
+                      <span>
+                        {msg.summary.transportDetails.option}
+                        {msg.summary.transportDetails.klass ? ` · ${msg.summary.transportDetails.klass}` : ""}
+                      </span>
+                    </div>
+                    <div className="summary-row">
+                      <span>Fare</span>
+                      <span>₹{msg.summary.transportDetails.fare.toLocaleString()}/person</span>
+                    </div>
+                    <div className="summary-row">
+                      <span>Fare source</span>
+                      <span className="fare-source">
+                        {msg.summary.transportDetails.source}
+                        {msg.summary.transport === "train" ? " · live coming next" : ""}
+                      </span>
+                    </div>
+                    {msg.summary.transportDetails.breakdown && (
+                      <>
+                        {msg.summary.transportDetails.breakdown.fuelNeeded != null && (
+                          <div className="summary-row">
+                            <span>Fuel needed</span>
+                            <span>
+                              {msg.summary.transportDetails.breakdown.fuelNeeded}{" "}
+                              {msg.summary.transportDetails.breakdown.fuelUnit}
+                            </span>
+                          </div>
+                        )}
+                        <div className="summary-row">
+                          <span>Fuel cost</span>
+                          <span>₹{msg.summary.transportDetails.breakdown.fuelCost.toLocaleString()}</span>
+                        </div>
+                        <div className="summary-row"><span>Toll (est.)</span><span>₹{msg.summary.transportDetails.breakdown.toll}</span></div>
+                        <div className="summary-row"><span>Parking (est.)</span><span>₹{msg.summary.transportDetails.breakdown.parking}</span></div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <div className="summary-costs">
+                  <div className="summary-row">
+                    <span>🚕 Transport (×{msg.summary.travellers})</span>
+                    <span>₹{msg.summary.costs.transport.toLocaleString()}</span>
+                  </div>
+                  <div className="summary-row"><span>🏨 Hotel</span><span>₹{msg.summary.costs.hotel.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>🍴 Food</span><span>₹{msg.summary.costs.food.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>🎟 Activities</span><span>₹{msg.summary.costs.activities.toLocaleString()}</span></div>
+                  {msg.summary.remaining != null && (
+                    <div className="summary-row">
+                      <span>💰 Remaining</span>
+                      <span style={{ color: msg.summary.remaining < 0 ? "#f87171" : "#22c55e" }}>
+                        ₹{msg.summary.remaining.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <button className="summary-confirm" onClick={() => sendMessage("confirm trip")}>
+                  ✅ Confirm &amp; Generate Itinerary
+                </button>
+
+                <div className="summary-edits">
+                  <button onClick={() => sendMessage("edit budget")}>Budget</button>
+                  <button onClick={() => sendMessage("edit days")}>Days</button>
+                  <button onClick={() => sendMessage("edit travellers")}>Travelers</button>
+                  <button onClick={() => sendMessage("edit transport")}>Transport</button>
+                  <button onClick={() => sendMessage("edit hotel")}>Hotel</button>
+                  <button onClick={() => sendMessage("edit destination")}>Destination</button>
+                </div>
+              </div>
+            )}
 
             {msg.type === "itinerary" && (
               <div className="itinerary-box">
@@ -274,20 +369,39 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                     <div className="budget-row"><span>Travel time</span><span>{msg.route.duration}</span></div>
                   </div>
                 )}
+
                 {msg.transportDetails?.fare && (
                   <div className="budget-card">
                     <div className="budget-row">
                       <span style={{ textTransform: "capitalize" }}>🚍 {msg.transportDetails.type}</span>
-                      <span>{msg.transportDetails.option}{msg.transportDetails.klass ? ` · ${msg.transportDetails.klass}` : ""}</span>
+                      <span>
+                        {msg.transportDetails.option}
+                        {msg.transportDetails.klass ? ` · ${msg.transportDetails.klass}` : ""}
+                      </span>
                     </div>
-                    <div className="budget-row"><span>Fare · {msg.transportDetails.source}</span><span>₹{msg.transportDetails.fare.toLocaleString()}/person</span></div>
+                    <div className="budget-row">
+                      <span>Fare · {msg.transportDetails.source}</span>
+                      <span>₹{msg.transportDetails.fare.toLocaleString()}/person</span>
+                    </div>
                   </div>
                 )}
+
                 {msg.budget && (
                   <div className="budget-card">
-                    <div className="budget-total"><span>Total Budget</span><strong>₹{msg.budget.total.toLocaleString()}</strong></div>
-                    {[["🏨 Hotel", msg.budget.hotel], ["🍴 Food", msg.budget.food], ["🚕 Transport", msg.budget.transport], ["🎟 Activities", msg.budget.activities]].map(([label, val]) => (
-                      <div key={label} className="budget-row"><span>{label}</span><span>₹{val?.toLocaleString()}</span></div>
+                    <div className="budget-total">
+                      <span>Total Budget</span>
+                      <strong>₹{msg.budget.total.toLocaleString()}</strong>
+                    </div>
+                    {[
+                      ["🏨 Hotel", msg.budget.hotel],
+                      ["🍴 Food", msg.budget.food],
+                      ["🚕 Transport", msg.budget.transport],
+                      ["🎟 Activities", msg.budget.activities],
+                    ].map(([label, val]) => (
+                      <div key={label} className="budget-row">
+                        <span>{label}</span>
+                        <span>₹{val?.toLocaleString()}</span>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -300,7 +414,12 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                         <div>
                           <p>{item.place?.name}</p>
                           <small>{item.bestTime}{item.visitDuration ? ` · ${item.visitDuration}` : ""}</small>
-                          <button onClick={() => navigateTo(item.place)} style={{ marginTop: "5px", padding: "5px 10px", background: "#22c55e", border: "none", borderRadius: "6px", cursor: "pointer" }}>Navigate</button>
+                          <button
+                            onClick={() => navigateTo(item.place)}
+                            style={{ marginTop: "5px", padding: "5px 10px", background: "#22c55e", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                          >
+                            Navigate
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -339,35 +458,60 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 </div>
               </div>
             )}
+
           </div>
         ))}
 
         {typing && (
           <div className="chat-row bot">
             <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>
-            <div className="chat-typing"><span /><span /><span /></div>
+            <div className="chat-typing">
+              <span /><span /><span />
+            </div>
           </div>
         )}
+
         <div ref={chatEndRef} />
       </div>
 
-      {/* FOOTER */}
+      {/* ── FOOTER ── */}
       <div className="chat-footer">
+
         {isTempleMode && (
           <div className="chat-quick-actions-wrap">
-            <button className="chat-quick-toggle" onClick={() => setShowQuickActions((prev) => !prev)} aria-expanded={showQuickActions} aria-label="Toggle quick questions">
+            <button
+              className="chat-quick-toggle"
+              onClick={() => setShowQuickActions((prev) => !prev)}
+              aria-expanded={showQuickActions}
+              aria-label="Toggle quick questions"
+            >
               <span className="chat-quick-toggle-label">💬 Quick Questions</span>
               <span className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}>▲</span>
             </button>
-            <div className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`} aria-hidden={!showQuickActions}>
+
+            <div
+              className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
+              aria-hidden={!showQuickActions}
+            >
               <div className="chat-suggestions">
                 {templeSuggestions.map((s, i) => (
-                  <button key={i} className="chat-sug-pill" onClick={() => { setShowQuickActions(false); sendMessage(s); }} tabIndex={showQuickActions ? 0 : -1}>{s}</button>
+                  <button
+                    key={i}
+                    className="chat-sug-pill"
+                    onClick={() => {
+                      setShowQuickActions(false);
+                      sendMessage(s);
+                    }}
+                    tabIndex={showQuickActions ? 0 : -1}
+                  >
+                    {s}
+                  </button>
                 ))}
               </div>
             </div>
           </div>
         )}
+
         {!isTempleMode && (
           <div className="quick-actions">
             <button onClick={() => sendMessage("plan trip")}>✈️ Trip</button>
@@ -375,13 +519,31 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             <button onClick={() => sendMessage("food near me")}>🍽 Food</button>
           </div>
         )}
+
         <div className="chat-input-row">
-          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder={isTempleMode ? `Ask about ${templeContext.name.length > 22 ? templeContext.name.substring(0, 22) + "…" : templeContext.name}…` : "Ask Sarathi anything…"}
-            disabled={typing} className="chat-input-field" />
-          <button className="chat-send-btn" onClick={() => sendMessage()} disabled={typing || !input.trim()} aria-label="Send">➤</button>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isTempleMode
+                ? `Ask about ${templeContext.name.length > 22 ? templeContext.name.substring(0, 22) + "…" : templeContext.name}…`
+                : "Ask Sarathi anything…"
+            }
+            disabled={typing}
+            className="chat-input-field"
+          />
+          <button
+            className="chat-send-btn"
+            onClick={() => sendMessage()}
+            disabled={typing || !input.trim()}
+            aria-label="Send"
+          >
+            ➤
+          </button>
         </div>
       </div>
+
     </div>
   );
 };
