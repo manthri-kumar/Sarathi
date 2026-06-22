@@ -50,6 +50,7 @@ const askGroq = async (prompt) => {
   }
 
   throw lastError || new Error("All Groq models failed");
+  
 };
 
 module.exports = askGroq;
