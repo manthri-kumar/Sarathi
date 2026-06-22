@@ -210,3 +210,68 @@
 @media (min-width: 769px) {
   .chat-panel { position: fixed; bottom: 10px; right: 0; width: 400px; height: calc(100vh - 20px); max-height: calc(100vh - 20px); border-radius: 18px 18px 0 0; z-index: 9999; }
 }
+
+/* ── Action chips after AI answers ── */
+.chat-bubble-wrap { display: flex; flex-direction: column; gap: 7px; max-width: 85%; }
+.action-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.action-chip {
+  background: #0a1a0e; border: 1px solid rgba(34, 197, 94, 0.22); color: #6aad7a;
+  padding: 6px 11px; border-radius: 20px; font-size: 0.74rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.action-chip:hover { background: #0f2318; border-color: #22c55e; color: #e8f5e9; }
+
+/* ── Message headings ── */
+.message-heading { font-size: 0.86rem; font-weight: 700; color: #e8f5e9; margin: 6px 0 2px; display: flex; align-items: center; gap: 6px; }
+.message-heading-icon { font-size: 0.95rem; }
+
+/* ── Redesigned Trip Card ── */
+.trip-card {
+  width: 100%; max-width: 340px; background: #0a1a0e; border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+}
+.trip-hero { height: 130px; background-size: cover; background-position: center; position: relative; }
+.trip-hero-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;
+  padding: 12px 14px; background: linear-gradient(to top, rgba(7,17,10,0.92) 10%, rgba(7,17,10,0.15) 70%);
+}
+.trip-hero-title { margin: 0; font-size: 1.15rem; font-weight: 800; color: #fff; text-transform: capitalize; }
+.trip-hero-sub { margin: 0; font-size: 0.74rem; color: #d4e8d6; }
+.trip-hero-stars { font-size: 0.7rem; letter-spacing: 1px; }
+
+.trip-route { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px 6px; }
+.trip-route span { font-size: 0.8rem; color: #e8f5e9; font-weight: 600; }
+
+.trip-quickfacts { display: flex; gap: 6px; padding: 4px 14px 8px; flex-wrap: wrap; }
+.trip-quickfacts .qf {
+  flex: 1; min-width: 60px; background: #07110a; border: 1px solid rgba(34,197,94,0.12); border-radius: 10px;
+  padding: 7px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.trip-quickfacts .qf span { font-size: 0.9rem; }
+.trip-quickfacts .qf strong { font-size: 0.78rem; color: #22c55e; }
+
+.trip-insights { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 14px 8px; }
+.insight-badge { font-size: 0.7rem; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #6aad7a; padding: 3px 8px; border-radius: 20px; }
+
+.trip-budget { display: flex; justify-content: space-between; align-items: center; margin: 0 14px; padding: 10px 0; border-top: 1px solid rgba(34,197,94,0.12); }
+.trip-budget span { font-size: 0.82rem; color: #6aad7a; }
+.trip-budget strong { font-size: 1.15rem; color: #22c55e; font-weight: 800; }
+.trip-remaining { font-size: 0.76rem; font-weight: 600; padding: 0 14px 6px; text-align: right; }
+
+.trip-breakdown-toggle { background: none; border: none; color: #6aad7a; font-size: 0.76rem; font-weight: 600; cursor: pointer; padding: 6px 14px; text-align: left; }
+.trip-breakdown-toggle:hover { color: #22c55e; }
+.trip-breakdown { padding: 2px 14px 8px; display: flex; flex-direction: column; gap: 4px; }
+.trip-breakdown .bd-row { display: flex; justify-content: space-between; font-size: 0.76rem; }
+.trip-breakdown .bd-row span:first-child { color: #6aad7a; }
+.trip-breakdown .bd-row span:last-child { color: #e8f5e9; font-weight: 500; }
+.trip-breakdown .bd-row.sub span { font-size: 0.72rem; opacity: 0.85; }
+.trip-breakdown .fare-source { font-style: italic; color: #6aad7a !important; }
+
+.trip-card .summary-confirm { margin: 6px 14px; width: auto; padding: 11px; background: #22c55e; color: #000; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+.trip-card .summary-confirm:hover { background: #16a34a; }
+
+.trip-edit-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 14px 14px; }
+.trip-edit-chips button {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(34,197,94,0.18); color: #6aad7a;
+  padding: 6px 10px; border-radius: 18px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.trip-edit-chips button:hover { background: #0f2318; border-color: #22c55e; color: #e8f5e9; }
