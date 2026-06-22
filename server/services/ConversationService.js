@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const askGroq = require("./askGroq");
+const askGroq = require("./groqService.js");
 const T = require("./TransportService");
 const Train = require("./TrainService");
 const Planner = require("./TripPlannerService");

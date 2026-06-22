@@ -2,7 +2,7 @@
 
 const express  = require("express");
 const router   = express.Router();
-const askGroq  = require("../services/groqService");
+const askGroq  = require("../services/groqService.js");
 
 const {
   getNearbyTemples,

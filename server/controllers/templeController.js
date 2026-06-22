@@ -17,7 +17,7 @@
  */
 
 const axios    = require("axios");
-const askGroq  = require("../services/groqService");
+const askGroq  = require("../services/groqService.js");
 const { askGemini, getEnrichedTempleData } = require("../services/templeDataService");
 const { searchTempleVideos }               = require("../services/youtubeService");
 const { getTempleWikiData }                = require("../services/wikipediaService");
