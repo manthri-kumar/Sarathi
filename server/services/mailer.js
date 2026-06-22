@@ -1,54 +1,30 @@
 "use strict";
 
-const dns = require("dns");
-dns.setDefaultResultOrder("ipv4first");
+const { Resend } = require("resend");
 
-const nodemailer = require("nodemailer");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+// Until you verify your own domain in Resend, the sender MUST be
+// onboarding@resend.dev. After domain verification, set EMAIL_FROM
+// to e.g. "Sarathi <noreply@yourdomain.com>".
+const FROM = process.env.EMAIL_FROM || "Sarathi <onboarding@resend.dev>";
 
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
+const buildHtml = (otp) => `
+  <div style="max-width:600px;margin:auto;padding:32px;background:#041108;border-radius:18px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+    <h2 style="color:#22c55e;margin:0 0 16px;">Sarathi Email Verification</h2>
+    <p style="margin:0 0 8px;">Hello,</p>
+    <p style="margin:0 0 16px;">Thank you for creating your Sarathi account. Your verification code is:</p>
+    <div style="text-align:center;padding:18px;border-radius:12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);margin:20px 0;">
+      <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#22c55e;">${otp}</span>
+    </div>
+    <p style="margin:0 0 16px;">This code expires in <strong>5 minutes</strong>.</p>
+    <p style="color:#94a3b8;font-size:13px;margin:0 0 20px;">If you did not request this code, please ignore this email.</p>
+    <hr style="border:none;border-top:1px solid #1e293b;margin:20px 0;">
+    <p style="color:#94a3b8;font-size:13px;margin:0;">Team Sarathi 🚀</p>
+  </div>`;
 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-
-  tls: {
-    rejectUnauthorized: false,
-    family: 4,
-  },
-});
-
-// Verify SMTP connection when server starts
-transporter.verify((error) => {
-  if (error) {
-    console.error("❌ SMTP VERIFY FAILED");
-    console.error(error);
-  } else {
-    console.log("✅ SMTP READY - Gmail connected");
-  }
-});
-
-const sendOtpEmail = async (toEmail, otp) => {
-  try {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(`📧 Sending OTP to: ${toEmail}`);
-    console.log(`📨 Sender: ${process.env.EMAIL_USER}`);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-    const mailOptions = {
-      from: `"Sarathi" <${process.env.EMAIL_USER}>`,
-      to: toEmail,
-      subject: "Sarathi Email Verification",
-
-      text: `
-Welcome to Sarathi!
+const buildText = (otp) =>
+  `Welcome to Sarathi!
 
 Your verification code is:
 
@@ -58,113 +34,41 @@ This code expires in 5 minutes.
 
 If you did not request this email, please ignore it.
 
-Team Sarathi
-      `,
+Team Sarathi`;
 
-      html: `
-      <div style="
-        max-width:600px;
-        margin:auto;
-        padding:30px;
-        background:#041108;
-        border-radius:18px;
-        color:#ffffff;
-        font-family:Arial,sans-serif;
-      ">
+/**
+ * sendOtpEmail(toEmail, otp)
+ * Sends the OTP via Resend HTTPS API (port 443 — not blocked on Render).
+ * Throws on failure so the controller's try/catch returns a clean 500.
+ */
+const sendOtpEmail = async (toEmail, otp) => {
+  console.log(`📧 [RESEND] Sending OTP to ${toEmail} from ${FROM}`);
 
-        <h2 style="color:#22c55e;">
-          Sarathi Email Verification
-        </h2>
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not set");
+  }
 
-        <p>Hello,</p>
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: [toEmail],
+      subject: "Sarathi Email Verification",
+      html: buildHtml(otp),
+      text: buildText(otp),
+    });
 
-        <p>
-          Thank you for creating your Sarathi account.
-        </p>
-
-        <p>Your verification code:</p>
-
-        <div style="
-          text-align:center;
-          padding:18px;
-          border-radius:12px;
-          background:rgba(34,197,94,0.08);
-          border:1px solid rgba(34,197,94,0.25);
-          margin:20px 0;
-        ">
-          <span style="
-            font-size:36px;
-            font-weight:800;
-            letter-spacing:8px;
-            color:#22c55e;
-          ">
-            ${otp}
-          </span>
-        </div>
-
-        <p>
-          This code expires in
-          <strong>5 minutes</strong>.
-        </p>
-
-        <p style="
-          color:#94a3b8;
-          font-size:13px;
-        ">
-          If you did not request this code,
-          please ignore this email.
-        </p>
-
-        <hr style="
-          border:none;
-          border-top:1px solid #1e293b;
-          margin:20px 0;
-        ">
-
-        <p style="
-          color:#94a3b8;
-          font-size:13px;
-        ">
-          Team Sarathi 🚀
-        </p>
-
-      </div>
-      `,
-    };
-
-    console.log("🚀 Starting Gmail send...");
-
-    const info = await Promise.race([
-      transporter.sendMail(mailOptions),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("SMTP_TIMEOUT_AFTER_15_SECONDS")),
-          15000
-        )
-      ),
-    ]);
-
-    console.log("✅ MAIL SENT SUCCESSFULLY");
-    console.log("📩 Message ID:", info.messageId);
-
-    return info;
-  } catch (error) {
-    console.error("❌ MAIL SEND FAILED");
-    console.error("Error Name:", error.name);
-    console.error("Error Message:", error.message);
-
-    if (error.response) {
-      console.error("SMTP Response:", error.response);
+    // Resend returns { data, error } rather than throwing on API errors.
+    if (error) {
+      console.error("❌ [RESEND] API error:", error.name || "", error.message || error);
+      throw new Error(error.message || "Resend API error");
     }
 
-    if (error.code) {
-      console.error("Error Code:", error.code);
-    }
-
-    throw error;
+    console.log("✅ [RESEND] Sent — id:", data?.id);
+    return data;
+  } catch (err) {
+    console.error("❌ [RESEND] Send failed:", err.message);
+    throw err;
   }
 };
 
-module.exports = {
-  sendOtpEmail,
-};
+module.exports = { sendOtpEmail };
