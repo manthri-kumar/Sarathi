@@ -3,19 +3,17 @@
 /**
  * Sarathi Wikipedia Service
  * ─────────────────────────
- * Fetches FULL Wikipedia articles (not just summaries) for temples.
- * Uses the MediaWiki extracts API to get complete plaintext articles.
- * Caches results in memory for 24 hours to avoid redundant API calls.
- *
- * Exports:
- *   getTempleWikiData(templeName) → { title, extract, url } | null
+ * Two responsibilities:
+ *   1. getTempleWikiData(templeName)     → full article for ONE temple (temple chat)
+ *   2. getWikipediaAttractions(cityName) → list of attraction NAMES for a city (Explore)
+ * Both share the 24h in-memory cache.
  */
 
 const axios = require("axios");
 
 /* ── In-memory cache ─────────────────────────────────────────── */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const wikiCache    = new Map(); // key: normalised temple name → { data, expiry }
+const wikiCache    = new Map(); // key → { data, expiry }
 
 const getCached = (key) => {
   const entry = wikiCache.get(key);
@@ -174,7 +172,7 @@ const fetchSummaryFallback = async (pageTitle) => {
   }
 };
 
-/* ── Main export ─────────────────────────────────────────────── */
+/* ── Main export #1 — TEMPLE DETAIL (unchanged) ──────────────── */
 /**
  * getTempleWikiData(templeName)
  * Returns { title, extract, url } or null.
@@ -183,7 +181,7 @@ const fetchSummaryFallback = async (pageTitle) => {
 const getTempleWikiData = async (templeName) => {
   if (!templeName?.trim()) return null;
 
-  const cacheKey = templeName.trim().toLowerCase();
+  const cacheKey = `temple:${templeName.trim().toLowerCase()}`;
   const cached   = getCached(cacheKey);
   if (cached) {
     console.log(`[WIKI] Cache hit for "${templeName}"`);
@@ -221,6 +219,80 @@ const getTempleWikiData = async (templeName) => {
   }
 };
 
+/* ── Main export #2 — CITY ATTRACTIONS LIST (new) ────────────── */
+/**
+ * getWikipediaAttractions(cityName)
+ * Returns [{ name, category, description, source }] — candidate place
+ * NAMES for a city (no coordinates). The attractions pipeline resolves
+ * these to lat/lng via Google. Wikipedia is the noisiest source, so we
+ * filter hard and cap the list.
+ */
+const ATTRACTION_BLOCK_RE =
+  /\b(history|list of|district|division|mandal|census|economy|demograph|climate|politics|administration|assembly|constituency|railway station|municipality)\b/i;
+
+const looksLikePlace = (title) => {
+  if (!title) return false;
+  if (ATTRACTION_BLOCK_RE.test(title)) return false;
+  if (title.length > 60) return false;
+  return true;
+};
+
+const opensearchTitles = async (term) => {
+  try {
+    const res = await axios.get(WIKI_API, {
+      params: {
+        action: "opensearch",
+        search: term,
+        limit: 15,
+        namespace: 0,
+        format: "json",
+        origin: "*",
+      },
+      timeout: 8000,
+    });
+    return Array.isArray(res.data?.[1]) ? res.data[1] : [];
+  } catch (err) {
+    console.warn(`[WIKI] attractions opensearch failed "${term}": ${err.message}`);
+    return [];
+  }
+};
+
+const getWikipediaAttractions = async (city = "") => {
+  if (!city.trim()) return [];
+
+  const cacheKey = `attractions:${city.trim().toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    console.log(`[WIKI] Attractions cache hit for "${city}"`);
+    return cached;
+  }
+
+  const terms = [
+    `${city} tourist attractions`,
+    `${city} landmarks`,
+    `${city} temple`,
+    `${city} fort`,
+  ];
+
+  const results = await Promise.all(terms.map(opensearchTitles));
+  const seen = new Set();
+  const names = [];
+
+  results.flat().forEach((title) => {
+    const norm = title.toLowerCase().trim();
+    if (seen.has(norm)) return;
+    seen.add(norm);
+    if (looksLikePlace(title)) {
+      names.push({ name: title, category: "attraction", description: "", source: "wikipedia" });
+    }
+  });
+
+  const out = names.slice(0, 12);
+  console.log(`[WIKI] Attractions for "${city}" → ${out.length} candidates`);
+  setCache(cacheKey, out);
+  return out;
+};
+
 /* ── Cache management helpers (optional debug use) ───────────── */
 const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache cleared"); };
 const getWikiCacheStats = () => ({
@@ -228,4 +300,9 @@ const getWikiCacheStats = () => ({
   entries: [...wikiCache.keys()],
 });
 
-module.exports = { getTempleWikiData, clearWikiCache, getWikiCacheStats };
+module.exports = {
+  getTempleWikiData,
+  getWikipediaAttractions,
+  clearWikiCache,
+  getWikiCacheStats,
+};
