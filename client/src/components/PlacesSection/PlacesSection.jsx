@@ -49,7 +49,7 @@ const PlacesSection = ({
       image: img4,
       lat: 34.0837,
       lng: 74.7973,
-      badge: "Best For You",
+      badge: "Popular Destination",
       rating: "4.9",
       reviews: "3.1k",
     },

@@ -50,7 +50,7 @@ const Sidebar = ({ isOpen }) => {
       icon: <Compass size={18} />,
     },
     {
-      name: t("itinerary"),
+      name: t("PlanMyTrip"),
       path: "/itinerary",
       icon: <Calendar size={18} />,
     },

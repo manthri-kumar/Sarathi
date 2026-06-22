@@ -144,6 +144,7 @@ topRestaurants:
 
 bestHotels:
   "ఉత్తమ హోటళ్ళు",
+PlanMyTrip:"ప్లాన్ ట్రిప్ "
 
   }
 },
