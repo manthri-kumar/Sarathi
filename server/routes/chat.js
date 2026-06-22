@@ -14,18 +14,21 @@ const saveSession = async (s) => {
   await s.save();
 };
 
+const sendSummary = async (s, res, save = true) => {
+  if (save) await saveSession(s);
+  const payload = C.Planner.buildSummary(s.trip);
+  console.log("[SUMMARY GENERATED]", payload.summary);
+  console.log("[TRIP SUMMARY SENT]", { type: payload.type });
+  return res.json(payload);
+};
+
 const advance = async (s, res, prefix = "") => {
   s.step = C.nextStep(s.trip);
   if (s.step === "transport" && !s.trip.transport) {
     await saveSession(s);
     return res.json({ reply: prefix + C.QUESTION.transport });
   }
-  if (s.step === "summary") {
-    await saveSession(s);
-    const payload = C.Planner.buildSummary(s.trip);
-    console.log("[RESPONSE_TYPE]", payload.type);
-    return res.json(payload);
-  }
+  if (s.step === "summary") return sendSummary(s, res);
   await saveSession(s);
   return res.json({ reply: prefix + C.QUESTION[s.step] });
 };
@@ -33,15 +36,14 @@ const advance = async (s, res, prefix = "") => {
 const finalizeTransport = async (s, res, details) => {
   s.trip.transportDetails = details;
   s.step = C.nextStep(s.trip);
-  if (s.step === "summary") {
-    await saveSession(s);
-    const payload = C.Planner.buildSummary(s.trip);
-    console.log("[RESPONSE_TYPE]", payload.type);
-    return res.json(payload);
-  }
+  if (s.step === "summary") return sendSummary(s, res);
   await saveSession(s);
   return res.json({ reply: C.QUESTION[s.step] });
 };
+
+/* A genuinely new intent that should break out of any parked trip. */
+const isFreshIntent = (intent) =>
+  intent === "trip" || intent === "nearby" || intent === "food" || intent === "food_items" || intent === "hotel";
 
 router.post("/", async (req, res) => {
   try {
@@ -50,7 +52,7 @@ router.post("/", async (req, res) => {
     const lower = raw.toLowerCase();
     const s = await loadSession(userId);
 
-    /* ===== EDIT / CONTROL COMMANDS (only meaningful with a real trip) ===== */
+    /* ===== EDIT / CONTROL COMMANDS ===== */
     if (lower === "update budget" && s.trip?.destination) {
       s.trip.budget = undefined; s.step = "budget"; await saveSession(s);
       return res.json({ reply: "💰 Sure — what's your new budget?\n\nExamples:\n₹15000\n₹20000\n₹30000" });
@@ -85,52 +87,41 @@ router.post("/", async (req, res) => {
       }
     }
 
-    /* ===== FLOW DETECTION (BUG 3/4) ===== */
+    /* ===== FLOW + INTENT ===== */
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
     console.log("[INTENT]", raw, "=>", intent);
-    console.log("[FLOW]", {
-      step: s.step,
-      inFlow,
-      destination: s.trip?.destination,
-      source: s.trip?.source,
-    });
+    console.log("[FLOW]", { step: s.step, inFlow, destination: s.trip?.destination, source: s.trip?.source });
 
-    /* ===== STALE-SESSION SAFETY (BUG 4) =====
-       Not really mid-planning, but step is dirty → reset to IDLE.
-       Trip subdocument is preserved (not deleted). */
-    if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
-      s.step = null;
-      await saveSession(s);
-      console.log("[FLOW] stale planning step cleared → IDLE");
-    }
+    /* ===== FIX 1: a fresh intent breaks out of a parked/active trip =====
+       Exception: while collecting source/destination, a short place-like
+       answer is the ANSWER, not a new search — let those fall through. */
+    const collectingPlace = inFlow && (s.step === "source" || s.step === "destination");
+    if (isFreshIntent(intent) && !collectingPlace) {
+      // starting a brand-new trip resets; place/food/hotel just answer once
+      if (intent === "trip") {
+        const slots = await C.extractTripSlots(raw);
+        s.trip = {
+          source: slots.source || (lat && lng ? city : null),
+          destination: slots.destination || "",
+          travellers: slots.travellers || null,
+          days: slots.days || null,
+          budget: slots.budget ?? undefined,
+          tripType: slots.tripType || "general",
+          transport: "", hotelType: "",
+          distanceKm: null, travelTime: null,
+          transportDetails: {}, carFuelType: null,
+        };
+        const ack = slots.destination
+          ? `Great choice — ${slots.destination} is a wonderful pick! Let's sort out the details.\n\n`
+          : "Let's plan your trip ✈️\n\n";
+        return advance(s, res, ack);
+      }
 
-    /* ===== EXPLICIT TRIP START (always allowed, even from IDLE) ===== */
-    if (!inFlow && intent === "trip") {
-      const slots = await C.extractTripSlots(raw);
-      s.trip = {
-        source: slots.source || (lat && lng ? city : null),
-        destination: slots.destination || "",
-        travellers: slots.travellers || null,
-        days: slots.days || null,
-        budget: slots.budget ?? undefined,
-        tripType: slots.tripType || "general",
-        transport: "", hotelType: "",
-        distanceKm: null, travelTime: null,
-        transportDetails: {}, carFuelType: null,
-      };
-      const ack = slots.destination
-        ? `Great choice — ${slots.destination} is a wonderful pick! Let's sort out the details.\n\n`
-        : "Let's plan your trip ✈️\n\n";
-      return advance(s, res, ack);
-    }
-
-    /* ===== NOT IN FLOW → places / food / hotel / general ===== */
-    if (!inFlow) {
+      const placeCity = C.extractPlaceFromQuery(raw) || city;
       if (intent === "food_items") {
-        const place = C.extractPlaceFromQuery(raw) || city || "your city";
-        const dishes = await C.getFoodFromAI(place);
+        const dishes = await C.getFoodFromAI(C.extractPlaceFromQuery(raw) || city || "your city");
         if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
         const payload = { type: "places", data: dishes.map((d) => ({
           name: d.name, description: d.description, rating: 4.5, bestTime: "Anytime 🍽️",
@@ -138,46 +129,42 @@ router.post("/", async (req, res) => {
         console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
+      const keyword = intent === "food" ? "restaurant" : intent === "hotel" ? "hotel" : "tourist attraction";
+      const payload = { type: "places", data: await C.fetchNearby(lat, lng, keyword, placeCity) };
+      console.log("[RESPONSE_TYPE]", payload.type);
+      return res.json(payload);
+    }
 
-      if (intent === "food") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city;
-        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "restaurant", placeCity) };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        return res.json(payload);
+    /* ===== NOT IN FLOW → general chat ===== */
+    if (!inFlow) {
+      if (s.step && C.ACTIVE.has(s.step)) {
+        s.step = null; await saveSession(s);
+        console.log("[FLOW] stale planning step cleared → IDLE");
       }
-
-      if (intent === "nearby") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city;
-        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "tourist attraction", placeCity) };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        return res.json(payload);
-      }
-
-      if (intent === "hotel") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city;
-        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "hotel", placeCity) };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        return res.json(payload);
-      }
-
-      // general → natural AI answer (dual-mode B). NEVER a trip prompt.
       const reply = await C.askAI(raw, city);
       console.log("[RESPONSE_TYPE]", "text");
       return res.json({ reply });
     }
 
-    /* ===== IN FLOW → dual-mode off-topic guard ===== */
+    /* ===== IN FLOW + not a fresh intent ===== */
+
+    /* FIX 2: parked at summary, non-answer/non-edit → RE-EMIT the card. */
+    if (s.step === "summary") {
+      if (!C.looksLikeStepAnswer("summary", raw)) {
+        // user typed something unrelated while summary is shown → re-show card
+        return sendSummary(s, res, false);
+      }
+    }
+
+    /* dual-mode off-topic guard for genuine planning steps */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      // Mid-planning but user asked something off-topic → answer, keep state.
       const answer = await C.askAI(raw, city);
-      const reprompt = s.step === "summary"
-        ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
-        : `\n\n${C.QUESTION[s.step]}`;
+      const reprompt = `\n\n${C.QUESTION[s.step]}`;
       console.log("[RESPONSE_TYPE]", "text(dual-mode)");
       return res.json({ reply: `${answer}${reprompt}` });
     }
 
-    /* ===== IN FLOW → step handlers ===== */
+    /* ===== STEP HANDLERS ===== */
     if (s.step === "source") {
       s.trip.source = ["current", "use current", "📍"].some((x) => lower.includes(x)) && city ? city : C.clean(raw);
       return advance(s, res, "Got it 👍\n\n");
@@ -226,7 +213,6 @@ router.post("/", async (req, res) => {
       const fare = C.Train.trainFareEstimate(klass, s.trip.distanceKm);
       return finalizeTransport(s, res, { type: "train", option: "Train", klass, fare, source: "Estimated", breakdown: null });
     }
-
     if (s.step === "bus_type") {
       const idx = parseInt(raw) - 1;
       const type = C.T.BUS_TYPES[idx] || C.T.BUS_TYPES.find((b) => lower.includes(b.toLowerCase()));
@@ -234,7 +220,6 @@ router.post("/", async (req, res) => {
       const fare = C.T.busFare(type, s.trip.distanceKm);
       return finalizeTransport(s, res, { type: "bus", option: type, klass: null, fare, source: "Estimated", breakdown: null });
     }
-
     if (s.step === "flight_class") {
       const idx = parseInt(raw) - 1;
       const klass = C.T.FLIGHT_CLASSES[idx] || C.T.FLIGHT_CLASSES.find((f) => lower.includes(f.toLowerCase()));
@@ -242,7 +227,6 @@ router.post("/", async (req, res) => {
       const fare = C.T.flightFare(klass, s.trip.distanceKm);
       return finalizeTransport(s, res, { type: "flight", option: klass, klass: null, fare, source: "Estimated", breakdown: null });
     }
-
     if (s.step === "car_fuel") {
       const m = { "1": "petrol", "2": "diesel", "3": "cng", "4": "ev" };
       const f = m[raw] || ["petrol", "diesel", "cng", "ev"].find((x) => lower.includes(x));
@@ -255,7 +239,6 @@ router.post("/", async (req, res) => {
       s.step = "car_mileage"; await saveSession(s);
       return res.json({ reply: C.QUESTION.car_mileage });
     }
-
     if (s.step === "car_mileage") {
       const mileage = parseFloat(raw.replace(/[^\d.]/g, ""));
       if (!mileage || mileage < 3) return res.json({ reply: "🚗 Please enter a valid mileage (e.g. 18)." });
@@ -271,10 +254,8 @@ router.post("/", async (req, res) => {
       s.trip.hotelType = h; return advance(s, res);
     }
 
-    if (s.step === "summary") {
-      return res.json({ reply: "Tap Confirm to generate your itinerary, or an Edit button to change a detail." });
-    }
-
+    // any other in-flow text → re-show summary if parked there, else AI
+    if (s.step === "summary") return sendSummary(s, res, false);
     const reply = await C.askAI(raw, city);
     return res.json({ reply });
   } catch (err) {
