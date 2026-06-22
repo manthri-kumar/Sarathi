@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./ChatPanel.css";
+import MessageFormatter from "./MessageFormatter";
 
 const API_BASE =
   process.env.REACT_APP_API_URL ||
@@ -22,7 +23,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
   const [showQuickActions, setShowQuickActions] = useState(true);
   const chatEndRef = useRef(null);
 
-  // Reset when switching temple
   useEffect(() => {
     setMessages([getInitialMessage()]);
     setInput("");
@@ -107,6 +107,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       }
 
       console.log("[CHAT] ✓ Reply:", data.reply?.substring(0, 80));
+      console.log("[MESSAGE TYPE]", data.type);
       setTyping(false);
 
       if (isTempleMode) {
@@ -205,12 +206,23 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
             {(!msg.type || msg.type === undefined) && msg.text && (
               <div className={`chat-bubble ${msg.isError ? "chat-bubble-error" : ""}`}>
-                {msg.text.split("\n").map((line, j) => (
-                  <React.Fragment key={j}>
-                    {line}
-                    {j < msg.text.split("\n").length - 1 && <br />}
-                  </React.Fragment>
-                ))}
+                {msg.isError ? (
+                  msg.text.split("\n").map((line, j) => (
+                    <React.Fragment key={j}>
+                      {line}
+                      {j < msg.text.split("\n").length - 1 && <br />}
+                    </React.Fragment>
+                  ))
+                ) : msg.sender === "bot" ? (
+                  <MessageFormatter text={msg.text} />
+                ) : (
+                  msg.text.split("\n").map((line, j) => (
+                    <React.Fragment key={j}>
+                      {line}
+                      {j < msg.text.split("\n").length - 1 && <br />}
+                    </React.Fragment>
+                  ))
+                )}
                 {msg.isError && (
                   <button
                     className="chat-retry-btn"
@@ -244,7 +256,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               </div>
             )}
 
-            {/* ── TRIP SUMMARY (Phase 1) ── */}
+            {/* ── TRIP SUMMARY ── */}
             {msg.type === "tripSummary" && (
               <div className="trip-summary-card">
                 <div className="summary-head">
@@ -269,19 +281,29 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                   ))}
                 </div>
 
-                {/* Structured transport */}
                 {msg.summary.transportDetails?.fare && (
                   <div className="summary-costs">
                     <div className="summary-row">
-                      <span>🚍 {msg.summary.transport}</span>
+                      <span>🚍 Transport</span>
+                      <span style={{ textTransform: "capitalize" }}>{msg.summary.transport}</span>
+                    </div>
+                    <div className="summary-row">
+                      <span>Option</span>
                       <span>
                         {msg.summary.transportDetails.option}
                         {msg.summary.transportDetails.klass ? ` · ${msg.summary.transportDetails.klass}` : ""}
                       </span>
                     </div>
                     <div className="summary-row">
-                      <span>Fare {msg.summary.transportDetails.source === "estimated" ? "(est.)" : ""}</span>
+                      <span>Fare</span>
                       <span>₹{msg.summary.transportDetails.fare.toLocaleString()}/person</span>
+                    </div>
+                    <div className="summary-row">
+                      <span>Fare source</span>
+                      <span className="fare-source">
+                        {msg.summary.transportDetails.source}
+                        {msg.summary.transport === "train" ? " · live coming next" : ""}
+                      </span>
                     </div>
                     {msg.summary.transportDetails.breakdown && (
                       <>
@@ -298,14 +320,8 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                           <span>Fuel cost</span>
                           <span>₹{msg.summary.transportDetails.breakdown.fuelCost.toLocaleString()}</span>
                         </div>
-                        <div className="summary-row">
-                          <span>Toll (est.)</span>
-                          <span>₹{msg.summary.transportDetails.breakdown.toll}</span>
-                        </div>
-                        <div className="summary-row">
-                          <span>Parking (est.)</span>
-                          <span>₹{msg.summary.transportDetails.breakdown.parking}</span>
-                        </div>
+                        <div className="summary-row"><span>Toll (est.)</span><span>₹{msg.summary.transportDetails.breakdown.toll}</span></div>
+                        <div className="summary-row"><span>Parking (est.)</span><span>₹{msg.summary.transportDetails.breakdown.parking}</span></div>
                       </>
                     )}
                   </div>
@@ -319,6 +335,14 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                   <div className="summary-row"><span>🏨 Hotel</span><span>₹{msg.summary.costs.hotel.toLocaleString()}</span></div>
                   <div className="summary-row"><span>🍴 Food</span><span>₹{msg.summary.costs.food.toLocaleString()}</span></div>
                   <div className="summary-row"><span>🎟 Activities</span><span>₹{msg.summary.costs.activities.toLocaleString()}</span></div>
+                  {msg.summary.remaining != null && (
+                    <div className="summary-row">
+                      <span>💰 Remaining</span>
+                      <span style={{ color: msg.summary.remaining < 0 ? "#f87171" : "#22c55e" }}>
+                        ₹{msg.summary.remaining.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <button className="summary-confirm" onClick={() => sendMessage("confirm trip")}>
@@ -349,14 +373,14 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 {msg.transportDetails?.fare && (
                   <div className="budget-card">
                     <div className="budget-row">
-                      <span>🚍 {msg.transportDetails.type}</span>
+                      <span style={{ textTransform: "capitalize" }}>🚍 {msg.transportDetails.type}</span>
                       <span>
                         {msg.transportDetails.option}
                         {msg.transportDetails.klass ? ` · ${msg.transportDetails.klass}` : ""}
                       </span>
                     </div>
                     <div className="budget-row">
-                      <span>Fare {msg.transportDetails.source === "estimated" ? "(est.)" : ""}</span>
+                      <span>Fare · {msg.transportDetails.source}</span>
                       <span>₹{msg.transportDetails.fare.toLocaleString()}/person</span>
                     </div>
                   </div>
