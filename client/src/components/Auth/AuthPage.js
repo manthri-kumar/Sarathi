@@ -1,60 +1,87 @@
 // src/components/Auth/AuthPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./Auth.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import googleLogo from "../../assets/google.png";
-import sarathiLogo from "../../assets/sarathi-logo.png";
+import googleLogo   from "../../assets/google.png";
+import sarathiLogo  from "../../assets/sarathi-logo.png";
 
 const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
 
-function AuthPage() {
-  const [isLogin, setIsLogin] = useState(false);
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+/* ─────────────────────────────────────────────────────────────────────
+   Forgot-password sub-steps
+───────────────────────────────────────────────────────────────────── */
+const FP_STEP = {
+  EMAIL:    "email",    // enter email → send OTP
+  OTP:      "otp",     // verify 6-digit OTP
+  PASSWORD: "password", // enter + confirm new password
+  SUCCESS:  "success",  // done
+};
 
+function AuthPage() {
+  /* ── Existing state (unchanged) ── */
+  const [isLogin,          setIsLogin]          = useState(false);
+  const [form,             setForm]             = useState({ username: "", email: "", password: "" });
+  const [signupLoading,    setSignupLoading]    = useState(false);
   const [isGoogleRedirect, setIsGoogleRedirect] = useState(
     () => window.location.hash.includes("access_token")
   );
-  const [googleError, setGoogleError] = useState(null);
+  const [googleError,      setGoogleError]      = useState(null);
+  const [showSplash,       setShowSplash]       = useState(false);
+  const [splashFadingOut,  setSplashFadingOut]  = useState(false);
 
-  const [showSplash, setShowSplash] = useState(false);
-  const [splashFadingOut, setSplashFadingOut] = useState(false);
+  /* ── Signup OTP modal state (unchanged) ── */
+  const [showOtp,    setShowOtp]    = useState(false);
+  const [otpEmail,   setOtpEmail]   = useState("");
+  const [otpDigits,  setOtpDigits]  = useState(["", "", "", "", "", ""]);
+  const [otpState,   setOtpState]   = useState({ loading: false, success: false, error: "" });
+  const [resendIn,   setResendIn]   = useState(0);
 
-  const [showForgot, setShowForgot] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotState, setForgotState] = useState({ loading: false, success: false, error: "" });
+  /* ── Forgot-password modal state (new) ── */
+  const [showForgot,       setShowForgot]       = useState(false);
+  const [fpStep,           setFpStep]           = useState(FP_STEP.EMAIL);
+  const [fpEmail,          setFpEmail]          = useState("");
+  const [fpOtpDigits,      setFpOtpDigits]      = useState(["", "", "", "", "", ""]);
+  const [fpNewPassword,    setFpNewPassword]    = useState("");
+  const [fpConfirmPassword,setFpConfirmPassword]= useState("");
+  const [fpResetToken,     setFpResetToken]     = useState("");   // short-lived JWT from server
+  const [fpLoading,        setFpLoading]        = useState(false);
+  const [fpError,          setFpError]          = useState("");
+  const [fpResendIn,       setFpResendIn]       = useState(0);
+  const [fpShowNewPw,      setFpShowNewPw]      = useState(false);
+  const [fpShowConfirmPw,  setFpShowConfirmPw]  = useState(false);
 
-  /* ── OTP verification state ── */
-  const [showOtp, setShowOtp] = useState(false);
-  const [otpEmail, setOtpEmail] = useState("");
-  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
-  const [otpState, setOtpState] = useState({ loading: false, success: false, error: "" });
-  const [resendIn, setResendIn] = useState(0);
-  const [signupLoading, setSignupLoading] = useState(false);
+  const navigate    = useNavigate();
+  const fpOtpRefs   = useRef([]);           // refs for the 6 forgot-pw OTP boxes
 
-  const navigate = useNavigate();
-
-  /* ── Splash: mobile/tablet only, once per session ── */
+  /* ── Splash: mobile/tablet, once per session (unchanged) ── */
   useEffect(() => {
     const isMobileOrTablet = window.matchMedia("(max-width: 1024px)").matches;
     const seen = sessionStorage.getItem("sarathi_splash_seen");
     if (isMobileOrTablet && !seen && !isGoogleRedirect) {
       setShowSplash(true);
       sessionStorage.setItem("sarathi_splash_seen", "true");
-      const fadeTimer = setTimeout(() => setSplashFadingOut(true), 3200);
+      const fadeTimer  = setTimeout(() => setSplashFadingOut(true), 3200);
       const removeTimer = setTimeout(() => setShowSplash(false), 4100);
       return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
     }
   }, [isGoogleRedirect]);
 
-  /* ── Resend countdown ── */
+  /* ── Signup OTP resend countdown (unchanged) ── */
   useEffect(() => {
     if (resendIn <= 0) return;
     const t = setInterval(() => setResendIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
     return () => clearInterval(t);
   }, [resendIn]);
 
-  /* ── Google redirect handler (UNCHANGED) ── */
+  /* ── Forgot-password OTP resend countdown (new) ── */
+  useEffect(() => {
+    if (fpResendIn <= 0) return;
+    const t = setInterval(() => setFpResendIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [fpResendIn]);
+
+  /* ── Google redirect handler (unchanged) ── */
   useEffect(() => {
     const handleGoogleLogin = async () => {
       const hash = window.location.hash;
@@ -86,18 +113,18 @@ function AuthPage() {
     handleGoogleLogin();
   }, [navigate]);
 
-  /* ── Google OAuth click (UNCHANGED) ── */
+  /* ── Google OAuth click (unchanged) ── */
   const handleGoogleClick = () => {
-    const CLIENT_ID = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
+    const CLIENT_ID   = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
     const REDIRECT_URI = window.location.origin;
-    const scope = encodeURIComponent("openid email profile");
+    const scope        = encodeURIComponent("openid email profile");
     window.location.href =
       `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}` +
       `&response_type=token&scope=${scope}&prompt=select_account`;
   };
 
-  /* ── Submit: LOGIN unchanged; SIGNUP now requests an OTP ── */
+  /* ── Login / Signup submit (unchanged) ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLogin) {
@@ -114,8 +141,7 @@ function AuthPage() {
       }
       return;
     }
-
-    // SIGN UP → send OTP, open modal
+    // Signup → send OTP
     if (!form.username || !form.email || !form.password) {
       alert("Please fill all fields");
       return;
@@ -135,16 +161,13 @@ function AuthPage() {
     }
   };
 
-  /* ── OTP input handling ── */
+  /* ── Signup OTP handlers (unchanged) ── */
   const handleOtpChange = (idx, val) => {
     if (!/^\d?$/.test(val)) return;
     const next = [...otpDigits];
     next[idx] = val;
     setOtpDigits(next);
-    if (val && idx < 5) {
-      const el = document.getElementById(`otp-${idx + 1}`);
-      el?.focus();
-    }
+    if (val && idx < 5) document.getElementById(`otp-${idx + 1}`)?.focus();
   };
 
   const handleOtpKeyDown = (idx, e) => {
@@ -173,7 +196,6 @@ function AuthPage() {
     try {
       await axios.post(`${API_BASE}/api/auth/verify-otp`, { email: otpEmail, otp: code });
       setOtpState({ loading: false, success: true, error: "" });
-      // success → switch to login after a beat
       setTimeout(() => {
         setShowOtp(false);
         setIsLogin(true);
@@ -202,32 +224,152 @@ function AuthPage() {
     }
   };
 
-  /* ── Forgot password (UNCHANGED) ── */
+  /* ══════════════════════════════════════════════════════════════════
+     FORGOT PASSWORD HANDLERS  (new)
+  ══════════════════════════════════════════════════════════════════ */
+
+  /** Open modal, pre-fill email from login form if available */
   const openForgot = () => {
-    setForgotEmail(form.email || "");
-    setForgotState({ loading: false, success: false, error: "" });
+    setFpEmail(form.email || "");
+    setFpStep(FP_STEP.EMAIL);
+    setFpOtpDigits(["", "", "", "", "", ""]);
+    setFpNewPassword("");
+    setFpConfirmPassword("");
+    setFpResetToken("");
+    setFpError("");
+    setFpLoading(false);
+    setFpResendIn(0);
     setShowForgot(true);
   };
 
-  const handleForgotSubmit = async (e) => {
+  const closeForgot = () => {
+    if (fpLoading) return;   // block close during network call
+    setShowForgot(false);
+  };
+
+  /** Step 1 → send OTP to email */
+  const handleFpSendOtp = async (e) => {
     e.preventDefault();
-    if (!forgotEmail) {
-      setForgotState({ loading: false, success: false, error: "Please enter your email." });
+    if (!fpEmail.trim()) {
+      setFpError("Please enter your email address");
       return;
     }
-    setForgotState({ loading: true, success: false, error: "" });
+    setFpLoading(true);
+    setFpError("");
     try {
-      await axios.post(`${API_BASE}/api/auth/forgot-password`, { email: forgotEmail });
-      setForgotState({ loading: false, success: true, error: "" });
+      await axios.post(`${API_BASE}/api/auth/forgot-password/send-otp`, { email: fpEmail });
+      setFpOtpDigits(["", "", "", "", "", ""]);
+      setFpResendIn(60);
+      setFpStep(FP_STEP.OTP);
+      // Focus first OTP box after render
+      setTimeout(() => fpOtpRefs.current[0]?.focus(), 80);
     } catch (err) {
-      setForgotState({
-        loading: false, success: false,
-        error: err.response?.data?.message || "Could not send reset link. Please try again.",
-      });
+      setFpError(err.response?.data?.message || "Could not send reset code. Please try again.");
+    } finally {
+      setFpLoading(false);
     }
   };
 
-  /* RENDER: Google auth loader (UNCHANGED) */
+  /** Forgot-pw OTP input handlers */
+  const handleFpOtpChange = (idx, val) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...fpOtpDigits];
+    next[idx] = val;
+    setFpOtpDigits(next);
+    if (val && idx < 5) fpOtpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleFpOtpKeyDown = (idx, e) => {
+    if (e.key === "Backspace" && !fpOtpDigits[idx] && idx > 0) {
+      fpOtpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handleFpOtpPaste = (e) => {
+    const txt = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+    if (!txt) return;
+    e.preventDefault();
+    const next = ["", "", "", "", "", ""];
+    txt.split("").forEach((d, i) => (next[i] = d));
+    setFpOtpDigits(next);
+    fpOtpRefs.current[Math.min(txt.length, 6) - 1]?.focus();
+  };
+
+  /** Step 2 → verify OTP */
+  const handleFpVerifyOtp = async () => {
+    const code = fpOtpDigits.join("");
+    if (code.length !== 6) {
+      setFpError("Please enter all 6 digits");
+      return;
+    }
+    setFpLoading(true);
+    setFpError("");
+    try {
+      const res = await axios.post(`${API_BASE}/api/auth/forgot-password/verify-otp`, {
+        email: fpEmail,
+        otp:   code,
+      });
+      setFpResetToken(res.data.resetToken);
+      setFpNewPassword("");
+      setFpConfirmPassword("");
+      setFpStep(FP_STEP.PASSWORD);
+    } catch (err) {
+      setFpError(err.response?.data?.message || "Verification failed. Please try again.");
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  /** Resend forgot-pw OTP */
+  const handleFpResendOtp = async () => {
+    if (fpResendIn > 0) return;
+    setFpError("");
+    setFpLoading(true);
+    try {
+      await axios.post(`${API_BASE}/api/auth/forgot-password/send-otp`, { email: fpEmail });
+      setFpOtpDigits(["", "", "", "", "", ""]);
+      setFpResendIn(60);
+      setTimeout(() => fpOtpRefs.current[0]?.focus(), 80);
+    } catch (err) {
+      setFpError(err.response?.data?.message || "Could not resend code. Please try again.");
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  /** Step 3 → reset password */
+  const handleFpResetPassword = async (e) => {
+    e.preventDefault();
+    if (fpNewPassword.length < 6) {
+      setFpError("Password must be at least 6 characters");
+      return;
+    }
+    if (fpNewPassword !== fpConfirmPassword) {
+      setFpError("Passwords do not match");
+      return;
+    }
+    setFpLoading(true);
+    setFpError("");
+    try {
+      await axios.post(`${API_BASE}/api/auth/forgot-password/reset`, {
+        resetToken:  fpResetToken,
+        newPassword: fpNewPassword,
+      });
+      setFpStep(FP_STEP.SUCCESS);
+      // Auto-close and return to login after 2.2 s
+      setTimeout(() => {
+        setShowForgot(false);
+        setIsLogin(true);
+        setForm({ username: "", email: fpEmail, password: "" });
+      }, 2200);
+    } catch (err) {
+      setFpError(err.response?.data?.message || "Could not reset password. Please try again.");
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  /* ── Render: Google auth loader (unchanged) ── */
   if (isGoogleRedirect) {
     return (
       <div className="google-auth-loader">
@@ -240,7 +382,7 @@ function AuthPage() {
     );
   }
 
-  /* RENDER: Splash (UNCHANGED) */
+  /* ── Render: Splash (unchanged) ── */
   if (showSplash) {
     return (
       <div className={`splash-screen ${splashFadingOut ? "splash-out" : "splash-in"}`}>
@@ -249,10 +391,13 @@ function AuthPage() {
           <h1 className="splash-title">Sarathi</h1>
           <p className="splash-sub">Your Journey, Our Guidance</p>
         </div>
-        <button className="splash-skip" onClick={() => {
-          setSplashFadingOut(true);
-          setTimeout(() => setShowSplash(false), 500);
-        }} />
+        <button
+          className="splash-skip"
+          onClick={() => {
+            setSplashFadingOut(true);
+            setTimeout(() => setShowSplash(false), 500);
+          }}
+        />
       </div>
     );
   }
@@ -261,10 +406,13 @@ function AuthPage() {
     <img src={sarathiLogo} alt="Sarathi Logo" className="brand-mark" />
   );
 
+  /* ════════════════════════════════════════════════════════════════════
+     MAIN RENDER
+  ════════════════════════════════════════════════════════════════════ */
   return (
     <div className="main-container auth-fade-in">
 
-      {/* LEFT PANEL (UNCHANGED) */}
+      {/* ── LEFT PANEL (unchanged) ── */}
       <div className="left-panel">
         <div className="lp-bg" aria-hidden="true">
           <div className="lp-glow" />
@@ -284,13 +432,14 @@ function AuthPage() {
           </h2>
           <p className="desc">
             Sarathi is a travel companion that helps users discover temples, attractions,
-            and hidden destinations through personalized recommendations, real-time insights, and smart trip planning.
+            and hidden destinations through personalized recommendations, real-time insights,
+            and smart trip planning.
           </p>
           <button className="explore-btns">Start Exploring →</button>
           <div className="hero-pills">
-            <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Smart Itineraries</h4><p>AI-built travel plans</p></div></div>
-            <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Hidden Gems</h4><p>Discover unseen places</p></div></div>
-            <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Live Updates</h4><p>Real-time travel insights</p></div></div>
+            <div className="hero-pill"><span className="hp-icon">🗺</span><div className="hp-text"><h4>Smart Itineraries</h4><p>AI-built travel plans</p></div></div>
+            <div className="hero-pill"><span className="hp-icon">💎</span><div className="hp-text"><h4>Hidden Gems</h4><p>Discover unseen places</p></div></div>
+            <div className="hero-pill"><span className="hp-icon">📡</span><div className="hp-text"><h4>Live Updates</h4><p>Real-time travel insights</p></div></div>
           </div>
         </div>
         <div className="lp-mountains" aria-hidden="true">
@@ -300,7 +449,7 @@ function AuthPage() {
         </div>
       </div>
 
-      {/* RIGHT PANEL */}
+      {/* ── RIGHT PANEL ── */}
       <div className="right-panel">
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
@@ -308,30 +457,36 @@ function AuthPage() {
             {isLogin ? "Sign in to continue" : "Create your account to get started"}
           </p>
 
-          {googleError && <div className="auth-error-banner">⚠️ {googleError}</div>}
+          {googleError && (
+            <div className="auth-error-banner">⚠️ {googleError}</div>
+          )}
 
           <div className="toggle">
-            <button className={!isLogin ? "active" : ""} onClick={() => setIsLogin(false)}>Sign Up</button>
-            <button className={isLogin ? "active" : ""} onClick={() => setIsLogin(true)}>Log In</button>
+            <button className={!isLogin ? "active" : ""} onClick={() => setIsLogin(false)}>
+              Sign Up
+            </button>
+            <button className={isLogin ? "active" : ""} onClick={() => setIsLogin(true)}>
+              Log In
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} autoComplete="off">
             {!isLogin && (
               <input
-                type="text" name="random_username_123" placeholder="Username"
+                type="text" placeholder="Username"
                 value={form.username} autoComplete="off" readOnly
                 onFocus={(e) => e.target.removeAttribute("readOnly")}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
               />
             )}
             <input
-              type="email" name="random_email_456" placeholder="Email"
+              type="email" placeholder="Email"
               value={form.email} autoComplete="off" readOnly
               onFocus={(e) => e.target.removeAttribute("readOnly")}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
             <input
-              type="password" name="random_password_789" placeholder="Password"
+              type="password" placeholder="Password"
               value={form.password} autoComplete="new-password" readOnly
               onFocus={(e) => e.target.removeAttribute("readOnly")}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -339,7 +494,9 @@ function AuthPage() {
 
             {isLogin && (
               <div className="forgot-row">
-                <button type="button" className="forgot-link" onClick={openForgot}></button>
+                <button type="button" className="forgot-link" onClick={openForgot}>
+                  Forgot Password?
+                </button>
               </div>
             )}
 
@@ -363,47 +520,31 @@ function AuthPage() {
           </p>
 
           <div className="trust-row">
-            <div className="trust-item"><span></span><p>Secure &amp; Private</p></div>
-            <div className="trust-item"><span></span><p>Fast &amp; Reliable</p></div>
-            <div className="trust-item"><span></span><p>Trusted by Travelers</p></div>
+            <div className="trust-item"><span>🔒</span><p>Secure &amp; Private</p></div>
+            <div className="trust-item"><span>⚡</span><p>Fast &amp; Reliable</p></div>
+            <div className="trust-item"><span>🌍</span><p>Trusted by Travelers</p></div>
           </div>
         </div>
       </div>
 
-      {/* Forgot-password modal (UNCHANGED) */}
-      {showForgot && (
-        <div className="forgot-overlay" onClick={() => setShowForgot(false)}>
-          <div className="forgot-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="forgot-close" onClick={() => setShowForgot(false)} aria-label="Close">✕</button>
-            <h3>Reset Password</h3>
-            <p className="forgot-sub">Enter your email address and we'll send you a reset link.</p>
-            {forgotState.success ? (
-              <div className="forgot-success">✅ Reset link sent successfully.<br />Please check your email.</div>
-            ) : (
-              <form onSubmit={handleForgotSubmit} autoComplete="off">
-                <input type="email" placeholder="Email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
-                {forgotState.error && <div className="forgot-error">⚠️ {forgotState.error}</div>}
-                <button className="forgot-submit" type="submit" disabled={forgotState.loading}>
-                  {forgotState.loading ? "Sending…" : "Send Reset Link"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── OTP VERIFICATION MODAL (new) ── */}
+      {/* ══════════════════════════════════════════════════════════════
+          SIGNUP OTP VERIFICATION MODAL  (unchanged)
+      ══════════════════════════════════════════════════════════════ */}
       {showOtp && (
         <div className="forgot-overlay" onClick={() => !otpState.loading && setShowOtp(false)}>
           <div className="forgot-modal otp-modal" onClick={(e) => e.stopPropagation()}>
             <button className="forgot-close" onClick={() => setShowOtp(false)} aria-label="Close">✕</button>
             <h3>Verify Your Email</h3>
             <p className="forgot-sub">
-              We sent a 6-digit code to <strong style={{ color: "#86efac" }}>{otpEmail}</strong>. It expires in 5 minutes.
+              We sent a 6-digit code to{" "}
+              <strong style={{ color: "#86efac" }}>{otpEmail}</strong>.
+              It expires in 5 minutes.
             </p>
 
             {otpState.success ? (
-              <div className="forgot-success">✅ Email Verified Successfully.<br />Redirecting to login…</div>
+              <div className="forgot-success">
+                ✅ Email Verified Successfully.<br />Redirecting to login…
+              </div>
             ) : (
               <>
                 <div className="otp-inputs" onPaste={handleOtpPaste}>
@@ -423,9 +564,15 @@ function AuthPage() {
                   ))}
                 </div>
 
-                {otpState.error && <div className="forgot-error">⚠️ {otpState.error}</div>}
+                {otpState.error && (
+                  <div className="forgot-error">⚠️ {otpState.error}</div>
+                )}
 
-                <button className="forgot-submit" onClick={handleVerifyOtp} disabled={otpState.loading}>
+                <button
+                  className="forgot-submit"
+                  onClick={handleVerifyOtp}
+                  disabled={otpState.loading}
+                >
                   {otpState.loading ? "Verifying…" : "Verify OTP"}
                 </button>
 
@@ -443,6 +590,213 @@ function AuthPage() {
           </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          FORGOT PASSWORD MODAL  (new — multi-step)
+      ══════════════════════════════════════════════════════════════ */}
+      {showForgot && (
+        <div className="forgot-overlay" onClick={closeForgot}>
+          <div className="forgot-modal otp-modal fp-modal" onClick={(e) => e.stopPropagation()}>
+
+            {/* Close button — always visible */}
+            <button className="forgot-close" onClick={closeForgot} aria-label="Close">✕</button>
+
+            {/* Step indicator */}
+            {fpStep !== FP_STEP.SUCCESS && (
+              <div className="fp-steps">
+                {[FP_STEP.EMAIL, FP_STEP.OTP, FP_STEP.PASSWORD].map((s, idx) => (
+                  <React.Fragment key={s}>
+                    <div className={`fp-step-dot ${fpStep === s ? "fp-step-active" : [FP_STEP.OTP, FP_STEP.PASSWORD, FP_STEP.SUCCESS].includes(fpStep) && idx === 0 ? "fp-step-done" : fpStep === FP_STEP.PASSWORD && idx === 1 ? "fp-step-done" : ""}`}>
+                      {(idx === 0 && [FP_STEP.OTP, FP_STEP.PASSWORD].includes(fpStep)) ||
+                       (idx === 1 && fpStep === FP_STEP.PASSWORD)
+                        ? "✓"
+                        : idx + 1}
+                    </div>
+                    {idx < 2 && <div className={`fp-step-line ${(idx === 0 && [FP_STEP.OTP, FP_STEP.PASSWORD].includes(fpStep)) || (idx === 1 && fpStep === FP_STEP.PASSWORD) ? "fp-step-line-done" : ""}`} />}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
+            {/* ── STEP 1: Enter email ── */}
+            {fpStep === FP_STEP.EMAIL && (
+              <>
+                <h3>Reset Password</h3>
+                <p className="forgot-sub">
+                  Enter the email address linked to your Sarathi account and we'll send you a verification code.
+                </p>
+                <form onSubmit={handleFpSendOtp} autoComplete="off">
+                  <input
+                    type="email"
+                    placeholder="Your email address"
+                    value={fpEmail}
+                    onChange={(e) => { setFpEmail(e.target.value); setFpError(""); }}
+                    autoFocus
+                    disabled={fpLoading}
+                  />
+                  {fpError && <div className="forgot-error">⚠️ {fpError}</div>}
+                  <button className="forgot-submit" type="submit" disabled={fpLoading}>
+                    {fpLoading ? "Sending code…" : "Send Verification Code"}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* ── STEP 2: Verify OTP ── */}
+            {fpStep === FP_STEP.OTP && (
+              <>
+                <h3>Enter Verification Code</h3>
+                <p className="forgot-sub">
+                  We sent a 6-digit code to{" "}
+                  <strong style={{ color: "#86efac" }}>{fpEmail}</strong>.
+                  {" "}It expires in 5 minutes.
+                </p>
+
+                <div className="otp-inputs" onPaste={handleFpOtpPaste}>
+                  {fpOtpDigits.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => (fpOtpRefs.current[i] = el)}
+                      className="otp-box"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      onChange={(e) => handleFpOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleFpOtpKeyDown(i, e)}
+                      disabled={fpLoading}
+                    />
+                  ))}
+                </div>
+
+                {fpError && <div className="forgot-error">⚠️ {fpError}</div>}
+
+                <button
+                  className="forgot-submit"
+                  onClick={handleFpVerifyOtp}
+                  disabled={fpLoading}
+                >
+                  {fpLoading ? "Verifying…" : "Verify Code"}
+                </button>
+
+                <div className="otp-resend-row">
+                  {fpResendIn > 0 ? (
+                    <span className="otp-resend-wait">Resend code in {fpResendIn}s</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="otp-resend-btn"
+                      onClick={handleFpResendOtp}
+                      disabled={fpLoading}
+                    >
+                      Resend Code
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="fp-back-btn"
+                  onClick={() => { setFpStep(FP_STEP.EMAIL); setFpError(""); }}
+                  disabled={fpLoading}
+                >
+                  ← Change Email
+                </button>
+              </>
+            )}
+
+            {/* ── STEP 3: New password ── */}
+            {fpStep === FP_STEP.PASSWORD && (
+              <>
+                <h3>Set New Password</h3>
+                <p className="forgot-sub">
+                  Choose a strong password for your Sarathi account.
+                </p>
+                <form onSubmit={handleFpResetPassword} autoComplete="off">
+                  <div className="fp-pw-wrap">
+                    <input
+                      type={fpShowNewPw ? "text" : "password"}
+                      placeholder="New password (min. 6 characters)"
+                      value={fpNewPassword}
+                      onChange={(e) => { setFpNewPassword(e.target.value); setFpError(""); }}
+                      autoFocus
+                      disabled={fpLoading}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      className="fp-eye-btn"
+                      onClick={() => setFpShowNewPw((p) => !p)}
+                      tabIndex={-1}
+                      aria-label={fpShowNewPw ? "Hide password" : "Show password"}
+                    >
+                      {fpShowNewPw ? "🙈" : "👁"}
+                    </button>
+                  </div>
+
+                  <div className="fp-pw-wrap">
+                    <input
+                      type={fpShowConfirmPw ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      value={fpConfirmPassword}
+                      onChange={(e) => { setFpConfirmPassword(e.target.value); setFpError(""); }}
+                      disabled={fpLoading}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      className="fp-eye-btn"
+                      onClick={() => setFpShowConfirmPw((p) => !p)}
+                      tabIndex={-1}
+                      aria-label={fpShowConfirmPw ? "Hide password" : "Show password"}
+                    >
+                      {fpShowConfirmPw ? "🙈" : "👁"}
+                    </button>
+                  </div>
+
+                  {/* Password strength hints */}
+                  {fpNewPassword && (
+                    <div className="fp-pw-hints">
+                      <span className={fpNewPassword.length >= 6 ? "fp-hint-ok" : "fp-hint-bad"}>
+                        {fpNewPassword.length >= 6 ? "✓" : "✗"} At least 6 characters
+                      </span>
+                      {fpConfirmPassword && (
+                        <span className={fpNewPassword === fpConfirmPassword ? "fp-hint-ok" : "fp-hint-bad"}>
+                          {fpNewPassword === fpConfirmPassword ? "✓" : "✗"} Passwords match
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {fpError && <div className="forgot-error">⚠️ {fpError}</div>}
+
+                  <button className="forgot-submit" type="submit" disabled={fpLoading}>
+                    {fpLoading ? "Updating password…" : "Reset Password"}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* ── STEP 4: Success ── */}
+            {fpStep === FP_STEP.SUCCESS && (
+              <div className="fp-success-view">
+                <div className="fp-success-icon">✅</div>
+                <h3>Password Updated!</h3>
+                <p className="forgot-sub">
+                  Your password has been reset successfully.
+                  <br />
+                  Redirecting you to login…
+                </p>
+                <div className="fp-success-bar">
+                  <div className="fp-success-bar-fill" />
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
