@@ -10,9 +10,9 @@ const genOtp          = () => String(Math.floor(100000 + Math.random() * 900000)
 const OTP_TTL_MS      = 5 * 60 * 1000;   // 5 minutes
 const RESEND_WINDOW_MS = 60 * 1000;       // 60 seconds
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    SIGNUP FLOW  (unchanged — do not modify)
-═══════════════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════════ */
 
 // ── Step 1: Send signup OTP ──────────────────────────────────────────
 exports.sendOtp = async (req, res) => {
@@ -140,9 +140,9 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    LOGIN  (unchanged)
-═══════════════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════════ */
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -168,9 +168,9 @@ exports.login = async (req, res) => {
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    GOOGLE LOGIN  (unchanged)
-═══════════════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════════ */
 exports.googleLogin = async (req, res) => {
   try {
     const { email, name } = req.body;
@@ -192,9 +192,9 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    LEGACY SIGNUP  (no longer routed — preserved for safety)
-═══════════════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════════ */
 exports.signup = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -216,9 +216,9 @@ exports.signup = async (req, res) => {
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    FORGOT PASSWORD FLOW  (new)
-═══════════════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════════ */
 
 /**
  * POST /api/auth/forgot-password/send-otp
@@ -232,39 +232,55 @@ exports.signup = async (req, res) => {
  */
 exports.sendForgotOtp = async (req, res) => {
   try {
+    console.log("[sendForgotOtp] Starting forgot password flow");
     const { email } = req.body;
+    console.log("[sendForgotOtp] Email received:", email);
 
     if (!email || !email.trim()) {
+      console.log("[sendForgotOtp] Email is empty or missing");
       return res.status(400).json({ message: "Email is required" });
     }
     if (!EMAIL_RE.test(email)) {
+      console.log("[sendForgotOtp] Email format invalid:", email);
       return res.status(400).json({ message: "Please enter a valid email address" });
     }
 
     const normEmail = email.toLowerCase().trim();
+    console.log("[sendForgotOtp] Normalized email:", normEmail);
 
     // Account must exist
+    console.log("[sendForgotOtp] Checking if user exists...");
     const user = await User.findOne({ email: normEmail });
     if (!user) {
+      console.log("[sendForgotOtp] User not found for email:", normEmail);
       return res.status(404).json({ message: "No account found with this email address" });
     }
+    console.log("[sendForgotOtp] User found:", user._id);
 
     // Enforce resend window: check if a recent OTP was already sent
+    console.log("[sendForgotOtp] Checking for existing OTP...");
     const existing = await Otp.findOne({ email: normEmail, purpose: "forgot-password" });
     if (existing) {
+      console.log("[sendForgotOtp] Existing OTP found, checking resend window...");
       const since = Date.now() - new Date(existing.createdAt).getTime();
       if (since < RESEND_WINDOW_MS) {
         const wait = Math.ceil((RESEND_WINDOW_MS - since) / 1000);
+        console.log("[sendForgotOtp] Resend window violated, must wait:", wait, "seconds");
         return res.status(429).json({
           message: `Please wait ${wait}s before requesting a new code`,
         });
       }
+      console.log("[sendForgotOtp] Resend window expired, proceeding to generate new OTP");
+    } else {
+      console.log("[sendForgotOtp] No existing OTP found");
     }
 
     const otp = genOtp();
+    console.log("[sendForgotOtp] Generated OTP:", otp);
 
     // Upsert keyed on { email, purpose: "forgot-password" }
-    await Otp.findOneAndUpdate(
+    console.log("[sendForgotOtp] Upserting OTP record to MongoDB...");
+    const otpRecord = await Otp.findOneAndUpdate(
       { email: normEmail, purpose: "forgot-password" },
       {
         email:     normEmail,
@@ -276,15 +292,23 @@ exports.sendForgotOtp = async (req, res) => {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+    console.log("[sendForgotOtp] OTP record saved to MongoDB:", otpRecord._id);
 
+    console.log("[sendForgotOtp] Sending OTP email to:", normEmail);
     await sendOtpEmail(normEmail, otp, "forgot-password");
+    console.log("[sendForgotOtp] Email sent successfully");
 
+    console.log("[sendForgotOtp] Returning success response");
     return res.status(200).json({
       message: "Password reset code sent to your email",
     });
   } catch (error) {
-    console.error("sendForgotOtp error:", error.message);
-    return res.status(500).json({ message: "Could not send reset code. Please try again." });
+    console.error("[sendForgotOtp] ERROR:", error.message);
+    console.error("[sendForgotOtp] Stack:", error.stack);
+    return res.status(500).json({
+      message: "Could not send reset code. Please try again.",
+      error: error.message, // Include error for debugging
+    });
   }
 };
 
@@ -298,46 +322,64 @@ exports.sendForgotOtp = async (req, res) => {
  */
 exports.verifyForgotOtp = async (req, res) => {
   try {
+    console.log("[verifyForgotOtp] Starting OTP verification");
     const { email, otp } = req.body;
+    console.log("[verifyForgotOtp] Email:", email, "OTP:", otp);
 
     if (!email || !otp) {
+      console.log("[verifyForgotOtp] Missing email or OTP");
       return res.status(400).json({ message: "Email and OTP are required" });
     }
 
     const normEmail = email.toLowerCase().trim();
+    console.log("[verifyForgotOtp] Normalized email:", normEmail);
 
+    console.log("[verifyForgotOtp] Looking up OTP record...");
     const record = await Otp.findOne({ email: normEmail, purpose: "forgot-password" });
     if (!record) {
+      console.log("[verifyForgotOtp] No OTP record found");
       return res.status(400).json({
         message: "Reset code not found or already used. Please request a new one.",
       });
     }
+    console.log("[verifyForgotOtp] OTP record found");
 
     if (new Date() > new Date(record.expiresAt)) {
+      console.log("[verifyForgotOtp] OTP expired");
       await Otp.deleteOne({ _id: record._id });
       return res.status(400).json({
         message: "Reset code has expired. Please request a new one.",
       });
     }
+    console.log("[verifyForgotOtp] OTP not expired");
 
     if (String(otp).trim() !== record.otp) {
+      console.log("[verifyForgotOtp] OTP mismatch. Provided:", String(otp).trim(), "Stored:", record.otp);
       return res.status(400).json({ message: "Invalid reset code. Please try again." });
     }
+    console.log("[verifyForgotOtp] OTP matches");
 
     // Issue a short-lived reset token (5 min) so the client can call /reset
+    console.log("[verifyForgotOtp] Generating reset token...");
     const resetToken = jwt.sign(
       { email: normEmail, purpose: "password-reset" },
       process.env.JWT_SECRET,
       { expiresIn: "5m" }
     );
+    console.log("[verifyForgotOtp] Reset token generated");
 
+    console.log("[verifyForgotOtp] Returning success with reset token");
     return res.status(200).json({
       message: "OTP verified successfully",
       resetToken,
     });
   } catch (error) {
-    console.error("verifyForgotOtp error:", error.message);
-    return res.status(500).json({ message: "Verification failed. Please try again." });
+    console.error("[verifyForgotOtp] ERROR:", error.message);
+    console.error("[verifyForgotOtp] Stack:", error.stack);
+    return res.status(500).json({
+      message: "Verification failed. Please try again.",
+      error: error.message,
+    });
   }
 };
 
@@ -352,47 +394,68 @@ exports.verifyForgotOtp = async (req, res) => {
  */
 exports.resetPassword = async (req, res) => {
   try {
+    console.log("[resetPassword] Starting password reset");
     const { resetToken, newPassword } = req.body;
+    console.log("[resetPassword] Reset token provided:", !!resetToken, "New password provided:", !!newPassword);
 
     if (!resetToken || !newPassword) {
+      console.log("[resetPassword] Missing reset token or new password");
       return res.status(400).json({ message: "Reset token and new password are required" });
     }
     if (newPassword.length < 6) {
+      console.log("[resetPassword] Password too short");
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
     // Verify the reset token
+    console.log("[resetPassword] Verifying reset token...");
     let decoded;
     try {
       decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+      console.log("[resetPassword] Token verified, email:", decoded.email);
     } catch (err) {
+      console.log("[resetPassword] Token verification failed:", err.message);
       return res.status(401).json({
         message: "Reset session expired. Please start over.",
       });
     }
 
     if (decoded.purpose !== "password-reset") {
+      console.log("[resetPassword] Token purpose mismatch:", decoded.purpose);
       return res.status(401).json({ message: "Invalid reset token" });
     }
 
     const normEmail = decoded.email.toLowerCase().trim();
+    console.log("[resetPassword] Normalized email from token:", normEmail);
 
+    console.log("[resetPassword] Looking up user...");
     const user = await User.findOne({ email: normEmail });
     if (!user) {
+      console.log("[resetPassword] User not found");
       return res.status(404).json({ message: "Account not found" });
     }
+    console.log("[resetPassword] User found:", user._id);
 
     // Hash new password and update
+    console.log("[resetPassword] Hashing new password...");
     const hashed = await bcrypt.hash(newPassword, 10);
     user.password = hashed;
     await user.save();
+    console.log("[resetPassword] Password updated in database");
 
     // Clean up the OTP record
+    console.log("[resetPassword] Deleting OTP record...");
     await Otp.deleteOne({ email: normEmail, purpose: "forgot-password" });
+    console.log("[resetPassword] OTP record deleted");
 
+    console.log("[resetPassword] Password reset complete");
     return res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
-    console.error("resetPassword error:", error.message);
-    return res.status(500).json({ message: "Could not reset password. Please try again." });
+    console.error("[resetPassword] ERROR:", error.message);
+    console.error("[resetPassword] Stack:", error.stack);
+    return res.status(500).json({
+      message: "Could not reset password. Please try again.",
+      error: error.message,
+    });
   }
 };
