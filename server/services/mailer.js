@@ -3,10 +3,15 @@
 
 const nodemailer = require("nodemailer");
 
+/* ── Gmail SMTP transporter ──────────────────────────────────────────
+   family: 4 forces IPv4 — Render has no working IPv6 route, so without
+   this Nodemailer's own resolver picks Gmail's IPv6 (AAAA) record and
+   dies with ENETUNREACH before reaching Gmail. */
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
-  secure: true,
+  secure: true, // 465 = implicit TLS
+  family: 4,    // force IPv4
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -16,6 +21,9 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 20000,
 });
 
+/* ── Verify SMTP connection on startup ───────────────────────────────
+   Logs readiness or the full error so you know at boot whether Gmail
+   auth / connectivity works. Does NOT crash the server on failure. */
 transporter.verify((error) => {
   if (error) {
     console.error("❌ Gmail SMTP verify FAILED:", error.message);
@@ -25,6 +33,7 @@ transporter.verify((error) => {
   }
 });
 
+/* ── Email template (Sarathi branding, green theme, OTP box) ─────────── */
 const buildEmail = (otp, purpose) => {
   const isReset = purpose === "forgot-password";
   const subject = isReset ? "Reset Your Sarathi Password" : "Verify Your Sarathi Account";
@@ -55,6 +64,13 @@ const buildEmail = (otp, purpose) => {
   return { subject, html, text };
 };
 
+/**
+ * sendOtpEmail(to, otp, purpose)
+ * @param {string} to       recipient email
+ * @param {string} otp      6-digit code
+ * @param {string} purpose  "signup" | "forgot-password"
+ * Throws on failure so the calling controller's try/catch returns a clean 500.
+ */
 const sendOtpEmail = async (to, otp, purpose = "signup") => {
   console.log(`📧 OTP email requested → ${to} (purpose: ${purpose})`);
 
@@ -76,7 +92,7 @@ const sendOtpEmail = async (to, otp, purpose = "signup") => {
     return info;
   } catch (error) {
     console.error("❌ Email send FAILED:", error.message);
-    console.error(error);
+    console.error(error); // full stack
     throw new Error("Email could not be sent");
   }
 };
