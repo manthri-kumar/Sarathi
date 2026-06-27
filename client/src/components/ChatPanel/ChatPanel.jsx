@@ -173,7 +173,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
       <div className="chat-header">
         <div className="chat-header-left">
           <span className="chat-header-avatar">
-            {isTempleMode ? "🛕" : "🤖"}
+            {isTempleMode ? "🛕" : ""}
           </span>
           <div className="chat-header-info">
             <h3 className="chat-header-title">
@@ -284,7 +284,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 {msg.summary.transportDetails?.fare && (
                   <div className="summary-costs">
                     <div className="summary-row">
-                      <span>🚍 Transport</span>
+                      <span>Transport</span>
                       <span style={{ textTransform: "capitalize" }}>{msg.summary.transport}</span>
                     </div>
                     <div className="summary-row">
@@ -329,12 +329,12 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
                 <div className="summary-costs">
                   <div className="summary-row">
-                    <span>🚕 Transport (×{msg.summary.travellers})</span>
+                    <span> Transport (×{msg.summary.travellers})</span>
                     <span>₹{msg.summary.costs.transport.toLocaleString()}</span>
                   </div>
-                  <div className="summary-row"><span>🏨 Hotel</span><span>₹{msg.summary.costs.hotel.toLocaleString()}</span></div>
-                  <div className="summary-row"><span>🍴 Food</span><span>₹{msg.summary.costs.food.toLocaleString()}</span></div>
-                  <div className="summary-row"><span>🎟 Activities</span><span>₹{msg.summary.costs.activities.toLocaleString()}</span></div>
+                  <div className="summary-row"><span> Hotel</span><span>₹{msg.summary.costs.hotel.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>Food</span><span>₹{msg.summary.costs.food.toLocaleString()}</span></div>
+                  <div className="summary-row"><span>Activities</span><span>₹{msg.summary.costs.activities.toLocaleString()}</span></div>
                   {msg.summary.remaining != null && (
                     <div className="summary-row">
                       <span>💰 Remaining</span>
@@ -393,10 +393,10 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                       <strong>₹{msg.budget.total.toLocaleString()}</strong>
                     </div>
                     {[
-                      ["🏨 Hotel", msg.budget.hotel],
-                      ["🍴 Food", msg.budget.food],
-                      ["🚕 Transport", msg.budget.transport],
-                      ["🎟 Activities", msg.budget.activities],
+                      ["Hotel", msg.budget.hotel],
+                      ["Food", msg.budget.food],
+                      ["Transport", msg.budget.transport],
+                      ["Activities", msg.budget.activities],
                     ].map(([label, val]) => (
                       <div key={label} className="budget-row">
                         <span>{label}</span>
@@ -433,15 +433,15 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 <h3>⚠️ Budget Exceeded</h3>
                 <p>The estimated trip cost exceeds your budget.</p>
                 <div className="budget-breakdown">
-                  <div className="budget-line"><strong>🏨 Hotel</strong></div>
+                  <div className="budget-line"><strong>Hotel</strong></div>
                   <div className="budget-subline">₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days × {msg.budgetData.roomsNeeded} rooms</div>
                   <div className="budget-value">₹{msg.budgetData.hotelCost?.toLocaleString()}</div>
                   <hr />
-                  <div className="budget-line"><strong>🍽 Food</strong></div>
+                  <div className="budget-line"><strong>Food</strong></div>
                   <div className="budget-subline">₹{msg.budgetData.foodRate} × {msg.budgetData.travellers} travelers × {msg.budgetData.days} days</div>
                   <div className="budget-value">₹{msg.budgetData.foodCost?.toLocaleString()}</div>
                   <hr />
-                  <div className="budget-line"><strong>🚆 Transport</strong></div>
+                  <div className="budget-line"><strong>Transport</strong></div>
                   <div className="budget-subline">₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}</div>
                   <div className="budget-value">₹{msg.budgetData.transportCost?.toLocaleString()}</div>
                   <hr />
