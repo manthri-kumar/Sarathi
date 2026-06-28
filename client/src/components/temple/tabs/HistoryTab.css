@@ -1,170 +1,66 @@
-.history-tab {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 24px;
-  padding: 32px 24px;
+.hs-root { max-width: 760px; margin: 0 auto; padding: 8px 0 60px; }
+
+.hs-reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s cubic-bezier(.4,0,.2,1), transform .6s cubic-bezier(.4,0,.2,1); }
+.hs-reveal.hs-in { opacity: 1; transform: translateY(0); }
+
+.hs-hero { text-align: center; padding: 40px 24px 32px; }
+.hs-hero-icon { font-size: 48px; }
+.hs-hero-title { font-size: 30px; font-weight: 800; color: #fff; margin: 14px 0 8px; letter-spacing: -.02em; }
+.hs-hero-sub { color: #6aad7a; font-size: 15px; margin: 0; }
+
+.hs-card {
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(34,197,94,.12);
+  border-radius: 22px;
+  padding: 28px 30px;
+  margin: 18px 0;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
-
-.history-main {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(34, 197, 94, 0.1);
-  border-radius: 12px;
-  padding: 28px;
+.hs-card-hl {
+  background: linear-gradient(160deg, rgba(34,197,94,.10), rgba(34,197,94,.03));
+  border-color: rgba(34,197,94,.30);
+  box-shadow: 0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
 }
+.hs-card-title { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 800; color: #fff; margin: 0 0 18px; }
+.hs-card-icon { font-size: 24px; }
+.hs-para { color: #c7d6cc; font-size: 16px; line-height: 1.75; margin: 0 0 16px; max-width: 70ch; }
+.hs-para:last-child { margin-bottom: 0; }
 
-.history-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #22c55e;
-  margin-bottom: 20px;
+.hs-facts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 14px; }
+.hs-fact-card {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.18);
+  border-radius: 16px; padding: 16px; transition: transform .25s ease, border-color .25s ease;
 }
+.hs-fact-card:hover { transform: translateY(-3px); border-color: rgba(34,197,94,.4); }
+.hs-fact-gem { font-size: 18px; }
+.hs-fact-card p { margin: 0; color: #dbe7df; font-size: 14.5px; line-height: 1.55; }
 
-.history-text {
-  color: #e2e8f0;
-  line-height: 1.8;
-  font-size: 15px;
-}
+.hs-timeline { position: relative; padding-left: 28px; }
+.hs-timeline::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(#22c55e, rgba(34,197,94,.15)); }
+.hs-tl-item { position: relative; padding: 0 0 24px 8px; }
+.hs-tl-item:last-child { padding-bottom: 0; }
+.hs-tl-dot { position: absolute; left: -28px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.18); }
+.hs-tl-title { display: block; font-weight: 800; color: #86efac; font-size: 15px; margin-bottom: 4px; }
+.hs-tl-desc { margin: 0; color: #b9c9bf; font-size: 14px; line-height: 1.6; }
 
-.history-paragraph {
-  margin-bottom: 16px;
-  text-align: justify;
-}
+.hs-sources { margin-top: 22px; padding: 20px 24px; border-radius: 18px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); }
+.hs-sources h4 { margin: 0 0 10px; color: #fff; font-size: 15px; }
+.hs-sources ul { margin: 0; padding-left: 18px; }
+.hs-sources a { color: #4ade80; font-size: 13.5px; word-break: break-all; }
+.hs-disclaimer { margin: 12px 0 0; color: #6aad7a; font-size: 12.5px; }
 
-.history-sources {
-  margin-top: 28px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(34, 197, 94, 0.2);
-}
+.history-no-data { text-align: center; padding: 60px 24px; color: #94a3b8; }
+.history-no-data .no-data-icon { font-size: 44px; margin-bottom: 14px; }
+.history-no-data .no-data-hint { font-size: 13px; color: #6aad7a; }
 
-.history-sources h4 {
-  color: #22c55e;
-  font-size: 13px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-  letter-spacing: 0.5px;
-}
+.loading-state { text-align: center; padding: 60px 24px; color: #94a3b8; }
+.loading-state .spinner { width: 40px; height: 40px; border: 3px solid rgba(34,197,94,.2); border-top-color: #22c55e; border-radius: 50%; animation: hsspin .8s linear infinite; margin: 0 auto 16px; }
+@keyframes hsspin { to { transform: rotate(360deg); } }
 
-.sources-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 12px 0;
-}
-
-.source-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  color: #cbd5e1;
-  font-size: 13px;
-}
-
-.source-icon {
-  color: #22c55e;
-  flex-shrink: 0;
-}
-
-.sources-disclaimer {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0;
-  font-style: italic;
-}
-
-.history-no-data {
-  text-align: center;
-  padding: 40px 20px;
-  background: rgba(34, 197, 94, 0.05);
-  border-radius: 8px;
-  border: 1px dashed rgba(34, 197, 94, 0.2);
-  margin-top: 20px;
-}
-
-.no-data-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.history-no-data p {
-  color: #cbd5e1;
-  margin: 8px 0;
-  font-size: 14px;
-}
-
-.no-data-hint {
-  color: #94a3b8 !important;
-  font-size: 13px !important;
-}
-
-.history-info-box {
-  background: rgba(34, 197, 94, 0.05);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  border-radius: 8px;
-  padding: 20px;
-  position: sticky;
-  top: 24px;
-  height: fit-content;
-}
-
-.history-info-box h4 {
-  color: #22c55e;
-  font-size: 13px;
-  text-transform: uppercase;
-  margin: 0 0 12px 0;
-  letter-spacing: 0.5px;
-}
-
-.history-info-box p {
-  color: #cbd5e1;
-  font-size: 13px;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #cbd5e1;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(34, 197, 94, 0.2);
-  border-top-color: #22c55e;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 768px) {
-  .history-tab {
-    grid-template-columns: 1fr;
-    padding: 20px 16px;
-  }
-
-  .history-info-box {
-    position: static;
-  }
-
-  .history-main {
-    padding: 20px;
-  }
-
-  .history-title {
-    font-size: 20px;
-  }
-
-  .history-text {
-    font-size: 14px;
-  }
+@media (max-width: 640px) {
+  .hs-card { padding: 22px 20px; border-radius: 18px; }
+  .hs-hero-title { font-size: 25px; }
+  .hs-para { font-size: 15px; }
 }

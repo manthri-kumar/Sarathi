@@ -263,6 +263,7 @@ function TempleDetailsPageInner() {
             <HistoryTab
               content={enriched?.history?.content}
               sources={enriched?.history?.sources || []}
+              history={enriched?.history}
               loading={loadingEnriched}
               templeName={googleData.name}
             />
