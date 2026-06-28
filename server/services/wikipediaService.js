@@ -31,39 +31,70 @@ const WIKI_API = "https://en.wikipedia.org/w/api.php";
 
 /**
  * Build search query variants from the raw Google Places name.
- * Wikipedia titles never match Places names exactly, so we try
- * progressively simpler forms until we get a hit.
+ *
+ * Google names are noisy: parentheticals ("(Tirumala Tirupati Devasthanams)"),
+ * multi-word suffixes ("Swamy Temple", "Vari Devasthanam"), repeated honorifics.
+ * Wikipedia titles never match these, so we strip aggressively and also build
+ * the "Deity Temple, City" form Wikipedia uses for major temples.
  */
 const buildSearchVariants = (templeName) => {
   const variants = new Set();
-  variants.add(templeName);
+  const raw = templeName.trim();
+  variants.add(raw);
 
-  // Strip leading honorifics
-  const stripped = templeName
-    .replace(/^(Sri\s+Sri\s+Sri\s+|Sri\s+Sri\s+|Shri\s+|Sri\s+|Sree\s+)/i, "")
-    .replace(/\s+(vari\s+devasthanam|devasthanam|mandir|swamy\s+temple|swami\s+temple|temple)$/i, "")
-    .trim();
+  // 1. Remove any parenthetical: "X Temple (Tirumala Tirupati Devasthanams)" → "X Temple"
+  const noParens = raw.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
+  if (noParens && noParens !== raw) variants.add(noParens);
 
-  variants.add(stripped);
-  variants.add(`${stripped} temple`);
-  variants.add(`${stripped} Hindu temple`);
+  // 2. Strip leading honorifics (Sri/Shri/Sree, repeated)
+  let stripped = noParens.replace(/^(?:sri\s+|shri\s+|sree\s+)+/i, "").trim();
 
-  // Just the core name (first 2-3 meaningful words)
+  // 3. Strip trailing temple-type suffixes — loop to catch "Swamy Temple",
+  //    "Vari Devasthanam", etc. until the string stops shrinking.
+  const SUFFIX_RE = /\s+(?:vari\s+devasthanam|devasthanams?|swamy\s+temple|swami\s+temple|swamy|swami|mandir|kovil|koil|temple)$/i;
+  let prev;
+  do {
+    prev = stripped;
+    stripped = stripped.replace(SUFFIX_RE, "").trim();
+  } while (stripped !== prev && stripped.length > 0);
+
+  if (stripped) {
+    variants.add(stripped);
+    variants.add(`${stripped} Temple`);
+    variants.add(`${stripped} Hindu temple`);
+  }
+
+  // 4. Wikipedia convention for major temples: "Deity Temple, City".
+  //    Pull likely city tokens from the original parenthetical.
+  const parenMatch = raw.match(/\(([^)]*)\)/);
+  const cityHints = [];
+  if (parenMatch) {
+    parenMatch[1].split(/[\s,]+/).forEach((w) => {
+      if (w.length > 3 && !/devasthanam/i.test(w)) cityHints.push(w);
+    });
+  }
+  cityHints.forEach((city) => {
+    if (stripped) {
+      variants.add(`${stripped} Temple, ${city}`);
+      variants.add(`${stripped}, ${city}`);
+    }
+  });
+
+  // 5. Core meaningful words (drop generic/stop words)
   const stopWords = new Set([
-    "sri", "shri", "sree", "swamy", "swami", "temple", "mandir",
-    "devasthanam", "vari", "the", "of", "and", "goddess", "lord",
+    "sri", "shri", "sree", "swamy", "swami", "temple", "mandir", "kovil", "koil",
+    "devasthanam", "devasthanams", "vari", "the", "of", "and", "goddess", "lord",
   ]);
   const meaningful = stripped
     .split(/\s+/)
     .filter((w) => !stopWords.has(w.toLowerCase()) && w.length > 2)
     .slice(0, 3);
-
   if (meaningful.length) {
     variants.add(meaningful.join(" "));
-    variants.add(`${meaningful.join(" ")} temple`);
+    variants.add(`${meaningful.join(" ")} Temple`);
   }
 
-  return [...variants];
+  return [...variants].filter(Boolean);
 };
 
 /**
@@ -172,7 +203,7 @@ const fetchSummaryFallback = async (pageTitle) => {
   }
 };
 
-/* ── Main export #1 — TEMPLE DETAIL (unchanged) ──────────────── */
+/* ── Main export #1 — TEMPLE DETAIL ──────────────────────────── */
 /**
  * getTempleWikiData(templeName)
  * Returns { title, extract, url } or null.
@@ -190,6 +221,7 @@ const getTempleWikiData = async (templeName) => {
 
   try {
     console.log(`[WIKI] Starting lookup for: "${templeName}"`);
+    console.log(`[WIKI] Variants: ${JSON.stringify(buildSearchVariants(templeName))}`);
 
     const pageTitle = await findPageTitle(templeName);
     if (!pageTitle) {
@@ -219,7 +251,7 @@ const getTempleWikiData = async (templeName) => {
   }
 };
 
-/* ── Main export #2 — CITY ATTRACTIONS LIST (new) ────────────── */
+/* ── Main export #2 — CITY ATTRACTIONS LIST ──────────────────── */
 /**
  * getWikipediaAttractions(cityName)
  * Returns [{ name, category, description, source }] — candidate place
