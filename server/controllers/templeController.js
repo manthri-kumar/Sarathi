@@ -5,7 +5,7 @@
  * ─────────────────────────
  * Handles all /api/temples/* routes.
  *
- * Temple Chat pipeline (updated):
+ * Temple Chat pipeline:
  *   User message
  *     → getTempleWikiData()       [full Wikipedia article, cached 24h]
  *     → extractSections()         [parse article into named sections]
@@ -14,6 +14,11 @@
  *     → askGroq() / askGemini()  [get AI answer]
  *     → cleanReply                [strip markdown artifacts]
  *     → res.json({ reply })
+ *
+ * Temple Details (enriched) pipeline — NOW uses the SAME Wikipedia
+ * extraction as the chat for History / Rituals / Festivals (factual,
+ * no AI). Gemini is used ONLY for practical Overview / Darshan / Travel
+ * fields, grounded by the Wikipedia extract.
  */
 
 const axios    = require("axios");
@@ -60,6 +65,35 @@ const shapePlace = (place) => ({
   openNow: place.opening_hours?.open_now ?? null,
   types:   place.types || [],
 });
+
+/* ── Sentence-safe truncation ────────────────────────────────── */
+const capText = (text, max) => {
+  if (!text || text.length <= max) return (text || "").trim();
+  const cut = text.lastIndexOf(". ", max);
+  return cut > max * 0.6
+    ? text.substring(0, cut + 1).trim()
+    : text.substring(0, max).trim() + "…";
+};
+
+/* ── Collect specific section text for a tab ─────────────────────
+   Reuses the SAME getSectionForQuestion routing the chat uses.
+   Strips generic fallback keys ("raw"/"other") so a tab never shows
+   a whole-article dump as if it were a specific section. */
+const collectSectionText = (sections, keys) => {
+  if (!sections) return "";
+  const skip = new Set(["raw", "other"]);
+  const seen = new Set();
+  const parts = [];
+  for (const k of keys || []) {
+    if (skip.has(k) || seen.has(k)) continue;
+    seen.add(k);
+    const t = sections[k];
+    if (t && typeof t === "string" && t.trim().length > 40) {
+      parts.push(capText(t.trim(), 3500));
+    }
+  }
+  return parts.join("\n\n").trim();
+};
 
 /* ── GET NEARBY TEMPLES ──────────────────────────────────────── */
 const getNearbyTemples = async (req, res) => {
@@ -175,24 +209,87 @@ const getTempleDetails = async (req, res) => {
   }
 };
 
-/* ── GET ENRICHED DATA ───────────────────────────────────────── */
+/* ── GET ENRICHED DATA ───────────────────────────────────────────
+   Unified pipeline:
+   1. Wikipedia article (same fetch + cache as chat)
+   2. extractSections() + getSectionForQuestion()  → history/rituals/festivals
+      as { content, sources } — factual, NO AI
+   3. Gemini (grounded by wiki) → overview/darshan/travel/spiritualPurposes
+      practical fields only. Non-fatal if it fails.
+   Returns a single object the tabs and Overview/Travel all consume. */
 const getEnrichedTemple = async (req, res) => {
   const { name, address } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
 
   try {
-    console.log(`[ENRICH] Generating enriched data for: ${name}`);
+    console.log(`[ENRICH] Building enriched data for: ${name}`);
 
-    // Ground the enrichment prompt with Wikipedia data
-    const wikiData   = await getTempleWikiData(name).catch(() => null);
+    /* ── 1. Wikipedia (factual source for the 3 knowledge tabs) ── */
+    const wikiData = await getTempleWikiData(name).catch((e) => {
+      console.error("[ENRICH] Wikipedia fetch failed (non-fatal):", e.message);
+      return null;
+    });
+
+    let history   = { content: "", sources: [] };
+    let rituals   = { content: "", sources: [] };
+    let festivals = { content: "", sources: [] };
+
+    if (wikiData?.extract) {
+      const sections    = extractSections(wikiData.extract);
+      const wikiSources = [wikiData.url].filter(Boolean);
+
+      const histKeys = getSectionForQuestion(
+        sections, "What is the history, origin and architecture of this temple?"
+      );
+      const ritKeys = getSectionForQuestion(
+        sections, "What are the daily rituals, poojas and worship practices at this temple?"
+      );
+      const festKeys = getSectionForQuestion(
+        sections, "What festivals and celebrations are held at this temple?"
+      );
+
+      let historyContent = collectSectionText(sections, histKeys);
+      // History falls back to the Wikipedia intro (still factual, not AI)
+      if (!historyContent) {
+        historyContent = capText((sections.raw || wikiData.extract || "").trim(), 2200);
+      }
+
+      const ritualsContent   = collectSectionText(sections, ritKeys);
+      const festivalsContent  = collectSectionText(sections, festKeys);
+
+      if (historyContent)   history   = { content: historyContent,   sources: wikiSources };
+      if (ritualsContent)   rituals   = { content: ritualsContent,   sources: wikiSources };
+      if (festivalsContent) festivals = { content: festivalsContent, sources: wikiSources };
+
+      console.log(
+        `[ENRICH] Wikipedia sections → history:${!!historyContent} rituals:${!!ritualsContent} festivals:${!!festivalsContent}`
+      );
+    } else {
+      console.log("[ENRICH] No Wikipedia article — knowledge tabs will show 'not available'");
+    }
+
+    /* ── 2. Gemini practical fields (Overview/Travel/Darshan) ──── */
     const wikiContext = wikiData?.extract
       ? `\n\nVerified Wikipedia article extract — use this to populate fields accurately:\n${wikiData.extract.substring(0, 3000)}`
       : "";
 
-    const data = await getEnrichedTempleData(name, address || "India", wikiContext);
-    if (!data) return res.status(500).json({ error: "Enrichment returned no data" });
+    let practical = null;
+    try {
+      practical = await getEnrichedTempleData(name, address || "India", wikiContext);
+    } catch (e) {
+      console.error("[ENRICH] Gemini practical enrichment failed (non-fatal):", e.message);
+    }
 
-    return res.json(data);
+    /* ── 3. Merge — single object consumed by all tabs ─────────── */
+    return res.json({
+      overview:         practical?.overview         || {},
+      darshan:          practical?.darshan          || {},
+      travel:           practical?.travel           || {},
+      spiritualPurposes: practical?.spiritualPurposes || [],
+      history,
+      rituals,
+      festivals,
+    });
   } catch (err) {
     console.error("[ENRICH] Error:", err.message);
     return res.status(500).json({ error: "Enrichment failed" });
@@ -250,7 +347,7 @@ const getNearbyServicePlaces = async (req, res) => {
 };
 
 /* ══════════════════════════════════════════════════════════════
- * TEMPLE CHAT — Main AI pipeline
+ * TEMPLE CHAT — Main AI pipeline (unchanged)
  * ══════════════════════════════════════════════════════════════*/
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", JSON.stringify({
