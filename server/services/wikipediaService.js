@@ -5,11 +5,12 @@
  * ─────────────────────────
  * Wikipedia's API blocks requests without a descriptive User-Agent (403).
  * EVERY axios call here sends WIKI_HEADERS. Uses the modern list=search
- * query API instead of OpenSearch.
+ * query API. Page resolution is address-aware so deity names shared by
+ * many temples (e.g. multiple "Venkateswara") resolve to the right city.
  *
  * Exports:
- *   getTempleWikiData(templeName)     → { title, url, extract } | null
- *   getWikipediaAttractions(cityName) → [{ name, category, description, source }]
+ *   getTempleWikiData(templeName, address?) → { title, url, extract } | null
+ *   getWikipediaAttractions(cityName)        → [{ name, category, description, source }]
  */
 
 const axios = require("axios");
@@ -74,8 +75,24 @@ const buildSearchVariants = (templeName) => {
 
 const TITLE_PREFER_RE = /(temple|mandir|devasthanam|shrine|kovil|koil)/i;
 
-/* ── Step 1 — search for the best page title (list=search) ───── */
-const searchPageTitle = async (templeName) => {
+/* ── Score a search hit by temple-likeness + address overlap ──── */
+const scoreTitle = (title, snippet, addressTokens) => {
+  const hay = `${title} ${snippet || ""}`.toLowerCase();
+  let score = 0;
+  if (TITLE_PREFER_RE.test(title)) score += 5;          // looks like a temple
+  for (const tok of addressTokens) {
+    if (tok.length > 3 && hay.includes(tok)) score += 4; // matches the address
+  }
+  return score;
+};
+
+/* ── Step 1 — search for the best page title (address-aware) ──── */
+const searchPageTitle = async (templeName, address = "") => {
+  const addressTokens = address
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .filter((t) => t.length > 3 && !/india|temple|district|urban/.test(t));
+
   for (const query of buildSearchVariants(templeName)) {
     try {
       console.log(`[WIKI] Searching: "${query}"`);
@@ -84,7 +101,7 @@ const searchPageTitle = async (templeName) => {
           action:   "query",
           list:     "search",
           srsearch: query,
-          srlimit:  6,
+          srlimit:  8,
           format:   "json",
         },
         headers: WIKI_HEADERS,
@@ -94,11 +111,16 @@ const searchPageTitle = async (templeName) => {
       const hits = res.data?.query?.search || [];
       if (!hits.length) continue;
 
-      // Prefer a title that looks like a temple; else best (first) hit.
-      const preferred = hits.find((h) => TITLE_PREFER_RE.test(h.title));
-      const chosen = (preferred || hits[0]).title;
-      console.log(`[WIKI] Matched title: "${chosen}"`);
-      return chosen;
+      // Rank by temple-likeness + address overlap; keep the best.
+      let best = hits[0];
+      let bestScore = -1;
+      for (const h of hits) {
+        const s = scoreTitle(h.title, h.snippet, addressTokens);
+        if (s > bestScore) { bestScore = s; best = h; }
+      }
+
+      console.log(`[WIKI] Matched title: "${best.title}" (score ${bestScore}, address tokens: [${addressTokens.join(", ")}])`);
+      return best.title;
     } catch (err) {
       const code = err.response?.status || err.code;
       console.warn(`[WIKI] Search failed for "${query}": ${code} ${err.message}`);
@@ -164,10 +186,12 @@ const fetchSummary = async (pageTitle) => {
 };
 
 /* ── Main export #1 — TEMPLE DETAIL ──────────────────────────── */
-const getTempleWikiData = async (templeName) => {
+const getTempleWikiData = async (templeName, address = "") => {
   if (!templeName?.trim()) return null;
 
-  const cacheKey = `temple:${templeName.trim().toLowerCase()}`;
+  // Cache key includes address so different temples sharing a deity
+  // name (e.g. multiple "Venkateswara") don't collide.
+  const cacheKey = `temple:${templeName.trim().toLowerCase()}|${address.trim().toLowerCase()}`;
   const cached   = getCached(cacheKey);
   if (cached) {
     console.log(`[WIKI] Cache hit for "${templeName}"`);
@@ -175,9 +199,9 @@ const getTempleWikiData = async (templeName) => {
   }
 
   try {
-    console.log(`[WIKI] Starting lookup for: "${templeName}"`);
+    console.log(`[WIKI] Starting lookup for: "${templeName}" (address: "${address}")`);
 
-    const pageTitle = await searchPageTitle(templeName);
+    const pageTitle = await searchPageTitle(templeName, address);
     if (!pageTitle) {
       console.log("[WIKI] No page title found");
       return null;
