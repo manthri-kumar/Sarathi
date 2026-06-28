@@ -187,9 +187,9 @@ const buildFacts = (sections) => {
     const t = s.trim();
     if (t.length < 30 || t.length > 180) continue;
     if (!FACT_RE.test(t)) continue;
-    const norm = t.toLowerCase();
-    if (seen.has(norm)) continue;
-    seen.add(norm);
+    const n = t.toLowerCase();
+    if (seen.has(n)) continue;
+    seen.add(n);
     facts.push(t);
     if (facts.length >= 6) break;
   }
@@ -204,7 +204,6 @@ const buildHistoryStory = (sections, sourceUrl) => {
   let legend = buildSection(
     sections, ["legend", "sacred", "belief"], "Sacred Legend"
   );
-  // Don't duplicate the same Wikipedia section across origin + legend.
   if (legend && originStory && legend._heading === originStory._heading) legend = null;
 
   const historicalConstruction = buildSection(
@@ -228,15 +227,14 @@ const buildHistoryStory = (sections, sourceUrl) => {
     if (intro?.text) content = splitParagraphs(intro.text).join("\n\n");
   }
 
-  // strip internal _heading before returning
   const clean = (s) => (s ? { title: s.title, content: s.content } : null);
 
   return {
-    originStory:           clean(originStory),
-    legend:                clean(legend),
+    originStory:            clean(originStory),
+    legend:                 clean(legend),
     historicalConstruction: clean(historicalConstruction),
-    architecture:          clean(architecture),
-    spiritualImportance:   clean(spiritualImportance),
+    architecture:           clean(architecture),
+    spiritualImportance:    clean(spiritualImportance),
     interestingFacts,
     timeline,
     content,
@@ -345,13 +343,20 @@ const getTempleDetails = async (req, res) => {
 
 /* ── GET ENRICHED DATA ───────────────────────────────────────── */
 const getEnrichedTemple = async (req, res) => {
-  const { name, address } = req.query;
+  const { name, address, lat, lng } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
 
   try {
     console.log(`[ENRICH] Building enriched data for: ${name}`);
 
-    const wikiData = await getTempleWikiData(name, address || "").catch((e) => {
+    // Pass a LOCATION CONTEXT OBJECT (not a bare string) so the validator
+    // can score city/state/coordinates. This is the fix for the
+    // string-vs-object mismatch that caused every lookup to return null.
+    const wikiData = await getTempleWikiData(name, {
+      address: address || "",
+      lat: lat ? Number(lat) : null,
+      lng: lng ? Number(lng) : null,
+    }).catch((e) => {
       console.error("[ENRICH] Wiki fetch failed (non-fatal):", e.message);
       return null;
     });
@@ -382,7 +387,7 @@ const getEnrichedTemple = async (req, res) => {
           .filter(([k, v]) => v && !["sources", "content"].includes(k))
           .map(([k]) => k));
     } else {
-      console.log("[ENRICH] No Wikipedia article — knowledge tabs empty");
+      console.log("[ENRICH] No verified Wikipedia article — knowledge tabs empty");
     }
 
     const wikiContext = wikiData?.extract
@@ -457,7 +462,7 @@ const getNearbyServicePlaces = async (req, res) => {
 };
 
 /* ══════════════════════════════════════════════════════════════
- * TEMPLE CHAT — Main AI pipeline (unchanged)
+ * TEMPLE CHAT — Main AI pipeline
  * ══════════════════════════════════════════════════════════════*/
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", JSON.stringify({
@@ -470,7 +475,8 @@ const templeChat = async (req, res) => {
   if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
 
   console.log(`[CHAT] Fetching Wikipedia for: ${templeName}`);
-  const wikiData = await getTempleWikiData(templeName, address || "").catch((err) => {
+  // Location context object (address-only is fine here).
+  const wikiData = await getTempleWikiData(templeName, { address: address || "" }).catch((err) => {
     console.error("[CHAT] Wikipedia fetch error (non-fatal):", err.message);
     return null;
   });

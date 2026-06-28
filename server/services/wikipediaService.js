@@ -4,11 +4,12 @@
  * Sarathi Wikipedia Service — Validation-Gated
  * ────────────────────────────────────────────
  * Every candidate article is scored against the Google Places location
- * (city/district/state/name). Articles below CONFIDENCE_THRESHOLD are
- * REJECTED — we return null rather than show another temple's story.
+ * (city/district/state/coordinates/name). Articles below
+ * CONFIDENCE_THRESHOLD are REJECTED — we return null rather than show
+ * another temple's story.
  *
  * getTempleWikiData(templeName, locationCtx) → { title, url, extract } | null
- *   locationCtx: { address, city, district, state, lat, lng }
+ *   locationCtx: { address, city?, district?, state?, lat?, lng? }
  */
 
 const axios = require("axios");
@@ -20,7 +21,7 @@ const WIKI_HEADERS = {
 };
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
-const CONFIDENCE_THRESHOLD = 85;   // reject anything below this
+const CONFIDENCE_THRESHOLD = 70;   // lowered from 85 — clears correct temples, still rejects wrong ones
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const wikiCache = new Map();
 
@@ -39,13 +40,12 @@ const norm = (s = "") =>
 const STOPWORDS = new Set([
   "sri", "shri", "sree", "temple", "templ", "swamy", "swami", "vari",
   "devasthanam", "devasthanams", "mandir", "kovil", "koil", "hindu",
-  "the", "of", "and", "lord",
+  "the", "of", "and", "lord", "urban", "rural",
 ]);
 
 const significantTokens = (s = "") =>
   norm(s).split(" ").filter((t) => t.length > 2 && !STOPWORDS.has(t));
 
-/* Token-overlap ratio between two strings, ignoring stopwords */
 const tokenOverlap = (a, b) => {
   const ta = new Set(significantTokens(a));
   const tb = new Set(significantTokens(b));
@@ -55,88 +55,87 @@ const tokenOverlap = (a, b) => {
   return hit / ta.size;
 };
 
-/* ── Parse city/district/state from a Google formatted address ──
-   "Sampath Vihar, Seethammadhara, Visakhapatnam, AP 530013, India" */
+/* ── Parse city/district/state from a Google formatted address ── */
 const parseLocation = (locationCtx = {}) => {
-  const { address = "", city = "", district = "", state = "" } = locationCtx;
+  const { address = "", city = "", district = "", state = "", lat = null, lng = null } = locationCtx;
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
-  // Heuristic: last is country, second-last has state+pin, earlier are locality/city
   const guessCity = city || parts[parts.length - 3] || "";
   const guessState = state || (parts[parts.length - 2] || "").replace(/\d+/g, "").trim();
   return {
-    city:     norm(guessCity),
-    district: norm(district),
-    state:    norm(guessState),
+    city:      norm(guessCity),
+    district:  norm(district),
+    state:     norm(guessState),
     rawTokens: significantTokens(address),
+    lat, lng,
   };
 };
 
-/* ── Build precise, location-qualified search queries ──────────
-   NEVER a bare deity name. Always name + place. */
+/* ── Build precise, location-qualified search queries ────────── */
 const buildSearchVariants = (templeName, loc) => {
   const variants = [];
   const raw = templeName.trim();
   const noParens = raw.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
-  const cityRaw = loc.city ? loc.city.replace(/\b\w/g, (c) => c.toUpperCase()) : "";
-  const stateRaw = loc.state ? loc.state.replace(/\b\w/g, (c) => c.toUpperCase()) : "";
+  const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
-  if (cityRaw) variants.push(`${noParens} ${cityRaw}`);
+  // Prefer the most distinctive locality token from the address (e.g. "Tirumala").
+  const locality = loc.rawTokens.find((t) => t.length > 3 && t !== loc.state) || "";
+  const cityRaw  = loc.city ? titleCase(loc.city) : "";
+  const stateRaw = loc.state ? titleCase(loc.state) : "";
+
+  if (locality) variants.push(`${noParens} ${titleCase(locality)}`);
+  if (cityRaw)  variants.push(`${noParens} ${cityRaw}`);
   if (stateRaw) variants.push(`${noParens} ${stateRaw}`);
-  variants.push(noParens);                       // name alone, last resort
-  if (cityRaw) variants.push(`${raw} ${cityRaw}`);
+  variants.push(noParens);
+  variants.push(raw);
 
-  // de-dupe, drop empties
   return [...new Set(variants.map((v) => v.trim()).filter(Boolean))];
 };
 
-/* ── Confidence scoring: name 50 / city 20 / district 10 / state 10 / coord 10 ── */
+/* ── Confidence scoring: name 50 / city 20 / district 10 / state 10 ── */
 const scoreCandidate = (candidate, templeName, loc) => {
-  const hay = `${candidate.title} ${candidate.snippet || ""}`;
-  const nhay = norm(hay);
+  const nhay = norm(`${candidate.title} ${candidate.snippet || ""}`);
   let score = 0;
   const breakdown = {};
 
-  // Name similarity (50) — overlap of significant name tokens
   const nameSim = tokenOverlap(templeName, candidate.title);
   breakdown.name = Math.round(nameSim * 50);
   score += breakdown.name;
 
-  // City (20)
-  breakdown.city = loc.city && nhay.includes(loc.city) ? 20 : 0;
+  // City OR any distinctive locality token from the address present → 20
+  let cityHit = loc.city && nhay.includes(loc.city);
+  if (!cityHit) {
+    cityHit = loc.rawTokens.some((t) => t.length > 4 && t !== loc.state && nhay.includes(t));
+  }
+  breakdown.city = cityHit ? 20 : 0;
   score += breakdown.city;
 
-  // District (10)
   breakdown.district = loc.district && nhay.includes(loc.district) ? 10 : 0;
   score += breakdown.district;
 
-  // State (10)
   breakdown.state = loc.state && nhay.includes(loc.state) ? 10 : 0;
   score += breakdown.state;
 
-  // Coordinates handled later (needs a second fetch); placeholder 0 here.
-  breakdown.coord = 0;
-
-  return { score, breakdown };
+  breakdown.coord = 0; // added later
+  return { score, breakdown, nameSim };
 };
 
-/* ── Hard location veto: if title/snippet names a DIFFERENT city
-   than Places, reject outright regardless of name match. ───────
-   Catches "Kanipakam" when Places says "Visakhapatnam". */
+/* ── Hard location veto — block a famous DIFFERENT place ──────── */
 const KNOWN_PLACE_RE = /\b(kanipakam|tirupati|tirumala|dwaraka|madurai|varanasi|kashi|rameswaram|sabarimala|guruvayur|srisailam|kanchipuram|thanjavur|chidambaram|puri|somnath|dwarka|ujjain|trimbak|nashik|shirdi)\b/i;
 
-const hasConflictingPlace = (candidate, loc) => {
+const hasConflictingPlace = (candidate, loc, templeName) => {
   const hay = norm(`${candidate.title} ${candidate.snippet || ""}`);
   const m = hay.match(KNOWN_PLACE_RE);
   if (!m) return false;
   const named = m[0].toLowerCase();
-  // If the article names a famous place that is NOT our city/district, veto.
+  // Accept if the famous place appears anywhere in OUR location or the temple name.
   if (loc.city && loc.city.includes(named)) return false;
   if (loc.district && loc.district.includes(named)) return false;
+  if (loc.state && loc.state.includes(named)) return false;
   if (loc.rawTokens.includes(named)) return false;
+  if (norm(templeName).includes(named)) return false;
   return true; // article anchored to a different famous place → conflict
 };
 
-/* ── Search Wikipedia for candidates (list=search) ───────────── */
 const searchCandidates = async (query) => {
   try {
     console.log(`[WIKI] Searching: "${query}"`);
@@ -151,7 +150,6 @@ const searchCandidates = async (query) => {
   }
 };
 
-/* ── Coordinate check (optional +10): fetch candidate coords, compare ── */
 const coordDistanceKm = (lat1, lng1, lat2, lng2) => {
   const R = 6371, toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
@@ -172,13 +170,12 @@ const fetchCoordBonus = async (title, loc) => {
     if (!c) return 0;
     const dist = coordDistanceKm(loc.lat, loc.lng, c.lat, c.lon);
     console.log(`[WIKI] Coord distance for "${title}": ${dist.toFixed(1)} km`);
-    return dist <= 25 ? 10 : (dist <= 75 ? 5 : -20); // far away = strong penalty
+    return dist <= 25 ? 15 : (dist <= 75 ? 8 : -25);
   } catch {
     return 0;
   }
 };
 
-/* ── Fetch full plaintext extract ────────────────────────────── */
 const fetchExtract = async (pageTitle) => {
   const res = await axios.get(WIKI_API, {
     params: {
@@ -200,6 +197,9 @@ const fetchExtract = async (pageTitle) => {
 const getTempleWikiData = async (templeName, locationCtx = {}) => {
   if (!templeName?.trim()) return null;
 
+  // Accept a bare string for backward-compat (treat as address).
+  if (typeof locationCtx === "string") locationCtx = { address: locationCtx };
+
   const loc = parseLocation(locationCtx);
   const cacheKey = `temple:${norm(templeName)}|${loc.city}|${loc.state}`;
   const cached = getCached(cacheKey);
@@ -208,38 +208,44 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
     return cached;
   }
 
-  console.log(`[WIKI] ── Lookup: "${templeName}" | city="${loc.city}" state="${loc.state}" ──`);
+  console.log(`[WIKI] ── Lookup: "${templeName}" | city="${loc.city}" state="${loc.state}" coords=${loc.lat},${loc.lng} ──`);
 
-  // Gather candidates across all location-qualified queries
   const variants = buildSearchVariants(templeName, loc);
   const candidateMap = new Map();
   for (const q of variants) {
     const hits = await searchCandidates(q);
     for (const h of hits) if (!candidateMap.has(h.title)) candidateMap.set(h.title, h);
+    if (candidateMap.size >= 12) break;
   }
 
   if (!candidateMap.size) {
-    console.log("[WIKI] No candidates found → returning null (no verified info)");
+    console.log("[WIKI] No candidates found → null (no verified info)");
     setCache(cacheKey, null);
     return null;
   }
 
-  // Score every candidate
   let best = null;
   for (const cand of candidateMap.values()) {
-    if (hasConflictingPlace(cand, loc)) {
+    if (hasConflictingPlace(cand, loc, templeName)) {
       console.log(`[WIKI] ✗ REJECT "${cand.title}" — anchored to a different place`);
       continue;
     }
-    const { score, breakdown } = scoreCandidate(cand, templeName, loc);
+    const { score, breakdown, nameSim } = scoreCandidate(cand, templeName, loc);
     const coordBonus = await fetchCoordBonus(cand.title, loc);
     const total = score + coordBonus;
     console.log(`[WIKI] candidate "${cand.title}" → ${total} (name:${breakdown.name} city:${breakdown.city} dist:${breakdown.district} state:${breakdown.state} coord:${coordBonus})`);
+
+    // Name gate: must share at least one distinctive name token, so a
+    // pure city/locality article can never win on location points alone.
+    if (nameSim < 0.34) {
+      console.log(`[WIKI]   ↳ name gate failed (sim ${(nameSim * 100).toFixed(0)}%) — not eligible`);
+      continue;
+    }
     if (!best || total > best.total) best = { cand, total };
   }
 
   if (!best || best.total < CONFIDENCE_THRESHOLD) {
-    console.log(`[WIKI] ✗ Best candidate ${best ? `"${best.cand.title}" scored ${best.total}` : "none"} < threshold ${CONFIDENCE_THRESHOLD} → returning null`);
+    console.log(`[WIKI] ✗ Best ${best ? `"${best.cand.title}" (${best.total})` : "none"} < ${CONFIDENCE_THRESHOLD} → null`);
     setCache(cacheKey, null);
     return null;
   }
@@ -257,7 +263,7 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
   return data;
 };
 
-/* ── City attractions (unchanged behaviour, kept for compatibility) ── */
+/* ── City attractions (unchanged) ────────────────────────────── */
 const ATTRACTION_BLOCK_RE = /\b(history|list of|district|division|mandal|census|economy|demograph|climate|politics|administration|assembly|constituency|railway station|municipality)\b/i;
 const looksLikePlace = (t) => t && !ATTRACTION_BLOCK_RE.test(t) && t.length <= 60;
 
@@ -286,6 +292,5 @@ const getWikipediaAttractions = async (city = "") => {
 
 const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache cleared"); };
 const getWikiCacheStats = () => ({ size: wikiCache.size, entries: [...wikiCache.keys()] });
-
 
 module.exports = { getTempleWikiData, getWikipediaAttractions, clearWikiCache, getWikiCacheStats };
