@@ -5,20 +5,12 @@
  * ─────────────────────────
  * Handles all /api/temples/* routes.
  *
- * Temple Chat pipeline:
- *   User message
- *     → getTempleWikiData()       [full Wikipedia article, cached 24h]
- *     → extractSections()         [parse article into named sections]
- *     → getSectionForQuestion()   [pick sections relevant to this question]
- *     → buildTemplePrompt()       [assemble clean, targeted Groq prompt]
- *     → askGroq() / askGemini()  [get AI answer]
- *     → cleanReply                [strip markdown artifacts]
- *     → res.json({ reply })
- *
- * Temple Details (enriched) pipeline — NOW uses the SAME Wikipedia
- * extraction as the chat for History / Rituals / Festivals (factual,
- * no AI). Gemini is used ONLY for practical Overview / Darshan / Travel
- * fields, grounded by the Wikipedia extract.
+ * Temple Details (enriched) pipeline:
+ *   Wikipedia article → parseWikiSections() → bucket sections into
+ *   history / rituals / festivals by heading keyword (NO AI, NO cross-
+ *   contamination). History may fall back to the intro; rituals and
+ *   festivals get NO fallback (empty if no matching section).
+ *   Gemini supplies only practical Overview/Darshan/Travel fields.
  */
 
 const axios    = require("axios");
@@ -75,24 +67,74 @@ const capText = (text, max) => {
     : text.substring(0, max).trim() + "…";
 };
 
-/* ── Collect specific section text for a tab ─────────────────────
-   Reuses the SAME getSectionForQuestion routing the chat uses.
-   Strips generic fallback keys ("raw"/"other") so a tab never shows
-   a whole-article dump as if it were a specific section. */
-const collectSectionText = (sections, keys) => {
-  if (!sections) return "";
-  const skip = new Set(["raw", "other"]);
-  const seen = new Set();
-  const parts = [];
-  for (const k of keys || []) {
-    if (skip.has(k) || seen.has(k)) continue;
-    seen.add(k);
-    const t = sections[k];
-    if (t && typeof t === "string" && t.trim().length > 40) {
-      parts.push(capText(t.trim(), 3500));
+/* ── Parse a Wikipedia plaintext extract into [{ heading, text }] ──
+   The extracts API (exsectionformat=plain) emits headings as bare
+   lines. A short line (≤ 6 words, no trailing punctuation, starts
+   uppercase) is treated as a heading. Text before the first heading
+   is the "Introduction". */
+const parseWikiSections = (extract) => {
+  const lines = extract.split("\n");
+  const sections = [];
+  let current = { heading: "Introduction", body: [] };
+
+  const isHeading = (line) => {
+    const t = line.trim();
+    if (!t) return false;
+    if (t.length > 60) return false;
+    if (/[.:!?]$/.test(t)) return false;
+    const words = t.split(/\s+/);
+    if (words.length > 6) return false;
+    return /^[A-Z]/.test(t);
+  };
+
+  for (const line of lines) {
+    if (isHeading(line)) {
+      if (current.body.join("").trim()) sections.push(current);
+      current = { heading: line.trim(), body: [] };
+    } else {
+      current.body.push(line);
     }
   }
-  return parts.join("\n\n").trim();
+  if (current.body.join("").trim()) sections.push(current);
+
+  return sections.map((s) => ({
+    heading: s.heading,
+    text: s.body.join("\n").replace(/\n{3,}/g, "\n\n").trim(),
+  }));
+};
+
+/* ── Tab keyword maps (fuzzy substring match on heading) ─────── */
+const TAB_KEYWORDS = {
+  history: [
+    "history", "origin", "legend", "architecture", "background",
+    "etymology", "construction", "mythology", "dynasty", "story",
+  ],
+  rituals: [
+    "ritual", "worship", "pooja", "puja", "darshan", "seva", "sevas",
+    "religious practice", "religious significance", "temple service",
+    "tradition", "daily routine", "offering", "prayer",
+  ],
+  festivals: [
+    "festival", "celebration", "annual", "utsavam", "brahmotsavam",
+    "event", "fair", "jatra", "yatra", "feast",
+  ],
+};
+
+const matchTab = (heading, tab) => {
+  const h = heading.toLowerCase();
+  return TAB_KEYWORDS[tab].some((kw) => h.includes(kw));
+};
+
+/* ── Build a tab's content from matching sections only ───────────
+   Returns "" if nothing matched — NO whole-article fallback. */
+const buildTabContent = (sections, tab) => {
+  const parts = [];
+  for (const s of sections) {
+    if (matchTab(s.heading, tab) && s.text.trim().length > 40) {
+      parts.push(`${s.heading}\n${s.text.trim()}`);
+    }
+  }
+  return capText(parts.join("\n\n").trim(), 6000);
 };
 
 /* ── GET NEARBY TEMPLES ──────────────────────────────────────── */
@@ -210,13 +252,9 @@ const getTempleDetails = async (req, res) => {
 };
 
 /* ── GET ENRICHED DATA ───────────────────────────────────────────
-   Unified pipeline:
-   1. Wikipedia article (same fetch + cache as chat)
-   2. extractSections() + getSectionForQuestion()  → history/rituals/festivals
-      as { content, sources } — factual, NO AI
-   3. Gemini (grounded by wiki) → overview/darshan/travel/spiritualPurposes
-      practical fields only. Non-fatal if it fails.
-   Returns a single object the tabs and Overview/Travel all consume. */
+   Wikipedia → parseWikiSections() → per-tab bucketing by heading
+   keyword. history may fall back to intro; rituals/festivals do NOT.
+   Gemini supplies practical Overview/Darshan/Travel only (non-fatal). */
 const getEnrichedTemple = async (req, res) => {
   const { name, address } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
@@ -224,9 +262,8 @@ const getEnrichedTemple = async (req, res) => {
   try {
     console.log(`[ENRICH] Building enriched data for: ${name}`);
 
-    /* ── 1. Wikipedia (factual source for the 3 knowledge tabs) ── */
     const wikiData = await getTempleWikiData(name).catch((e) => {
-      console.error("[ENRICH] Wikipedia fetch failed (non-fatal):", e.message);
+      console.error("[ENRICH] Wiki fetch failed (non-fatal):", e.message);
       return null;
     });
 
@@ -235,56 +272,58 @@ const getEnrichedTemple = async (req, res) => {
     let festivals = { content: "", sources: [] };
 
     if (wikiData?.extract) {
-      const sections    = extractSections(wikiData.extract);
+      const sections    = parseWikiSections(wikiData.extract);
       const wikiSources = [wikiData.url].filter(Boolean);
 
-      const histKeys = getSectionForQuestion(
-        sections, "What is the history, origin and architecture of this temple?"
-      );
-      const ritKeys = getSectionForQuestion(
-        sections, "What are the daily rituals, poojas and worship practices at this temple?"
-      );
-      const festKeys = getSectionForQuestion(
-        sections, "What festivals and celebrations are held at this temple?"
-      );
+      console.log("[ENRICH] Available sections:", sections.map((s) => s.heading));
 
-      let historyContent = collectSectionText(sections, histKeys);
-      // History falls back to the Wikipedia intro (still factual, not AI)
+      const histKeys = sections.filter((s) => matchTab(s.heading, "history")).map((s) => s.heading);
+      const ritKeys  = sections.filter((s) => matchTab(s.heading, "rituals")).map((s) => s.heading);
+      const festKeys = sections.filter((s) => matchTab(s.heading, "festivals")).map((s) => s.heading);
+      console.log("[ENRICH] Selected history keys:", histKeys);
+      console.log("[ENRICH] Selected ritual keys:", ritKeys);
+      console.log("[ENRICH] Selected festival keys:", festKeys);
+
+      let historyContent     = buildTabContent(sections, "history");
+      const ritualsContent   = buildTabContent(sections, "rituals");
+      const festivalsContent = buildTabContent(sections, "festivals");
+
+      // History MAY fall back to the introduction (still factual, not AI).
+      // Rituals and Festivals get NO fallback — empty if no section matched.
       if (!historyContent) {
-        historyContent = capText((sections.raw || wikiData.extract || "").trim(), 2200);
+        const intro = sections.find((s) => s.heading === "Introduction");
+        if (intro?.text) historyContent = capText(intro.text, 2200);
       }
 
-      const ritualsContent   = collectSectionText(sections, ritKeys);
-      const festivalsContent  = collectSectionText(sections, festKeys);
+      console.log("[ENRICH] History content length:",  historyContent.length);
+      console.log("[ENRICH] Ritual content length:",   ritualsContent.length);
+      console.log("[ENRICH] Festival content length:", festivalsContent.length);
 
       if (historyContent)   history   = { content: historyContent,   sources: wikiSources };
       if (ritualsContent)   rituals   = { content: ritualsContent,   sources: wikiSources };
       if (festivalsContent) festivals = { content: festivalsContent, sources: wikiSources };
-
-      console.log(
-        `[ENRICH] Wikipedia sections → history:${!!historyContent} rituals:${!!ritualsContent} festivals:${!!festivalsContent}`
-      );
     } else {
-      console.log("[ENRICH] No Wikipedia article — knowledge tabs will show 'not available'");
+      console.log("[ENRICH] No Wikipedia article — knowledge tabs empty");
     }
 
-    /* ── 2. Gemini practical fields (Overview/Travel/Darshan) ──── */
+    // Gemini practical fields (Overview/Travel/Darshan) — non-fatal.
+    // NOTE: currently failing on quota (429); empty until billing
+    // restored or switched to Groq.
     const wikiContext = wikiData?.extract
-      ? `\n\nVerified Wikipedia article extract — use this to populate fields accurately:\n${wikiData.extract.substring(0, 3000)}`
+      ? `\n\nVerified Wikipedia extract:\n${wikiData.extract.substring(0, 3000)}`
       : "";
 
     let practical = null;
     try {
       practical = await getEnrichedTempleData(name, address || "India", wikiContext);
     } catch (e) {
-      console.error("[ENRICH] Gemini practical enrichment failed (non-fatal):", e.message);
+      console.error("[ENRICH] Practical enrichment failed (non-fatal):", e.message);
     }
 
-    /* ── 3. Merge — single object consumed by all tabs ─────────── */
     return res.json({
-      overview:         practical?.overview         || {},
-      darshan:          practical?.darshan          || {},
-      travel:           practical?.travel           || {},
+      overview:          practical?.overview          || {},
+      darshan:           practical?.darshan           || {},
+      travel:            practical?.travel            || {},
       spiritualPurposes: practical?.spiritualPurposes || [],
       history,
       rituals,
