@@ -91,7 +91,12 @@ function TempleDetailsPageInner() {
     setEnrichError(false);
 
     axios.get(`${API_BASE}/api/temples/enriched`, {
-      params: { name: googleData.name, address: googleData.address || "" },
+      params: {
+        name: googleData.name,
+        address: googleData.address || "",
+        lat: googleData.lat,      // coords let the validator confirm the right temple
+        lng: googleData.lng,
+      },
       timeout: 60000, // Gemini can be slow — 60s timeout
     })
       .then(res => {
@@ -114,7 +119,7 @@ function TempleDetailsPageInner() {
         console.log("[ENRICH] Done loading");
         setLoadingEnriched(false);
       });
- }, [googleData?.name, googleData?.address]);// ← only re-run when temple name changes
+ }, [googleData?.name, googleData?.address, googleData?.lat, googleData?.lng]);
 
   /* ── 3. Videos — lazy ─────────────────────────── */
   const fetchVideos = useCallback(async () => {
