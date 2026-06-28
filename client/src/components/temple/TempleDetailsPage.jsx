@@ -63,7 +63,7 @@ function TempleDetailsPageInner() {
   const [showChat,         setShowChat]         = useState(false);
   const [error,            setError]            = useState(null);
 
-  /* ── 1. Google Places details ─────────────────── */
+  /* ── 1. Google Places details (temple source of truth) ──────── */
   useEffect(() => {
     if (!placeId) return;
     setLoadingGoogle(true);
@@ -81,22 +81,26 @@ function TempleDetailsPageInner() {
       .finally(() => setLoadingGoogle(false));
   }, [placeId]);
 
-  /* ── 2. Enriched (Wikipedia tabs + Gemini practical) — once googleData is ready ── */
+  /* ── 2. Enriched — TEMPLE coords only, never browser location ── */
   useEffect(() => {
     if (!googleData?.name) return;
 
-    console.log("[ENRICH] Starting fetch for:", googleData.name);
+    // VERIFICATION: these MUST be the temple's Places coords, not the browser's.
+    const enrichedParams = {
+      name: googleData.name,
+      address: googleData.address || "",
+      lat: googleData.lat,
+      lng: googleData.lng,
+    };
+    console.log("[ENRICH-REQ] sending:", enrichedParams,
+      "| googleData.lat:", googleData.lat, "| googleData.lng:", googleData.lng);
+
     setEnriched(null);          // clear stale temple data before refetch
     setLoadingEnriched(true);
     setEnrichError(false);
 
     axios.get(`${API_BASE}/api/temples/enriched`, {
-      params: {
-        name: googleData.name,
-        address: googleData.address || "",
-        lat: googleData.lat,      // coords let the validator confirm the right temple
-        lng: googleData.lng,
-      },
+      params: enrichedParams,
       timeout: 60000, // Gemini can be slow — 60s timeout
     })
       .then(res => {
@@ -119,9 +123,9 @@ function TempleDetailsPageInner() {
         console.log("[ENRICH] Done loading");
         setLoadingEnriched(false);
       });
- }, [googleData?.name, googleData?.address, googleData?.lat, googleData?.lng]);
+  }, [googleData?.name, googleData?.address, googleData?.lat, googleData?.lng]);
 
-  /* ── 3. Videos — lazy ─────────────────────────── */
+  /* ── 3. Videos — lazy (temple name only) ─────────────────────── */
   const fetchVideos = useCallback(async () => {
     if (!googleData?.name || videos.length > 0) return;
     console.log("[VIDEOS] Fetching for:", googleData.name);
@@ -140,10 +144,10 @@ function TempleDetailsPageInner() {
     }
   }, [googleData?.name, videos.length]);
 
-  /* ── 4. Nearby services — lazy ────────────────── */
+  /* ── 4. Nearby services — lazy (TEMPLE coords) ───────────────── */
   const fetchNearbyServices = useCallback(async () => {
     if (!googleData?.lat || nearbyServices) return;
-    console.log("[SERVICES] Fetching near:", googleData.lat, googleData.lng);
+    console.log("[SERVICES] Fetching near temple:", googleData.lat, googleData.lng);
     setLoadingServices(true);
     try {
       const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
@@ -343,7 +347,6 @@ function ErrorState({ message, onBack }) {
   return (
     <div className="tdp-error">
       <span>⚠️</span>
-      
       <p>{message}</p>
       <button onClick={onBack}>← Back to Temples</button>
     </div>
