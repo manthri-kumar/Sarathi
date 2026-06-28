@@ -3,12 +3,13 @@
 /**
  * Sarathi Temple Controller
  * ─────────────────────────
- * Temple Details (enriched) pipeline:
- *   Wikipedia article → parseWikiSections() → structured History story
- *   (originStory / legend / construction / architecture / spiritual /
- *   facts / timeline) + rituals/festivals by heading keyword.
- *   NO AI for these tabs. Gemini supplies only practical Overview/
- *   Darshan/Travel fields (non-fatal on failure).
+ * Temple knowledge depends ONLY on the selected temple (name/address/coords
+ * from Google Places) — never on the user's browser location. User location
+ * is used solely by nearby-services.
+ *
+ * Enriched pipeline: Wikipedia (validated) → structured History story +
+ * rituals/festivals by heading. NO AI for these tabs. Gemini supplies only
+ * practical Overview/Darshan/Travel fields (non-fatal on failure).
  */
 
 const axios    = require("axios");
@@ -268,21 +269,50 @@ const getNearbyTemples = async (req, res) => {
   }
 };
 
-/* ── SEARCH TEMPLES ──────────────────────────────────────────── */
+/* ── SEARCH TEMPLES ──────────────────────────────────────────────
+   Case 1: "Tirupati" (a place) → temples inside that place.
+   Case 2: "Venkateswara Temple" (a name) → matching temples across India.
+   Runs BOTH "temples in <query>" and "<query> temple" textsearches, then
+   merges + de-dupes. User location is intentionally NOT used. */
 const searchTemples = async (req, res) => {
-  const { query, lat, lng } = req.query;
+  const { query } = req.query;
   if (!query) return res.status(400).json({ error: "query required" });
 
+  const runTextSearch = async (q) => {
+    try {
+      const r = await axios.get(`${PLACES_BASE}/textsearch/json`, {
+        params: { query: q, key: GOOGLE_PLACES_KEY },
+      });
+      if (r.data.status === "REQUEST_DENIED") {
+        console.error("[SEARCH] REQUEST_DENIED:", r.data.error_message);
+        return [];
+      }
+      return r.data.results || [];
+    } catch (e) {
+      console.error(`[SEARCH] textsearch "${q}" failed:`, e.message);
+      return [];
+    }
+  };
+
   try {
-    const params = { query: `${query} temple`, key: GOOGLE_PLACES_KEY };
-    if (lat && lng) { params.location = `${lat},${lng}`; params.radius = 50000; }
+    const [asName, asPlace] = await Promise.all([
+      runTextSearch(`${query} temple`),       // Case 2: name → matches across India
+      runTextSearch(`temples in ${query}`),    // Case 1: place → temples inside the place
+    ]);
 
-    const response = await axios.get(`${PLACES_BASE}/textsearch/json`, { params });
-    const { status, error_message, results = [] } = response.data;
-    console.log("[SEARCH] status:", status, "| count:", results.length);
+    const seen = new Set();
+    const merged = [];
+    for (const place of [...asName, ...asPlace]) {   // name matches first (more specific)
+      if (seen.has(place.place_id)) continue;
+      seen.add(place.place_id);
+      const isTemple =
+        (place.types || []).some((t) => /temple|hindu|place_of_worship/i.test(t)) ||
+        /temple|mandir|kovil|devasthanam/i.test(place.name || "");
+      if (isTemple) merged.push(shapePlace(place));
+    }
 
-    if (status === "REQUEST_DENIED") return res.status(403).json({ error: error_message });
-    return res.json({ temples: results.map(shapePlace) });
+    console.log(`[SEARCH] "${query}" → ${merged.length} temples (name:${asName.length} place:${asPlace.length})`);
+    return res.json({ temples: merged.slice(0, 20) });
   } catch (err) {
     console.error("[SEARCH] Error:", err.message);
     return res.status(500).json({ error: "Search failed" });
@@ -343,15 +373,14 @@ const getTempleDetails = async (req, res) => {
 
 /* ── GET ENRICHED DATA ───────────────────────────────────────── */
 const getEnrichedTemple = async (req, res) => {
+  console.log("[ENRICH-RECV] req.query:", req.query);   // proves what the backend received
   const { name, address, lat, lng } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
 
   try {
     console.log(`[ENRICH] Building enriched data for: ${name}`);
 
-    // Pass a LOCATION CONTEXT OBJECT (not a bare string) so the validator
-    // can score city/state/coordinates. This is the fix for the
-    // string-vs-object mismatch that caused every lookup to return null.
+    // Location context OBJECT (never a bare string) — TEMPLE coords only.
     const wikiData = await getTempleWikiData(name, {
       address: address || "",
       lat: lat ? Number(lat) : null,
@@ -429,7 +458,7 @@ const getTempleVideos = async (req, res) => {
   }
 };
 
-/* ── GET NEARBY SERVICES ─────────────────────────────────────── */
+/* ── GET NEARBY SERVICES (user location is OK here) ──────────── */
 const getNearbyServicePlaces = async (req, res) => {
   const { lat, lng } = req.query;
   if (!lat || !lng) return res.status(400).json({ error: "lat and lng required" });
@@ -462,7 +491,7 @@ const getNearbyServicePlaces = async (req, res) => {
 };
 
 /* ══════════════════════════════════════════════════════════════
- * TEMPLE CHAT — Main AI pipeline
+ * TEMPLE CHAT
  * ══════════════════════════════════════════════════════════════*/
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", JSON.stringify({
@@ -475,7 +504,6 @@ const templeChat = async (req, res) => {
   if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
 
   console.log(`[CHAT] Fetching Wikipedia for: ${templeName}`);
-  // Location context object (address-only is fine here).
   const wikiData = await getTempleWikiData(templeName, { address: address || "" }).catch((err) => {
     console.error("[CHAT] Wikipedia fetch error (non-fatal):", err.message);
     return null;

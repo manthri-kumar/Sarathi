@@ -3,10 +3,9 @@
 /**
  * Sarathi Wikipedia Service — Validation-Gated
  * ────────────────────────────────────────────
- * Every candidate article is scored against the Google Places location
- * (city/district/state/coordinates/name). Articles below
- * CONFIDENCE_THRESHOLD are REJECTED — we return null rather than show
- * another temple's story.
+ * Articles are scored against the TEMPLE's Google Places location only
+ * (never the user's browser location). Coordinates are a confidence
+ * BONUS — a mismatch can never veto a strong name+city+state match.
  *
  * getTempleWikiData(templeName, locationCtx) → { title, url, extract } | null
  *   locationCtx: { address, city?, district?, state?, lat?, lng? }
@@ -21,7 +20,7 @@ const WIKI_HEADERS = {
 };
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
-const CONFIDENCE_THRESHOLD = 70;   // lowered from 85 — clears correct temples, still rejects wrong ones
+const CONFIDENCE_THRESHOLD = 70;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const wikiCache = new Map();
 
@@ -33,7 +32,7 @@ const getCached = (k) => {
 };
 const setCache = (k, data) => wikiCache.set(k, { data, expiry: Date.now() + CACHE_TTL_MS });
 
-/* ── Normalisation helpers ───────────────────────────────────── */
+/* ── Normalisation ───────────────────────────────────────────── */
 const norm = (s = "") =>
   s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
@@ -55,7 +54,7 @@ const tokenOverlap = (a, b) => {
   return hit / ta.size;
 };
 
-/* ── Parse city/district/state from a Google formatted address ── */
+/* ── Parse location from Google Places ───────────────────────── */
 const parseLocation = (locationCtx = {}) => {
   const { address = "", city = "", district = "", state = "", lat = null, lng = null } = locationCtx;
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
@@ -70,14 +69,13 @@ const parseLocation = (locationCtx = {}) => {
   };
 };
 
-/* ── Build precise, location-qualified search queries ────────── */
+/* ── Location-qualified search queries ───────────────────────── */
 const buildSearchVariants = (templeName, loc) => {
   const variants = [];
   const raw = templeName.trim();
   const noParens = raw.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
   const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
-  // Prefer the most distinctive locality token from the address (e.g. "Tirumala").
   const locality = loc.rawTokens.find((t) => t.length > 3 && t !== loc.state) || "";
   const cityRaw  = loc.city ? titleCase(loc.city) : "";
   const stateRaw = loc.state ? titleCase(loc.state) : "";
@@ -91,7 +89,7 @@ const buildSearchVariants = (templeName, loc) => {
   return [...new Set(variants.map((v) => v.trim()).filter(Boolean))];
 };
 
-/* ── Confidence scoring: name 50 / city 20 / district 10 / state 10 ── */
+/* ── Confidence scoring ──────────────────────────────────────── */
 const scoreCandidate = (candidate, templeName, loc) => {
   const nhay = norm(`${candidate.title} ${candidate.snippet || ""}`);
   let score = 0;
@@ -101,11 +99,8 @@ const scoreCandidate = (candidate, templeName, loc) => {
   breakdown.name = Math.round(nameSim * 50);
   score += breakdown.name;
 
-  // City OR any distinctive locality token from the address present → 20
   let cityHit = loc.city && nhay.includes(loc.city);
-  if (!cityHit) {
-    cityHit = loc.rawTokens.some((t) => t.length > 4 && t !== loc.state && nhay.includes(t));
-  }
+  if (!cityHit) cityHit = loc.rawTokens.some((t) => t.length > 4 && t !== loc.state && nhay.includes(t));
   breakdown.city = cityHit ? 20 : 0;
   score += breakdown.city;
 
@@ -115,11 +110,11 @@ const scoreCandidate = (candidate, templeName, loc) => {
   breakdown.state = loc.state && nhay.includes(loc.state) ? 10 : 0;
   score += breakdown.state;
 
-  breakdown.coord = 0; // added later
+  breakdown.coord = 0;
   return { score, breakdown, nameSim };
 };
 
-/* ── Hard location veto — block a famous DIFFERENT place ──────── */
+/* ── Hard veto: a famous DIFFERENT place ─────────────────────── */
 const KNOWN_PLACE_RE = /\b(kanipakam|tirupati|tirumala|dwaraka|madurai|varanasi|kashi|rameswaram|sabarimala|guruvayur|srisailam|kanchipuram|thanjavur|chidambaram|puri|somnath|dwarka|ujjain|trimbak|nashik|shirdi)\b/i;
 
 const hasConflictingPlace = (candidate, loc, templeName) => {
@@ -127,13 +122,12 @@ const hasConflictingPlace = (candidate, loc, templeName) => {
   const m = hay.match(KNOWN_PLACE_RE);
   if (!m) return false;
   const named = m[0].toLowerCase();
-  // Accept if the famous place appears anywhere in OUR location or the temple name.
   if (loc.city && loc.city.includes(named)) return false;
   if (loc.district && loc.district.includes(named)) return false;
   if (loc.state && loc.state.includes(named)) return false;
   if (loc.rawTokens.includes(named)) return false;
   if (norm(templeName).includes(named)) return false;
-  return true; // article anchored to a different famous place → conflict
+  return true;
 };
 
 const searchCandidates = async (query) => {
@@ -158,6 +152,7 @@ const coordDistanceKm = (lat1, lng1, lat2, lng2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+/* ── Coordinate BONUS only — never a penalty/veto ────────────── */
 const fetchCoordBonus = async (title, loc) => {
   if (!loc.lat || !loc.lng) return 0;
   try {
@@ -170,7 +165,9 @@ const fetchCoordBonus = async (title, loc) => {
     if (!c) return 0;
     const dist = coordDistanceKm(loc.lat, loc.lng, c.lat, c.lon);
     console.log(`[WIKI] Coord distance for "${title}": ${dist.toFixed(1)} km`);
-    return dist <= 25 ? 15 : (dist <= 75 ? 8 : -25);
+    // Bonus only. A mismatch returns 0 — it must NEVER veto a strong
+    // name+city+state match (Places/Wiki coords are often imprecise).
+    return dist <= 25 ? 15 : (dist <= 75 ? 8 : 0);
   } catch {
     return 0;
   }
@@ -193,11 +190,9 @@ const fetchExtract = async (pageTitle) => {
   };
 };
 
-/* ── MAIN: validation-gated temple lookup ────────────────────── */
+/* ── MAIN ────────────────────────────────────────────────────── */
 const getTempleWikiData = async (templeName, locationCtx = {}) => {
   if (!templeName?.trim()) return null;
-
-  // Accept a bare string for backward-compat (treat as address).
   if (typeof locationCtx === "string") locationCtx = { address: locationCtx };
 
   const loc = parseLocation(locationCtx);
@@ -219,7 +214,7 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
   }
 
   if (!candidateMap.size) {
-    console.log("[WIKI] No candidates found → null (no verified info)");
+    console.log("[WIKI] No candidates → null");
     setCache(cacheKey, null);
     return null;
   }
@@ -227,7 +222,7 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
   let best = null;
   for (const cand of candidateMap.values()) {
     if (hasConflictingPlace(cand, loc, templeName)) {
-      console.log(`[WIKI] ✗ REJECT "${cand.title}" — anchored to a different place`);
+      console.log(`[WIKI] ✗ REJECT "${cand.title}" — different place`);
       continue;
     }
     const { score, breakdown, nameSim } = scoreCandidate(cand, templeName, loc);
@@ -235,10 +230,8 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
     const total = score + coordBonus;
     console.log(`[WIKI] candidate "${cand.title}" → ${total} (name:${breakdown.name} city:${breakdown.city} dist:${breakdown.district} state:${breakdown.state} coord:${coordBonus})`);
 
-    // Name gate: must share at least one distinctive name token, so a
-    // pure city/locality article can never win on location points alone.
     if (nameSim < 0.34) {
-      console.log(`[WIKI]   ↳ name gate failed (sim ${(nameSim * 100).toFixed(0)}%) — not eligible`);
+      console.log(`[WIKI]   ↳ name gate failed (sim ${(nameSim * 100).toFixed(0)}%)`);
       continue;
     }
     if (!best || total > best.total) best = { cand, total };
@@ -253,7 +246,7 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
   console.log(`[WIKI] ✓ ACCEPT "${best.cand.title}" (confidence ${best.total})`);
   const data = await fetchExtract(best.cand.title);
   if (!data || data.extract.trim().length < 100) {
-    console.log("[WIKI] Accepted article had no usable extract → null");
+    console.log("[WIKI] No usable extract → null");
     setCache(cacheKey, null);
     return null;
   }
