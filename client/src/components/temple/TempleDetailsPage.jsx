@@ -81,11 +81,12 @@ function TempleDetailsPageInner() {
       .finally(() => setLoadingGoogle(false));
   }, [placeId]);
 
-  /* ── 2. Gemini enriched — runs once googleData is ready ── */
+  /* ── 2. Enriched (Wikipedia tabs + Gemini practical) — once googleData is ready ── */
   useEffect(() => {
     if (!googleData?.name) return;
 
     console.log("[ENRICH] Starting fetch for:", googleData.name);
+    setEnriched(null);          // clear stale temple data before refetch
     setLoadingEnriched(true);
     setEnrichError(false);
 
@@ -94,9 +95,12 @@ function TempleDetailsPageInner() {
       timeout: 60000, // Gemini can be slow — 60s timeout
     })
       .then(res => {
-        console.log("[ENRICH] Full response:", JSON.stringify(res.data, null, 2));
+        console.log("[ENRICH] history.content len:", res.data?.history?.content?.length);
+        console.log("[ENRICH] rituals.content len:", res.data?.rituals?.content?.length);
+        console.log("[ENRICH] festivals.content len:", res.data?.festivals?.content?.length);
         if (res.data && typeof res.data === "object") {
           setEnriched(res.data);
+          console.log("[ENRICH] setEnriched called");
         } else {
           console.warn("[ENRICH] Unexpected response format:", res.data);
           setEnrichError(true);
@@ -182,6 +186,11 @@ function TempleDetailsPageInner() {
     </div>
   );
 
+  /* Per-render trace of what the active tab will receive */
+  console.log("[TDP] render — activeTab:", activeTab,
+    "| enriched.history.content len:", enriched?.history?.content?.length,
+    "| loadingEnriched:", loadingEnriched);
+
   return (
     <div className="tdp-layout">
       {/* ── Sidebar ── */}
@@ -252,25 +261,25 @@ function TempleDetailsPageInner() {
           )}
           {activeTab === "history" && (
             <HistoryTab
-              enriched={enriched}
+              content={enriched?.history?.content}
+              sources={enriched?.history?.sources || []}
               loading={loadingEnriched}
-              enrichError={enrichError}
               templeName={googleData.name}
             />
           )}
           {activeTab === "rituals" && (
             <RitualsTab
-              enriched={enriched}
+              content={enriched?.rituals?.content}
+              sources={enriched?.rituals?.sources || []}
               loading={loadingEnriched}
-              enrichError={enrichError}
               templeName={googleData.name}
             />
           )}
           {activeTab === "festivals" && (
             <FestivalsTab
-              enriched={enriched}
+              content={enriched?.festivals?.content}
+              sources={enriched?.festivals?.sources || []}
               loading={loadingEnriched}
-              enrichError={enrichError}
               templeName={googleData.name}
             />
           )}
@@ -301,15 +310,12 @@ function TempleDetailsPageInner() {
         </button>
 
         {/* Chat */}
-        {/* Replace the existing wrapper div with: */}
-{showChat && (
-  <ChatPanel
-    closeChat={() => setShowChat(false)}
-    templeContext={{ name: googleData.name, address: googleData.address || "" }}
-  />
-
-  
-)}
+        {showChat && (
+          <ChatPanel
+            closeChat={() => setShowChat(false)}
+            templeContext={{ name: googleData.name, address: googleData.address || "" }}
+          />
+        )}
       </div>
     </div>
   );

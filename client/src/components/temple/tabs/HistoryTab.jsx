@@ -8,6 +8,8 @@ import "./HistoryTab.css";
  */
 
 function HistoryTab({ content, sources = [], loading, templeName }) {
+  console.log("[HISTORYTAB] content:", content, "| loading:", loading, "| sources:", sources);
+
   if (loading) {
     return (
       <div className="tab-content history-tab">
