@@ -343,6 +343,7 @@ function ErrorState({ message, onBack }) {
   return (
     <div className="tdp-error">
       <span>⚠️</span>
+      
       <p>{message}</p>
       <button onClick={onBack}>← Back to Temples</button>
     </div>
