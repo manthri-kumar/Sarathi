@@ -3,14 +3,12 @@
 /**
  * Sarathi Temple Controller
  * ─────────────────────────
- * Handles all /api/temples/* routes.
- *
  * Temple Details (enriched) pipeline:
- *   Wikipedia article → parseWikiSections() → bucket sections into
- *   history / rituals / festivals by heading keyword (NO AI, NO cross-
- *   contamination). History may fall back to the intro; rituals and
- *   festivals get NO fallback (empty if no matching section).
- *   Gemini supplies only practical Overview/Darshan/Travel fields.
+ *   Wikipedia article → parseWikiSections() → structured History story
+ *   (originStory / legend / construction / architecture / spiritual /
+ *   facts / timeline) + rituals/festivals by heading keyword.
+ *   NO AI for these tabs. Gemini supplies only practical Overview/
+ *   Darshan/Travel fields (non-fatal on failure).
  */
 
 const axios    = require("axios");
@@ -28,12 +26,7 @@ const PLACES_BASE       = "https://maps.googleapis.com/maps/api/place";
 (async () => {
   try {
     const test = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: {
-        location: "17.6868,83.2185",
-        radius:   1000,
-        type:     "hindu_temple",
-        key:      GOOGLE_PLACES_KEY,
-      },
+      params: { location: "17.6868,83.2185", radius: 1000, type: "hindu_temple", key: GOOGLE_PLACES_KEY },
     });
     console.log("[DIAG] Places API status:", test.data.status);
     console.log("[DIAG] Result count:",      test.data.results?.length ?? 0);
@@ -62,16 +55,10 @@ const shapePlace = (place) => ({
 const capText = (text, max) => {
   if (!text || text.length <= max) return (text || "").trim();
   const cut = text.lastIndexOf(". ", max);
-  return cut > max * 0.6
-    ? text.substring(0, cut + 1).trim()
-    : text.substring(0, max).trim() + "…";
+  return cut > max * 0.6 ? text.substring(0, cut + 1).trim() : text.substring(0, max).trim() + "…";
 };
 
-/* ── Parse a Wikipedia plaintext extract into [{ heading, text }] ──
-   The extracts API (exsectionformat=plain) emits headings as bare
-   lines. A short line (≤ 6 words, no trailing punctuation, starts
-   uppercase) is treated as a heading. Text before the first heading
-   is the "Introduction". */
+/* ── Parse a Wikipedia plaintext extract into [{ heading, text }] ── */
 const parseWikiSections = (extract) => {
   const lines = extract.split("\n");
   const sections = [];
@@ -82,8 +69,7 @@ const parseWikiSections = (extract) => {
     if (!t) return false;
     if (t.length > 60) return false;
     if (/[.:!?]$/.test(t)) return false;
-    const words = t.split(/\s+/);
-    if (words.length > 6) return false;
+    if (t.split(/\s+/).length > 6) return false;
     return /^[A-Z]/.test(t);
   };
 
@@ -103,12 +89,8 @@ const parseWikiSections = (extract) => {
   }));
 };
 
-/* ── Tab keyword maps (fuzzy substring match on heading) ─────── */
+/* ── Tab keyword maps (rituals/festivals) ────────────────────── */
 const TAB_KEYWORDS = {
-  history: [
-    "history", "origin", "legend", "architecture", "background",
-    "etymology", "construction", "mythology", "dynasty", "story",
-  ],
   rituals: [
     "ritual", "worship", "pooja", "puja", "darshan", "seva", "sevas",
     "religious practice", "religious significance", "temple service",
@@ -125,8 +107,6 @@ const matchTab = (heading, tab) => {
   return TAB_KEYWORDS[tab].some((kw) => h.includes(kw));
 };
 
-/* ── Build a tab's content from matching sections only ───────────
-   Returns "" if nothing matched — NO whole-article fallback. */
 const buildTabContent = (sections, tab) => {
   const parts = [];
   for (const s of sections) {
@@ -137,6 +117,133 @@ const buildTabContent = (sections, tab) => {
   return capText(parts.join("\n\n").trim(), 6000);
 };
 
+/* ── Split a section body into readable paragraphs ───────────── */
+const splitParagraphs = (text) => {
+  if (!text) return [];
+  const rawParas = text.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  const out = [];
+  for (const p of rawParas) {
+    if (p.length <= 600) { out.push(p); continue; }
+    const sentences = p.match(/[^.!?]+[.!?]+/g) || [p];
+    let buf = "";
+    for (const s of sentences) {
+      if ((buf + s).length > 400 && buf) { out.push(buf.trim()); buf = ""; }
+      buf += s;
+    }
+    if (buf.trim()) out.push(buf.trim());
+  }
+  return out;
+};
+
+/* ── Build one story section { title, content[] } or null ────── */
+const buildSection = (sections, headingKeywords, displayTitle) => {
+  const match = sections.find((s) =>
+    headingKeywords.some((kw) => s.heading.toLowerCase().includes(kw))
+  );
+  if (!match || match.text.trim().length < 60) return null;
+  const paras = splitParagraphs(match.text);
+  if (!paras.length) return null;
+  return { title: displayTitle, content: paras, _heading: match.heading };
+};
+
+/* ── Extract a timeline from year/era mentions ───────────────── */
+const buildTimeline = (sections) => {
+  const blob = sections.map((s) => `${s.heading}\n${s.text}`).join("\n");
+  const events = [];
+  const seen = new Set();
+
+  const yearRe = /\b(\d{3,4})\s*(AD|CE|BC|BCE)?\b/g;
+  let m;
+  while ((m = yearRe.exec(blob)) !== null && events.length < 8) {
+    const key = m[0];
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const ctx = blob.substring(m.index, m.index + 180).replace(/\s+/g, " ").trim();
+    const sentence = ctx.match(/^[^.]*\.?/)?.[0] || ctx;
+    events.push({ title: m[0], description: sentence.trim().slice(0, 200) });
+  }
+
+  const eras = ["Satya Yuga", "Treta Yuga", "Dvapara Yuga", "Kali Yuga"];
+  for (const era of eras) {
+    const idx = blob.indexOf(era);
+    if (idx !== -1 && !seen.has(era)) {
+      seen.add(era);
+      const ctx = blob.substring(idx, idx + 200).replace(/\s+/g, " ").trim();
+      events.unshift({ title: era, description: ctx.slice(0, 200) });
+    }
+  }
+
+  return events.length >= 2 ? events.slice(0, 8) : null;
+};
+
+/* ── Extract short "interesting facts" (Wikipedia-only) ───────── */
+const buildFacts = (sections) => {
+  const blob = sections.map((s) => s.text).join(" ");
+  const sentences = blob.match(/[^.!?]+[.!?]+/g) || [];
+  const FACT_RE = /\b(only|first|largest|richest|self-manifest|swayambhu|oldest|tallest|unique|west-facing|east-facing|seven hills|footprint|gold|tonnes|acres|hectares)\b/i;
+  const facts = [];
+  const seen = new Set();
+  for (const s of sentences) {
+    const t = s.trim();
+    if (t.length < 30 || t.length > 180) continue;
+    if (!FACT_RE.test(t)) continue;
+    const norm = t.toLowerCase();
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    facts.push(t);
+    if (facts.length >= 6) break;
+  }
+  return facts.length ? facts : null;
+};
+
+/* ── Build the full structured history story object ──────────── */
+const buildHistoryStory = (sections, sourceUrl) => {
+  const originStory = buildSection(
+    sections, ["origin", "legend", "mythology", "story"], "Why This Temple Exists"
+  );
+  let legend = buildSection(
+    sections, ["legend", "sacred", "belief"], "Sacred Legend"
+  );
+  // Don't duplicate the same Wikipedia section across origin + legend.
+  if (legend && originStory && legend._heading === originStory._heading) legend = null;
+
+  const historicalConstruction = buildSection(
+    sections, ["history", "construction", "background"], "Historical Construction"
+  );
+  const architecture = buildSection(
+    sections, ["architecture", "design", "structure"], "Temple Architecture"
+  );
+  const spiritualImportance = buildSection(
+    sections, ["significance", "importance", "pilgrimage", "religious"], "Spiritual Importance"
+  );
+  const interestingFacts = buildFacts(sections);
+  const timeline = buildTimeline(sections);
+
+  const hasAny = originStory || legend || historicalConstruction ||
+                 architecture || spiritualImportance;
+
+  let content = "";
+  if (!hasAny) {
+    const intro = sections.find((s) => s.heading === "Introduction");
+    if (intro?.text) content = splitParagraphs(intro.text).join("\n\n");
+  }
+
+  // strip internal _heading before returning
+  const clean = (s) => (s ? { title: s.title, content: s.content } : null);
+
+  return {
+    originStory:           clean(originStory),
+    legend:                clean(legend),
+    historicalConstruction: clean(historicalConstruction),
+    architecture:          clean(architecture),
+    spiritualImportance:   clean(spiritualImportance),
+    interestingFacts,
+    timeline,
+    content,
+    sources: sourceUrl ? [sourceUrl] : [],
+  };
+};
+
 /* ── GET NEARBY TEMPLES ──────────────────────────────────────── */
 const getNearbyTemples = async (req, res) => {
   const { lat, lng, radius = 10000 } = req.query;
@@ -145,13 +252,7 @@ const getNearbyTemples = async (req, res) => {
 
   try {
     const response = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
-      params: {
-        location: `${lat},${lng}`,
-        radius:   Number(radius),
-        keyword:  "temple",
-        type:     "hindu_temple",
-        key:      GOOGLE_PLACES_KEY,
-      },
+      params: { location: `${lat},${lng}`, radius: Number(radius), keyword: "temple", type: "hindu_temple", key: GOOGLE_PLACES_KEY },
     });
 
     const { status, error_message, results = [], next_page_token } = response.data;
@@ -162,10 +263,7 @@ const getNearbyTemples = async (req, res) => {
     if (status === "ZERO_RESULTS")     return res.json({ temples: [], nextPageToken: null });
     if (status !== "OK")               return res.status(500).json({ error: `Places API: ${status}` });
 
-    return res.json({
-      temples:       results.map(shapePlace),
-      nextPageToken: next_page_token || null,
-    });
+    return res.json({ temples: results.map(shapePlace), nextPageToken: next_page_token || null });
   } catch (err) {
     console.error("[TEMPLE] Error:", err.message);
     return res.status(500).json({ error: "Failed to fetch temples" });
@@ -179,10 +277,7 @@ const searchTemples = async (req, res) => {
 
   try {
     const params = { query: `${query} temple`, key: GOOGLE_PLACES_KEY };
-    if (lat && lng) {
-      params.location = `${lat},${lng}`;
-      params.radius   = 50000;
-    }
+    if (lat && lng) { params.location = `${lat},${lng}`; params.radius = 50000; }
 
     const response = await axios.get(`${PLACES_BASE}/textsearch/json`, { params });
     const { status, error_message, results = [] } = response.data;
@@ -237,11 +332,8 @@ const getTempleDetails = async (req, res) => {
         mapsUrl: place.url || null,
         types:   place.types || [],
         reviews: (place.reviews || []).slice(0, 5).map((r) => ({
-          author:       r.author_name,
-          rating:       r.rating,
-          text:         r.text,
-          time:         r.relative_time_description,
-          profilePhoto: r.profile_photo_url || null,
+          author: r.author_name, rating: r.rating, text: r.text,
+          time: r.relative_time_description, profilePhoto: r.profile_photo_url || null,
         })),
       },
     });
@@ -251,10 +343,7 @@ const getTempleDetails = async (req, res) => {
   }
 };
 
-/* ── GET ENRICHED DATA ───────────────────────────────────────────
-   Wikipedia → parseWikiSections() → per-tab bucketing by heading
-   keyword. history may fall back to intro; rituals/festivals do NOT.
-   Gemini supplies practical Overview/Darshan/Travel only (non-fatal). */
+/* ── GET ENRICHED DATA ───────────────────────────────────────── */
 const getEnrichedTemple = async (req, res) => {
   const { name, address } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
@@ -262,12 +351,16 @@ const getEnrichedTemple = async (req, res) => {
   try {
     console.log(`[ENRICH] Building enriched data for: ${name}`);
 
-    const wikiData = await getTempleWikiData(name).catch((e) => {
+    const wikiData = await getTempleWikiData(name, address || "").catch((e) => {
       console.error("[ENRICH] Wiki fetch failed (non-fatal):", e.message);
       return null;
     });
 
-    let history   = { content: "", sources: [] };
+    let history = {
+      originStory: null, legend: null, historicalConstruction: null,
+      architecture: null, spiritualImportance: null,
+      interestingFacts: null, timeline: null, content: "", sources: [],
+    };
     let rituals   = { content: "", sources: [] };
     let festivals = { content: "", sources: [] };
 
@@ -277,38 +370,21 @@ const getEnrichedTemple = async (req, res) => {
 
       console.log("[ENRICH] Available sections:", sections.map((s) => s.heading));
 
-      const histKeys = sections.filter((s) => matchTab(s.heading, "history")).map((s) => s.heading);
-      const ritKeys  = sections.filter((s) => matchTab(s.heading, "rituals")).map((s) => s.heading);
-      const festKeys = sections.filter((s) => matchTab(s.heading, "festivals")).map((s) => s.heading);
-      console.log("[ENRICH] Selected history keys:", histKeys);
-      console.log("[ENRICH] Selected ritual keys:", ritKeys);
-      console.log("[ENRICH] Selected festival keys:", festKeys);
+      history = buildHistoryStory(sections, wikiData.url);
 
-      let historyContent     = buildTabContent(sections, "history");
       const ritualsContent   = buildTabContent(sections, "rituals");
-      const festivalsContent = buildTabContent(sections, "festivals");
-
-      // History MAY fall back to the introduction (still factual, not AI).
-      // Rituals and Festivals get NO fallback — empty if no section matched.
-      if (!historyContent) {
-        const intro = sections.find((s) => s.heading === "Introduction");
-        if (intro?.text) historyContent = capText(intro.text, 2200);
-      }
-
-      console.log("[ENRICH] History content length:",  historyContent.length);
-      console.log("[ENRICH] Ritual content length:",   ritualsContent.length);
-      console.log("[ENRICH] Festival content length:", festivalsContent.length);
-
-      if (historyContent)   history   = { content: historyContent,   sources: wikiSources };
+      const festivalsContent  = buildTabContent(sections, "festivals");
       if (ritualsContent)   rituals   = { content: ritualsContent,   sources: wikiSources };
       if (festivalsContent) festivals = { content: festivalsContent, sources: wikiSources };
+
+      console.log("[ENRICH] history sections present:",
+        Object.entries(history)
+          .filter(([k, v]) => v && !["sources", "content"].includes(k))
+          .map(([k]) => k));
     } else {
       console.log("[ENRICH] No Wikipedia article — knowledge tabs empty");
     }
 
-    // Gemini practical fields (Overview/Travel/Darshan) — non-fatal.
-    // NOTE: currently failing on quota (429); empty until billing
-    // restored or switched to Groq.
     const wikiContext = wikiData?.extract
       ? `\n\nVerified Wikipedia extract:\n${wikiData.extract.substring(0, 3000)}`
       : "";
@@ -339,7 +415,6 @@ const getEnrichedTemple = async (req, res) => {
 const getTempleVideos = async (req, res) => {
   const { name } = req.query;
   if (!name) return res.status(400).json({ error: "name required" });
-
   try {
     const videos = await searchTempleVideos(name);
     return res.json({ videos });
@@ -360,13 +435,9 @@ const getNearbyServicePlaces = async (req, res) => {
         params: { location: `${lat},${lng}`, radius: 2000, type, keyword, key: GOOGLE_PLACES_KEY },
       });
       return (r.data.results || []).slice(0, 4).map((p) => ({
-        id:      p.place_id,
-        name:    p.name,
-        address: p.vicinity,
-        rating:  p.rating || null,
-        lat:     p.geometry?.location?.lat,
-        lng:     p.geometry?.location?.lng,
-        photo:   p.photos?.[0]?.photo_reference
+        id: p.place_id, name: p.name, address: p.vicinity, rating: p.rating || null,
+        lat: p.geometry?.location?.lat, lng: p.geometry?.location?.lng,
+        photo: p.photos?.[0]?.photo_reference
           ? `${PLACES_BASE}/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${GOOGLE_PLACES_KEY}`
           : null,
         mapsUrl: `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
@@ -377,9 +448,9 @@ const getNearbyServicePlaces = async (req, res) => {
   };
 
   const [hotels, restaurants, parking] = await Promise.all([
-    fetchType("lodging",    "hotel"),
+    fetchType("lodging", "hotel"),
     fetchType("restaurant", "restaurant"),
-    fetchType("parking",    "parking"),
+    fetchType("parking", "parking"),
   ]);
 
   return res.json({ hotels, restaurants, parking });
@@ -390,30 +461,20 @@ const getNearbyServicePlaces = async (req, res) => {
  * ══════════════════════════════════════════════════════════════*/
 const templeChat = async (req, res) => {
   console.log("[CHAT] Incoming:", JSON.stringify({
-    templeName: req.body?.templeName,
-    messageLen: req.body?.message?.length,
+    templeName: req.body?.templeName, messageLen: req.body?.message?.length,
   }));
 
-  const {
-    message,
-    templeName,
-    address,
-    rating,
-    openNow,
-    enriched,
-  } = req.body;
+  const { message, templeName, address, rating, openNow, enriched } = req.body;
 
   if (!message?.trim())    return res.status(400).json({ error: "message is required" });
   if (!templeName?.trim()) return res.status(400).json({ error: "templeName is required" });
 
-  /* ── Step 1: Fetch full Wikipedia article (cached) ─────────── */
   console.log(`[CHAT] Fetching Wikipedia for: ${templeName}`);
-  const wikiData = await getTempleWikiData(templeName).catch((err) => {
+  const wikiData = await getTempleWikiData(templeName, address || "").catch((err) => {
     console.error("[CHAT] Wikipedia fetch error (non-fatal):", err.message);
     return null;
   });
 
-  /* ── Step 2: Extract article sections ───────────────────────── */
   let sections     = null;
   let relevantKeys = [];
 
@@ -424,32 +485,20 @@ const templeChat = async (req, res) => {
     const availableKeys = Object.entries(sections)
       .filter(([k, v]) => v && typeof v === "string" && v.trim().length > 20 && k !== "raw" && k !== "other")
       .map(([k]) => k);
-
     console.log(`[CHAT] Available sections: [${availableKeys.join(", ")}]`);
 
-    /* ── Step 3: Route question to relevant sections ─────────── */
     relevantKeys = getSectionForQuestion(sections, message);
     console.log(`[CHAT] Question routed to sections: [${relevantKeys.join(", ")}]`);
   } else {
     console.log("[CHAT] No Wikipedia data — proceeding with Google Places context only");
   }
 
-  /* ── Step 4: Build the targeted prompt ─────────────────────── */
   const prompt = buildTemplePrompt({
-    templeName,
-    address,
-    wikiData,
-    sections,
-    relevantKeys,
-    openNow,
-    rating,
-    enriched,
-    message,
+    templeName, address, wikiData, sections, relevantKeys, openNow, rating, enriched, message,
   });
 
   console.log(`[CHAT] Sending context to Groq — prompt length: ${prompt.length} chars`);
 
-  /* ── Step 5: Groq → Gemini fallback ────────────────────────── */
   let reply    = null;
   let provider = null;
 
@@ -461,32 +510,24 @@ const templeChat = async (req, res) => {
   } catch (groqErr) {
     console.error("[CHAT] Groq failed:", groqErr.message);
     console.log("[CHAT] Falling back to Gemini");
-
     try {
       reply    = await askGemini(prompt);
       provider = "gemini";
       console.log("[CHAT] Gemini succeeded — reply length:", reply.length);
     } catch (geminiErr) {
       console.error("[CHAT] Gemini also failed:", geminiErr.message);
-      return res.status(503).json({
-        error: "The AI service is temporarily unavailable. Please try again in a moment.",
-      });
+      return res.status(503).json({ error: "The AI service is temporarily unavailable. Please try again in a moment." });
     }
   }
 
-  /* ── Step 6: Clean the reply ─────────────────────────────────── */
   const cleanReply = reply
-    .replace(/\*\*/g, "")
-    .replace(/\*/g, "")
-    .replace(/#{1,6}\s/g, "")
-    .replace(/^ANSWER:\s*/i, "")
-    .trim();
+    .replace(/\*\*/g, "").replace(/\*/g, "")
+    .replace(/#{1,6}\s/g, "").replace(/^ANSWER:\s*/i, "").trim();
 
   console.log(`[CHAT] Responding via ${provider}:`, cleanReply.substring(0, 100));
   return res.json({ reply: cleanReply });
 };
 
-/* ── Exports ─────────────────────────────────────────────────── */
 module.exports = {
   getNearbyTemples,
   searchTemples,
