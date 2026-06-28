@@ -330,6 +330,7 @@ const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache clea
 const getWikiCacheStats = () => ({
   size:    wikiCache.size,
   entries: [...wikiCache.keys()],
+  
 });
 
 module.exports = {
