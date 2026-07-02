@@ -1,266 +1,183 @@
-# 🚀 Sarathi – Context-Aware Travel Guide
+# 🚀 Sarathi – Intelligent Travel & Exploration Platform
+
+<p align="center">
+  <b>Discover • Plan • Explore • Experience</b>
+</p>
 
 ## 🌍 Overview
 
-**Sarathi** is a context-aware travel guide designed to transform how users plan and experience trips. It goes beyond traditional travel planners by adapting to user preferences, real-time conditions, and contextual factors to deliver personalized travel recommendations.
+**Sarathi** is a full-stack travel and exploration platform that helps users discover destinations, plan personalized trips, explore nearby attractions, and manage travel itineraries through an intuitive and modern web experience.
 
-Sarathi acts as a **smart travel assistant** — helping users discover places, plan itineraries, and make better travel decisions dynamically.
-
----
-
-## ✨ Key Features
-
-### 🧠 Smart Decision Engine
-
-* Generates personalized travel plans
-* Considers:
-
-  * User preferences
-  * Budget constraints
-  * Time availability
+The platform combines location-based services, interactive travel guidance, personalized recommendations, and cultural exploration into a single application. It also offers dedicated support for temple exploration, pilgrimage planning, verified historical information, rituals, festivals, and nearby travel services.
 
 ---
 
-### 🎭 Mood-Based Recommendations
+# ✨ Features
 
-* Suggests activities based on user mood:
+## 🧳 Smart Trip Planning
 
-  * Relaxed 😌
-  * Adventurous 😎
-  * Tired 😴
-* Adjusts plans dynamically
-
----
-
-### 🌦️ Real-Time Adaptation
-
-* Updates recommendations based on:
-
-  * Weather conditions
-  * Time of day
-  * Travel context
+- Create personalized travel itineraries
+- Day-wise travel planning
+- Customized travel recommendations
+- Save and manage trips
 
 ---
 
-### 📍 Smart Place Discovery
+## 📍 Destination Discovery
 
-* Recommends:
-
-  * Tourist attractions
-  * Hidden gems 🌍
-  * Local experiences
-* Based on real-world data such as ratings and reviews
+- Explore popular tourist attractions
+- Discover hidden gems
+- Find nearby places
+- Real-time location-based recommendations
 
 ---
 
-### 🍽️ Food & Hotel Suggestions
+## 🛕 Temple Explorer
 
-* Suggests best:
+Explore temples with rich cultural information including:
 
-  * Restaurants
-  * Hotels
-* Filters using:
-
-  * Ratings ⭐
-  * Budget 💰
-  * Location 📍
-
----
-
-### 🔄 Dynamic Itinerary Planning
-
-* Automatically updates travel plans
-* Example:
-
-  > “I feel tired” → suggests lighter activities or rest options
+- Temple Overview
+- History
+- Origin Story
+- Festivals
+- Rituals
+- Architecture
+- Nearby Services
+- Temple Videos
+- Pilgrimage Information
 
 ---
 
-### 🔐 Secure Authentication
+## 🍽 Nearby Services
 
-* User login/signup system
-* JWT-based authentication
-* Google OAuth integration
+Discover nearby:
 
----
+- Restaurants
+- Hotels
+- Parking
+- Hospitals
+- ATMs
+- Public Transport
 
-### 🛒 Travel Cart *(Future Scope)*
-
-* Save selected:
-
-  * Places
-  * Hotels
-  * Activities
-* Plan trips efficiently
+using Google Maps integration.
 
 ---
 
-## 🏗️ Tech Stack
+## 💬 Interactive Travel Assistant
 
-### 💻 Frontend
-
-* HTML
-* CSS
-* JavaScript
-* React.js
+- Travel-related guidance
+- Temple information
+- Destination queries
+- Context-aware recommendations
 
 ---
 
-### ⚙️ Backend
+## ❤️ Saved Places & Trips
 
-* Node.js
-* Express.js
-
----
-
-### 🗄️ Database
-
-* MongoDB
+- Bookmark favourite destinations
+- Save travel plans
+- Access saved places anytime
 
 ---
 
-### 🔐 Authentication
+## 🌐 Multi-language Support
 
-* JWT (JSON Web Tokens)
-* Google OAuth
+Supports multiple languages for an improved travel experience.
 
----
-
-### 🌐 APIs *(Planned / Optional)*
-
-* Google Places API
-* Weather API
+- English
+- Telugu
+- Hindi
 
 ---
 
-## 📂 Project Structure
+## 🔐 Secure Authentication
+
+- Email & Password Authentication
+- JWT Authentication
+- Google OAuth
+- Email OTP Verification
+- Password Reset via OTP
+
+---
+
+## 📱 Responsive UI
+
+- Mobile Friendly
+- Tablet Friendly
+- Desktop Optimized
+- Modern User Experience
+
+---
+
+# 🛠 Tech Stack
+
+## Frontend
+
+- React.js
+- HTML5
+- CSS3
+- JavaScript
+- Bootstrap
+
+---
+
+## Backend
+
+- Node.js
+- Express.js
+
+---
+
+## Database
+
+- MongoDB
+- Mongoose
+
+---
+
+## Authentication
+
+- JWT
+- Google OAuth
+
+---
+
+## APIs & Integrations
+
+- Google Maps API
+- Google Places API
+- Geocoding API
+- Wikipedia API
+- YouTube API
+
+---
+
+## Deployment
+
+- Frontend – Vercel
+- Backend – Render
+- Database – MongoDB Atlas
+
+---
+
+# 📂 Project Structure
 
 ```text
-Sarathi/
+Sarathi
 │
-├── client/              # Frontend (React)
-├── server/              # Backend (Node.js + Express)
-├── models/              # Database schemas
-├── routes/              # API routes
-├── controllers/         # Business logic
-├── .env                 # Environment variables
+├── client
+│   ├── src
+│   ├── public
+│   └── package.json
+│
+├── server
+│   ├── config
+│   ├── controllers
+│   ├── middleware
+│   ├── models
+│   ├── routes
+│   ├── services
+│   └── package.json
+│
 ├── README.md
-└── package.json
-```
-
----
-
-## ⚙️ Installation & Setup
-
-### 1️⃣ Clone Repository
-
-```bash
-git clone <your-repo-url>
-cd Sarathi
-```
-
----
-
-### 2️⃣ Install Dependencies
-
-#### Frontend
-
-```bash
-cd client
-npm install
-```
-
-#### Backend
-
-```bash
-cd server
-npm install
-```
-
----
-
-### 3️⃣ Setup Environment Variables
-
-Create a `.env` file in the `server/` directory:
-
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
-GOOGLE_CLIENT_ID=your_google_client_id
-```
-
----
-
-### 4️⃣ Run Application
-
-#### Start Backend
-
-```bash
-npm run dev
-```
-
-#### Start Frontend
-
-```bash
-npm start
-```
-
----
-
-## 📸 Screenshots *(To be added)*
-
-* Dashboard UI
-* Travel Recommendations
-* Login / Signup Page
-* Cart & Profile Page
-
----
-
-## 🚀 Unique Value
-
-✔ Context-aware recommendations
-✔ Dynamic itinerary updates
-✔ Personalized travel experience
-✔ Combines planning, discovery, and decision-making in one platform
-
-> Sarathi bridges the gap between static travel planners and intelligent travel assistance systems.
-
----
-
-## 🔮 Future Enhancements
-
-* 🤖 Advanced recommendation system
-* 💳 Payment & booking integration
-* 📊 Travel insights dashboard
-* 🗺️ Route optimization
-* 🌐 Multi-language support
-
----
-
-## 👨‍💻 Author
-
-**Kumar Manthri**
-
-* Aspiring Full Stack Developer
-* Passionate about building real-world, scalable applications
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License.
-
----
-
-## ⭐ Support
-
-If you found this project useful:
-
-* ⭐ Star the repository
-* 🍴 Fork it
-* 🤝 Contribute
-
----
-
-> **Sarathi – Your smart guide for better travel experiences.**
+└── .gitignore
