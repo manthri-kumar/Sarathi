@@ -52,28 +52,54 @@ const transporter = nodemailer.createTransport({
    Attempt SMTP connection on app startup to catch credential issues early.
    Logs result but does NOT crash server (allows for debugging).
    ─────────────────────────────────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   VERIFY SMTP CONNECTION ON STARTUP
+   Logs the COMPLETE error object for debugging.
+─────────────────────────────────────────────────────────────────────────── */
+
 transporter.verify((error, success) => {
   if (error) {
-    console.error(
-      "❌ Brevo SMTP verification FAILED:\n" +
-      `   ${error.message}\n` +
-      "\n   Troubleshooting:\n" +
-      "   1. Verify SENDER_EMAIL is confirmed in Brevo dashboard\n" +
-      "   2. Verify EMAIL_USER is correct (copy from Brevo SMTP section)\n" +
-      "   3. Verify EMAIL_PASS is correct (not your Brevo login password)\n" +
-      "   4. Check Render environment variables are set\n" +
-      "   5. Ensure Brevo SMTP access is enabled in account settings"
-    );
+    console.error("\n========================================");
+    console.error("❌ BREVO SMTP VERIFICATION FAILED");
+    console.error("========================================");
+
+    console.error("Message:", error.message);
+    console.error("Code:", error.code);
+    console.error("Command:", error.command);
+    console.error("Response:", error.response);
+    console.error("Response Code:", error.responseCode);
+    console.error("Stack:\n", error.stack);
+
+    console.error("\nCurrent SMTP Configuration:");
+    console.error("Host:", "smtp-relay.brevo.com");
+    console.error("Port:", 587);
+    console.error("Secure:", false);
+    console.error("EMAIL_USER:", process.env.EMAIL_USER ? "✅ Set" : "❌ Missing");
+    console.error("EMAIL_PASS:", process.env.EMAIL_PASS ? "✅ Set" : "❌ Missing");
+    console.error("SENDER_EMAIL:", process.env.SENDER_EMAIL || "❌ Missing");
+
+    console.error("\nFull Error Object:");
+    console.dir(error, { depth: null });
+
+    console.error("\nTroubleshooting Checklist:");
+    console.error("1. Verify EMAIL_USER is the SMTP login from Brevo.");
+    console.error("2. Verify EMAIL_PASS is the SMTP password, NOT your Brevo account password.");
+    console.error("3. Verify SENDER_EMAIL is a verified sender in Brevo.");
+    console.error("4. Verify SMTP is enabled in your Brevo account.");
+    console.error("5. Verify Render environment variables are saved.");
+    console.error("========================================\n");
   } else {
-    console.log(
-      "✅ Brevo SMTP initialized successfully\n" +
-      `   Host: smtp-relay.brevo.com:587 (TLS)\n` +
-      `   Sender: ${process.env.SENDER_EMAIL}\n` +
-      "   Status: Ready to send verification emails"
-    );
+    console.log("\n========================================");
+    console.log("✅ BREVO SMTP VERIFIED SUCCESSFULLY");
+    console.log("========================================");
+    console.log("Host:", "smtp-relay.brevo.com");
+    console.log("Port:", 587);
+    console.log("Secure:", false);
+    console.log("Sender:", process.env.SENDER_EMAIL);
+    console.log("Success:", success);
+    console.log("========================================\n");
   }
 });
-
 /* ───────────────────────────────────────────────────────────────────────────
    EMAIL TEMPLATE BUILDER
    
