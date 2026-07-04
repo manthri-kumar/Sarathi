@@ -318,9 +318,7 @@ export default function TempleExplorer() {
               >
                 ☰
               </button>
-              <span className="te-hero-icon">
-                <GopuramIcon size={30} color="var(--te-green)" />
-              </span>
+      
               <div className="te-hero-heading">
                 <h1>Temple Discovery</h1>
                 <p>Find sacred temples near you, powered by Google Places</p>
