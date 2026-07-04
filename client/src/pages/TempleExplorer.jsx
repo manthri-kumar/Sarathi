@@ -24,11 +24,9 @@ const GopuramIcon = ({ size = 18, color = "currentColor" }) => (
 /* ─── Star Rating ───────────────────────────────────── */
 const StarRating = ({ rating }) => {
   if (!rating) return <span className="te-no-rating">No rating</span>;
-  const stars = Math.round(rating);
   return (
     <span className="te-stars">
-      {"★".repeat(stars)}
-      {"☆".repeat(5 - stars)}
+      <span className="te-star-glyph">★</span>
       <span className="te-rating-num">{rating.toFixed(1)}</span>
     </span>
   );
@@ -72,7 +70,7 @@ const TempleCard = ({
   };
 
   return (
-    <div className="te-card" onClick={() => onViewDetails(temple.id)}>
+    <article className="te-card" onClick={() => onViewDetails(temple.id)}>
       <div className="te-card-image-wrap">
         {temple.photo ? (
           <img
@@ -87,18 +85,26 @@ const TempleCard = ({
           </div>
         )}
 
-        <div className="te-card-badges">
+        <div className="te-card-scrim" />
+
+        <div className="te-card-badges te-card-badges-left">
           {temple.openNow !== null && (
             <span
               className={`te-badge ${
                 temple.openNow ? "te-badge-open" : "te-badge-closed"
               }`}
             >
+              <span className="te-badge-dot" />
               {temple.openNow ? "Open Now" : "Closed"}
             </span>
           )}
-          {dist && <span className="te-badge te-badge-dist">{dist}</span>}
         </div>
+
+        {dist && (
+          <div className="te-card-badges te-card-badges-center">
+            <span className="te-badge te-badge-dist">📍 {dist}</span>
+          </div>
+        )}
 
         <button
           className={`te-save-btn ${isSaved ? "te-saved" : ""}`}
@@ -114,13 +120,13 @@ const TempleCard = ({
 
       <div className="te-card-body">
         <h3 className="te-card-name">{temple.name}</h3>
-        <p className="te-card-address">📍 {temple.address}</p>
+        <p className="te-card-address">{temple.address}</p>
 
         <div className="te-card-meta">
           <StarRating rating={temple.rating} />
           {temple.totalRatings > 0 && (
             <span className="te-review-count">
-              ({temple.totalRatings.toLocaleString()})
+              {temple.totalRatings.toLocaleString()} Reviews
             </span>
           )}
         </div>
@@ -146,11 +152,11 @@ const TempleCard = ({
             Ask AI
           </button>
           <button className="te-btn te-btn-ghost" onClick={openInMaps}>
-            Maps ↗
+            Maps
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 
@@ -301,11 +307,10 @@ export default function TempleExplorer() {
 
       {/* ── Right Side Content Workspace ── */}
       <div className="te-root">
-        {/* ── Header Area ── */}
-        <div className="te-header">
-          <div className="te-header-content">
-            <div className="te-header-title">
-              {/* Responsive Hamburger Toggle Button */}
+        {/* ── Hero Header ── */}
+        <header className="te-hero">
+          <div className="te-hero-inner">
+            <div className="te-hero-top">
               <button
                 className="te-hamburger-btn"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -313,11 +318,10 @@ export default function TempleExplorer() {
               >
                 ☰
               </button>
-
-              <span className="te-header-icon">
-                <GopuramIcon size={44} color="var(--te-green)" />
+              <span className="te-hero-icon">
+                <GopuramIcon size={30} color="var(--te-green)" />
               </span>
-              <div>
+              <div className="te-hero-heading">
                 <h1>Temple Discovery</h1>
                 <p>Find sacred temples near you, powered by Google Places</p>
               </div>
@@ -339,9 +343,9 @@ export default function TempleExplorer() {
               </div>
             </form>
           </div>
-        </div>
+        </header>
 
-        {/* ── Control Row Filters ── */}
+        {/* ── Controls: filter chips + status pills ── */}
         <div className="te-controls">
           <div className="te-filters">
             {["all", "open", "top"].map((f) => (
@@ -354,14 +358,14 @@ export default function TempleExplorer() {
                   ? "All Temples"
                   : f === "open"
                   ? "Open Now"
-                  : "Top Rated (4★+)"}
+                  : "Top Rated"}
               </button>
             ))}
           </div>
 
           <div className="te-meta">
             {locationStatus === "granted" && (
-              <span className="te-location-tag">📍Using your location</span>
+              <span className="te-location-tag">📍 Using your location</span>
             )}
             {temples.length > 0 && (
               <span className="te-count">
@@ -381,7 +385,7 @@ export default function TempleExplorer() {
               onClick={() => setChatContext("general")}
               title="Open Sarathi AI"
             >
-              Sarathi AI
+              ✦ Sarathi AI
             </button>
           </div>
         </div>
@@ -399,7 +403,7 @@ export default function TempleExplorer() {
           </div>
         )}
 
-        {/* ── Dashboard Content Layout ── */}
+        {/* ── Content ── */}
         {loading ? (
           <div className="te-loading">
             <div className="te-spinner" />
