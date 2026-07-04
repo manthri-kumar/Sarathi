@@ -1,8 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import Sidebar from "../Sidebar/Sidebar";
+import OverviewTab from "./tabs/OverviewTab";
+import HistoryTab from "./tabs/HistoryTab";
+import RitualsTab from "./tabs/RitualsTab";
+import FestivalsTab from "./tabs/FestivalsTab";
+import VideosTab from "./tabs/VideosTab";
+import TravelGuideTab from "./tabs/TravelGuideTab";
+import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
-import Sidebar from "../Sidebar";
+
 const TempleDetails = () => {
   const [temples, setTemples] = useState([]);
   const [filteredTemples, setFilteredTemples] = useState([]);
