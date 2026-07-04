@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import "./TempleDetails.css";
-import Sidebar from "../../components/Sidebar";
-
+import Sidebar from "../Sidebar";
 const TempleDetails = () => {
   const [temples, setTemples] = useState([]);
   const [filteredTemples, setFilteredTemples] = useState([]);
