@@ -1,354 +1,349 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
-import Sidebar from "../Sidebar/Sidebar";
-import OverviewTab from "./tabs/OverviewTab";
-import HistoryTab from "./tabs/HistoryTab";
-import RitualsTab from "./tabs/RitualsTab";
-import FestivalsTab from "./tabs/FestivalsTab";
-import VideosTab from "./tabs/VideosTab";
-import TravelGuideTab from "./tabs/TravelGuideTab";
-import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
+import Sidebar from "../../components/Sidebar";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const TempleDetails = () => {
+  const [temples, setTemples] = useState([]);
+  const [filteredTemples, setFilteredTemples] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [userLocation, setUserLocation] = useState(null);
+  const [selectedCity, setSelectedCity] = useState("");
 
-const TABS = [
-  { id: "overview",  label: "Overview",     icon: "🛕" },
-  { id: "history",   label: "History",      icon: "📜" },
-  { id: "rituals",   label: "Rituals",      icon: "🪔" },
-  { id: "festivals", label: "Festivals",    icon: "🎊" },
-  { id: "videos",    label: "Videos",       icon: "▶️"  },
-  { id: "travel",    label: "Travel Guide", icon: "🗺️" },
-];
+  const itemsPerPage = 12;
+  const location = useLocation();
 
-/* ─── Error Boundary ──────────────────────────────── */
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  render() {
-    if (this.state.hasError) return (
-      <div style={{ color:"#ff6b6b", padding:"40px", background:"#050f0a", minHeight:"100vh", fontFamily:"monospace" }}>
-        <h2>⚠️ Crashed: {this.state.error?.toString()}</h2>
-        <pre style={{ marginTop:16, whiteSpace:"pre-wrap", fontSize:12 }}>{this.state.error?.stack}</pre>
-        <button onClick={() => window.history.back()} style={{ marginTop:20, padding:"10px 20px", background:"#22c55e", border:"none", borderRadius:8, cursor:"pointer", color:"#fff" }}>← Go Back</button>
-      </div>
-    );
-    return this.props.children;
-  }
-}
-
-export default function TempleDetailsPage() {
-  return (
-    <ErrorBoundary>
-      <TempleDetailsPageInner />
-    </ErrorBoundary>
-  );
-}
-
-function TempleDetailsPageInner() {
-  const { placeId } = useParams();
-  const navigate    = useNavigate();
-
-  const [activeTab,        setActiveTab]        = useState("overview");
-  const [googleData,       setGoogleData]       = useState(null);
-  const [enriched,         setEnriched]         = useState(null);
-  const [enrichError,      setEnrichError]      = useState(false);
-  const [videos,           setVideos]           = useState([]);
-  const [nearbyServices,   setNearbyServices]   = useState(null);
-  const [loadingGoogle,    setLoadingGoogle]    = useState(true);
-  const [loadingEnriched,  setLoadingEnriched]  = useState(false);
-  const [loadingVideos,    setLoadingVideos]    = useState(false);
-  const [loadingServices,  setLoadingServices]  = useState(false);
-  const [showChat,         setShowChat]         = useState(false);
-  const [error,            setError]            = useState(null);
-
-  /* ── 1. Google Places details (temple source of truth) ──────── */
+  // Get user location
   useEffect(() => {
-    if (!placeId) return;
-    setLoadingGoogle(true);
-    setError(null);
-
-    axios.get(`${API_BASE}/api/temples/details/${placeId}`)
-      .then(res => {
-        console.log("[TEMPLE] Google data:", res.data.temple);
-        setGoogleData(res.data.temple);
-      })
-      .catch(e => {
-        console.error("[TEMPLE] Google fetch failed:", e.message);
-        setError("Could not load temple details: " + e.message);
-      })
-      .finally(() => setLoadingGoogle(false));
-  }, [placeId]);
-
-  /* ── 2. Enriched — TEMPLE coords only, never browser location ── */
-  useEffect(() => {
-    if (!googleData?.name) return;
-
-    // VERIFICATION: these MUST be the temple's Places coords, not the browser's.
-    const enrichedParams = {
-      name: googleData.name,
-      address: googleData.address || "",
-      lat: googleData.lat,
-      lng: googleData.lng,
-    };
-    console.log("[ENRICH-REQ] sending:", enrichedParams,
-      "| googleData.lat:", googleData.lat, "| googleData.lng:", googleData.lng);
-
-    setEnriched(null);          // clear stale temple data before refetch
-    setLoadingEnriched(true);
-    setEnrichError(false);
-
-    axios.get(`${API_BASE}/api/temples/enriched`, {
-      params: enrichedParams,
-      timeout: 60000, // Gemini can be slow — 60s timeout
-    })
-      .then(res => {
-        console.log("[ENRICH] history.content len:", res.data?.history?.content?.length);
-        console.log("[ENRICH] rituals.content len:", res.data?.rituals?.content?.length);
-        console.log("[ENRICH] festivals.content len:", res.data?.festivals?.content?.length);
-        if (res.data && typeof res.data === "object") {
-          setEnriched(res.data);
-          console.log("[ENRICH] setEnriched called");
-        } else {
-          console.warn("[ENRICH] Unexpected response format:", res.data);
-          setEnrichError(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
         }
-      })
-      .catch(e => {
-        console.error("[ENRICH] Failed:", e.message, e.response?.data);
-        setEnrichError(true);
-      })
-      .finally(() => {
-        console.log("[ENRICH] Done loading");
-        setLoadingEnriched(false);
-      });
-  }, [googleData?.name, googleData?.address, googleData?.lat, googleData?.lng]);
-
-  /* ── 3. Videos — lazy (temple name only) ─────────────────────── */
-  const fetchVideos = useCallback(async () => {
-    if (!googleData?.name || videos.length > 0) return;
-    console.log("[VIDEOS] Fetching for:", googleData.name);
-    setLoadingVideos(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/temples/videos`, {
-        params: { name: googleData.name },
-      });
-      console.log("[VIDEOS] Got:", res.data.videos?.length, "videos");
-      setVideos(res.data.videos || []);
-    } catch (e) {
-      console.error("[VIDEOS] Failed:", e.message);
-      setVideos([]);
-    } finally {
-      setLoadingVideos(false);
+      );
     }
-  }, [googleData?.name, videos.length]);
+  }, []);
 
-  /* ── 4. Nearby services — lazy (TEMPLE coords) ───────────────── */
-  const fetchNearbyServices = useCallback(async () => {
-    if (!googleData?.lat || nearbyServices) return;
-    console.log("[SERVICES] Fetching near temple:", googleData.lat, googleData.lng);
-    setLoadingServices(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/temples/nearby-services`, {
-        params: { lat: googleData.lat, lng: googleData.lng },
-      });
-      console.log("[SERVICES]", res.data);
-      setNearbyServices(res.data);
-    } catch (e) {
-      console.error("[SERVICES] Failed:", e.message);
-      setNearbyServices({ hotels: [], restaurants: [], parking: [] });
-    } finally {
-      setLoadingServices(false);
+  // Parse city from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const city = params.get("city");
+    if (city) {
+      setSelectedCity(decodeURIComponent(city));
     }
-  }, [googleData?.lat, googleData?.lng, nearbyServices]);
+  }, [location.search]);
 
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    if (tabId === "videos") fetchVideos();
-    if (tabId === "travel") fetchNearbyServices();
+  // Fetch temples
+  useEffect(() => {
+    const fetchTemples = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        let apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api/temples`;
+
+        if (selectedCity) {
+          apiUrl += `?city=${encodeURIComponent(selectedCity)}`;
+        } else if (userLocation) {
+          apiUrl += `?lat=${userLocation.lat}&lng=${userLocation.lng}`;
+        }
+
+        const response = await axios.get(apiUrl);
+        const templesData = response.data || [];
+
+        setTemples(templesData);
+        setFilteredTemples(templesData);
+        setCurrentPage(1);
+      } catch (err) {
+        console.error("Error fetching temples:", err);
+        setError("Failed to load temples. Please try again.");
+        setTemples([]);
+        setFilteredTemples([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (selectedCity || userLocation) {
+      fetchTemples();
+    }
+  }, [selectedCity, userLocation]);
+
+  // Handle search
+  useEffect(() => {
+    const filtered = temples.filter((temple) => {
+      const matchesSearch =
+        temple.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        temple.address?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesFilter =
+        filterType === "all" ||
+        (filterType === "open" && temple.isOpen !== false) ||
+        (filterType === "rated" &&
+          temple.rating &&
+          parseFloat(temple.rating) >= 4);
+
+      return matchesSearch && matchesFilter;
+    });
+
+    setFilteredTemples(filtered);
+    setCurrentPage(1);
+  }, [searchTerm, filterType, temples]);
+
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTemples = filteredTemples.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredTemples.length / itemsPerPage);
+
+  // Handle AI button click
+  const handleAIClick = () => {
+    console.log("Sarathi AI clicked");
   };
 
-  /* ── Guards ───────────────────────────────────── */
-  if (loadingGoogle) return (
-    <div className="tdp-layout">
-      <Sidebar />
-      <div className="tdp-main"><LoadingSkeleton /></div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="tdp-layout">
-      <Sidebar />
-      <div className="tdp-main">
-        <ErrorState message={error} onBack={() => navigate("/temples")} />
-      </div>
-    </div>
-  );
-
-  if (!googleData) return (
-    <div className="tdp-layout">
-      <Sidebar />
-      <div className="tdp-main">
-        <ErrorState message="Temple not found." onBack={() => navigate("/temples")} />
-      </div>
-    </div>
-  );
-
-  /* Per-render trace of what the active tab will receive */
-  console.log("[TDP] render — activeTab:", activeTab,
-    "| enriched.history.content len:", enriched?.history?.content?.length,
-    "| loadingEnriched:", loadingEnriched);
-
   return (
-    <div className="tdp-layout">
-      {/* ── Sidebar ── */}
+    <div className="temple-details-wrapper">
       <Sidebar />
 
-      {/* ── Main Content ── */}
-      <div className="tdp-main">
+      {/* Main Content Area - Full Width */}
+      <div className="temple-details-container">
+        {/* Hero Section - Full Width */}
+        <div className="temple-hero-section">
+          <div className="hero-content">
+            <h1 className="hero-title">🏛️ Temple Discovery</h1>
+            <p className="hero-subtitle">
+              Find sacred temples near you, powered by Google Places
+            </p>
+          </div>
+        </div>
 
-        {/* Hero */}
-        <div
-          className="tdp-hero"
-          style={{
-            backgroundImage: googleData.photos?.[0]
-              ? `url(${googleData.photos[0]})`
-              : "linear-gradient(135deg,#0a2a1a,#1a4a2a)",
-          }}
-        >
-          <div className="tdp-hero-overlay" />
-          <div className="tdp-hero-content">
-            <button className="tdp-back-btn" onClick={() => navigate("/temples")}>
-              ← Back
+        {/* Search & Filters Section - Full Width */}
+        <div className="search-section">
+          {/* Search Bar */}
+          <div className="search-bar-container">
+            <input
+              type="text"
+              placeholder="Search temples by city or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+            <button className="search-button">
+              <i className="fa-solid fa-magnifying-glass"></i> Search
             </button>
-            <h1 className="tdp-hero-title">{googleData.name}</h1>
-            <p className="tdp-hero-addr">📍 {googleData.address}</p>
-            <div className="tdp-hero-meta">
-              {googleData.rating && (
-                <span className="tdp-hero-badge">
-                  ⭐ {googleData.rating} ({googleData.totalRatings?.toLocaleString()})
-                </span>
-              )}
-              {enriched?.overview?.deity && (
-                <span className="tdp-hero-badge">🙏 {enriched.overview.deity}</span>
-              )}
-              {googleData.openNow !== null && (
-                <span className={`tdp-hero-badge ${googleData.openNow ? "open" : "closed"}`}>
-                  {googleData.openNow ? "🟢 Open Now" : "🔴 Closed"}
-                </span>
-              )}
+            <button className="location-button">
+              <i className="fa-solid fa-location-dot"></i> Using your location
+            </button>
+            <button className="refresh-button">
+              <i className="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+            <button className="ai-button" onClick={handleAIClick}>
+              <i className="fa-solid fa-wand-magic-sparkles"></i> Sarathi AI
+            </button>
+          </div>
+
+          {/* Filter Buttons */}
+          <div className="filter-buttons">
+            <button
+              className={`filter-btn ${filterType === "all" ? "active" : ""}`}
+              onClick={() => setFilterType("all")}
+            >
+              All Temples
+            </button>
+            <button
+              className={`filter-btn ${filterType === "open" ? "active" : ""}`}
+              onClick={() => setFilterType("open")}
+            >
+              Open Now
+            </button>
+            <button
+              className={`filter-btn ${filterType === "rated" ? "active" : ""}`}
+              onClick={() => setFilterType("rated")}
+            >
+              Top Rated (4★+)
+            </button>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        {loading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading temples...</p>
+          </div>
+        ) : error ? (
+          <div className="error-container">
+            <p>{error}</p>
+          </div>
+        ) : currentTemples.length === 0 ? (
+          <div className="no-results">
+            <p>No temples found. Try adjusting your search or filters.</p>
+          </div>
+        ) : (
+          <>
+            {/* Temple Cards Grid - Full Width, Responsive */}
+            <div className="temple-cards-grid">
+              {currentTemples.map((temple) => (
+                <div key={temple._id} className="temple-card">
+                  {/* Card Image */}
+                  <div className="card-image">
+                    {temple.image ? (
+                      <img
+                        src={temple.image}
+                        alt={temple.name}
+                        className="image"
+                      />
+                    ) : (
+                      <div className="image-placeholder">
+                        <i className="fa-solid fa-gopuram"></i>
+                      </div>
+                    )}
+
+                    {/* Distance Badge */}
+                    {temple.distance && (
+                      <div className="distance-badge">{temple.distance}</div>
+                    )}
+
+                    {/* Status Badge */}
+                    {temple.isOpen !== undefined && (
+                      <div
+                        className={`status-badge ${
+                          temple.isOpen ? "open" : "closed"
+                        }`}
+                      >
+                        {temple.isOpen ? "Open Now" : "Closed"}
+                      </div>
+                    )}
+
+                    {/* Like Button */}
+                    <button className="like-button">
+                      <i className="fa-solid fa-heart"></i>
+                    </button>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="card-content">
+                    <h3 className="card-title">{temple.name}</h3>
+
+                    {/* Rating & Reviews */}
+                    {temple.rating && (
+                      <div className="rating-section">
+                        <div className="stars">
+                          <i className="fa-solid fa-star"></i>
+                          <span className="rating-value">
+                            {parseFloat(temple.rating).toFixed(1)}
+                          </span>
+                          {temple.reviews && (
+                            <span className="reviews-count">
+                              ({temple.reviews})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Address */}
+                    {temple.address && (
+                      <p className="card-address">
+                        <i className="fa-solid fa-location-dot"></i>
+                        {temple.address}
+                      </p>
+                    )}
+
+                    {/* Card Actions */}
+                    <div className="card-actions">
+                      <button className="action-btn">
+                        <i className="fa-solid fa-eye"></i> View Details
+                      </button>
+                      <button className="action-btn">
+                        <i className="fa-solid fa-message"></i> Ask AI
+                      </button>
+                      <button className="action-btn">
+                        <i className="fa-solid fa-map"></i> Maps
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="tdp-tabs-wrap">
-          <div className="tdp-tabs">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                className={`tdp-tab ${activeTab === tab.id ? "active" : ""}`}
-                onClick={() => handleTabChange(tab.id)}
-              >
-                <span className="tdp-tab-icon">{tab.icon}</span>
-                <span className="tdp-tab-label">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  className="pagination-btn prev"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  <i className="fa-solid fa-chevron-left"></i>
+                </button>
 
-        {/* Content */}
-        <div className="tdp-content">
-          {activeTab === "overview" && (
-            <OverviewTab
-              google={googleData}
-              enriched={enriched}
-              loading={loadingEnriched}
-              enrichError={enrichError}
-            />
-          )}
-          {activeTab === "history" && (
-            <HistoryTab
-              content={enriched?.history?.content}
-              sources={enriched?.history?.sources || []}
-              history={enriched?.history}
-              loading={loadingEnriched}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "rituals" && (
-            <RitualsTab
-              content={enriched?.rituals?.content}
-              sources={enriched?.rituals?.sources || []}
-              loading={loadingEnriched}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "festivals" && (
-            <FestivalsTab
-              content={enriched?.festivals?.content}
-              sources={enriched?.festivals?.sources || []}
-              loading={loadingEnriched}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "videos" && (
-            <VideosTab
-              videos={videos}
-              loading={loadingVideos}
-              templeName={googleData.name}
-            />
-          )}
-          {activeTab === "travel" && (
-            <TravelGuideTab
-              google={googleData}
-              enriched={enriched}
-              services={nearbyServices}
-              loading={loadingServices}
-            />
-          )}
-        </div>
+                <div className="pagination-numbers">
+                  {Array.from({ length: totalPages }, (_, i) => {
+                    const pageNum = i + 1;
+                    if (
+                      pageNum === 1 ||
+                      pageNum === totalPages ||
+                      (pageNum >= currentPage - 1 &&
+                        pageNum <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          className={`pagination-number ${
+                            currentPage === pageNum ? "active" : ""
+                          }`}
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      pageNum === currentPage - 2 ||
+                      pageNum === currentPage + 2
+                    ) {
+                      return (
+                        <span key={pageNum} className="pagination-ellipsis">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
 
-        {/* FAB */}
-        <button
-          className="tdp-chat-fab"
-          onClick={() => setShowChat(true)}
-          title="Ask Temple Assistant"
-        >
-
-        </button>
-
-        {/* Chat */}
-        {showChat && (
-          <ChatPanel
-            closeChat={() => setShowChat(false)}
-            templeContext={{ name: googleData.name, address: googleData.address || "" }}
-          />
+                <button
+                  className="pagination-btn next"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  <i className="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
-}
+};
 
-function LoadingSkeleton() {
-  return (
-    <div className="tdp-skeleton">
-      <div className="tdp-skeleton-hero" />
-      <div className="tdp-skeleton-tabs" />
-      <div className="tdp-skeleton-body">
-        {[1,2,3].map(i => <div key={i} className="tdp-skeleton-card" />)}
-      </div>
-    </div>
-  );
-}
-
-function ErrorState({ message, onBack }) {
-  return (
-    <div className="tdp-error">
-      <span>⚠️</span>
-      <p>{message}</p>
-      <button onClick={onBack}>← Back to Temples</button>
-    </div>
-  );
-}
+export default TempleDetails;
