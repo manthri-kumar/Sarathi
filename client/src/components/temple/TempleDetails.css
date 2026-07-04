@@ -1,5 +1,5 @@
 /* ─── Root ─────────────────────────────────────────── */
-.tdp-root { min-height: 100vh; background: #ffffff; color: #e8f5e9; font-family: inherit; }
+.tdp-root { min-height: 100vh; background: #050f0a; color: #e8f5e9; font-family: inherit; }
 
 /* ─── Hero ──────────────────────────────────────────── */
 .tdp-hero { position: relative; height: 380px; background-size: cover; background-position: center; display: flex; align-items: flex-end; }
@@ -226,7 +226,7 @@
 .tdp-layout {
   display: flex;
   min-height: 100vh;
-  background: #050f0a;
+  background: #ffffff;
 }
 
 .tdp-main {
