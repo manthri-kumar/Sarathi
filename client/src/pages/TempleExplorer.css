@@ -1,104 +1,155 @@
 :root {
-  --te-bg-start: #0a0d0e;
-  --te-bg-end: #0d101f;
-  --te-green: #2ac522;
+  --te-bg-start: #07110b;
+  --te-bg-end: #0a1414;
+  --te-green: #22c55e;
+  --te-green-bright: #2ac522;
   --te-green-dim: #16a34a;
   --te-green-glow: rgba(34, 197, 94, 0.18);
   --te-gold: #f59e0b;
-  --te-card-bg: rgba(255, 255, 255, 0.04);
-  --te-card-border: rgba(34, 197, 94, 0.15);
-  --te-glass-bg: rgba(10, 20, 10, 0.75);
-  --te-text: #e8f5e8;
-  --te-text-dim: #9ca38f;
-  --te-radius: 16px;
-  --te-radius-sm: 10px;
-  --te-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --te-card-bg: #111827;
+  --te-card-bg-hover: #151d2e;
+  --te-card-border: rgba(255, 255, 255, 0.06);
+  --te-card-border-hover: rgba(34, 197, 94, 0.35);
+  --te-glass-bg: rgba(17, 24, 39, 0.72);
+  --te-text: #ffffff;
+  --te-text-soft: #d4dbe0;
+  --te-text-dim: #8b93a1;
+  --te-radius: 22px;
+  --te-radius-md: 16px;
+  --te-radius-sm: 12px;
+  --te-sidebar-w: 260px;
+  --te-pad: 32px;
+  --te-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --te-shadow-hover: 0 24px 60px -12px rgba(0, 0, 0, 0.65),
+    0 0 0 1px var(--te-card-border-hover), 0 0 40px -8px var(--te-green-glow);
+  --te-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── Split Flex Container Layout ── */
+/* ── Fixed sidebar contract — content offset, never flex ── */
 .te-page-layout {
-  display: flex;
-  width: 100vw;
+  position: relative;
   min-height: 100vh;
-  background: #000;
+  background: var(--te-bg-start);
   overflow-x: hidden;
 }
 
-/* ── Content Root (Takes up the rest of the workspace space) ── */
 .te-root {
-  flex: 1;
+  margin-left: var(--te-sidebar-w);
+  width: calc(100% - var(--te-sidebar-w));
   min-height: 100vh;
-  background: linear-gradient(145deg, var(--te-bg-start) 0%, var(--te-bg-end) 100%);
+  background: radial-gradient(
+      1200px 500px at 100% -10%,
+      rgba(34, 197, 94, 0.06),
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--te-bg-start) 0%, var(--te-bg-end) 100%);
   color: var(--te-text);
-  font-family: "Inter", system-ui, sans-serif;
-  padding-bottom: 60px;
-  overflow-y: auto;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  padding-bottom: 72px;
+  overflow-x: hidden;
 }
 
-/* ── Header ───────────────────────────────────────── */
+/* ── Hero header — full-bleed, padding-bounded only ── */
 .te-header {
-  background: linear-gradient(180deg, rgba(34,197,94,0.12) 0%, transparent 100%);
+  position: relative;
+  padding: 40px var(--te-pad) 28px;
   border-bottom: 1px solid var(--te-card-border);
-  padding: 32px 24px 24px;
+  background: radial-gradient(
+      600px 220px at 8% 0%,
+      rgba(34, 197, 94, 0.14),
+      transparent 70%
+    ),
+    linear-gradient(180deg, rgba(34, 197, 94, 0.05) 0%, transparent 100%);
+  overflow: hidden;
+}
+
+.te-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .te-header-content {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .te-header-title {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
 .te-header-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(
+    145deg,
+    rgba(34, 197, 94, 0.16),
+    rgba(34, 197, 94, 0.04)
+  );
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px -8px var(--te-green-glow);
 }
 
 .te-header-title h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 2.15rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #ffffff 0%, var(--te-green) 100%);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  background: linear-gradient(120deg, #ffffff 30%, var(--te-green) 130%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .te-header-title p {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--te-text-dim);
-  font-size: 0.95rem;
+  font-size: 0.96rem;
+  letter-spacing: -0.01em;
 }
 
-/* ── Search ───────────────────────────────────────── */
-.te-search-form { width: 100%; }
+/* ── Search — 56px, attached button ── */
+.te-search-form {
+  width: 100%;
+  max-width: 720px;
+}
 
 .te-search-wrap {
   display: flex;
   align-items: center;
-  background: var(--te-card-bg);
+  height: 56px;
+  background: var(--te-glass-bg);
   border: 1px solid var(--te-card-border);
-  border-radius: 50px;
-  padding: 4px 6px 4px 18px;
-  backdrop-filter: blur(12px);
-  gap: 10px;
-  transition: border-color 0.2s;
+  border-radius: var(--te-radius-md);
+  padding: 0 6px 0 20px;
+  gap: 12px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: border-color 0.25s var(--te-ease), box-shadow 0.25s var(--te-ease);
 }
 
 .te-search-wrap:focus-within {
   border-color: var(--te-green);
-  box-shadow: 0 0 0 3px var(--te-green-glow);
+  box-shadow: 0 0 0 4px var(--te-green-glow);
 }
 
-.te-search-icon { font-size: 18px; opacity: 0.6; }
+.te-search-icon {
+  font-size: 17px;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
 
 .te-search-input {
   flex: 1;
@@ -107,59 +158,79 @@
   outline: none;
   color: var(--te-text);
   font-size: 1rem;
-  padding: 10px 0;
+  letter-spacing: -0.01em;
+  height: 100%;
 }
 
-.te-search-input::placeholder { color: var(--te-text-dim); }
+.te-search-input::placeholder {
+  color: var(--te-text-dim);
+}
 
 .te-search-btn {
+  height: 44px;
   background: var(--te-green);
-  color: #000;
+  color: #04140a;
   border: none;
-  border-radius: 50px;
-  padding: 10px 24px;
+  border-radius: var(--te-radius-sm);
+  padding: 0 26px;
   font-weight: 700;
   font-size: 0.9rem;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: transform 0.15s var(--te-ease), background 0.2s, box-shadow 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.te-search-btn:hover { background: #16a34a; transform: scale(1.03); }
+.te-search-btn:hover {
+  background: var(--te-green-bright);
+  box-shadow: 0 8px 20px -6px var(--te-green-glow);
+}
+.te-search-btn:active {
+  transform: scale(0.97);
+}
 
-/* ── Controls ─────────────────────────────────────── */
+/* ── Controls — full-width, space-between ── */
 .te-controls {
-  max-width: 1200px;
-  margin: 20px auto 0;
-  padding: 0 24px;
+  width: 100%;
+  padding: 24px var(--te-pad) 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
 }
 
 .te-filters {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .te-filter-btn {
-  background: var(--te-card-bg);
+  background: rgba(255, 255, 255, 0.035);
   border: 1px solid var(--te-card-border);
   color: var(--te-text-dim);
   border-radius: 50px;
-  padding: 8px 18px;
+  padding: 9px 20px;
   font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all 0.2s;
   backdrop-filter: blur(8px);
+  transition: color 0.2s, border-color 0.2s, background 0.2s,
+    transform 0.15s var(--te-ease);
 }
 
-.te-filter-btn:hover { color: var(--te-text); border-color: rgba(34,197,94,0.3); }
+.te-filter-btn:hover {
+  color: var(--te-text-soft);
+  border-color: rgba(34, 197, 94, 0.28);
+}
+.te-filter-btn:active {
+  transform: scale(0.96);
+}
 .te-filter-btn.active {
-  background: rgba(34, 197, 94, 0.15);
+  background: rgba(34, 197, 94, 0.14);
   border-color: var(--te-green);
   color: var(--te-green);
   font-weight: 600;
@@ -169,15 +240,16 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .te-location-tag {
   font-size: 0.8rem;
   color: var(--te-green);
-  background: rgba(34,197,94,0.1);
-  border: 1px solid rgba(34,197,94,0.2);
-  border-radius: 20px;
-  padding: 4px 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 50px;
+  padding: 5px 13px;
 }
 
 .te-count {
@@ -185,73 +257,105 @@
   color: var(--te-text-dim);
 }
 
-.te-refresh-btn {
-  background: transparent;
-  border: 1px solid var(--te-card-border);
-  color: var(--te-text-dim);
+/* ── Glass action pills — Refresh + Sarathi AI, equal height ── */
+.te-refresh-btn,
+.te-ai-btn {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border-radius: 50px;
-  padding: 6px 14px;
+  padding: 0 18px;
   font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.15s var(--te-ease), background 0.2s, border-color 0.2s,
+    box-shadow 0.2s;
 }
 
+.te-refresh-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--te-card-border);
+  color: var(--te-text-dim);
+  backdrop-filter: blur(10px);
+}
 .te-refresh-btn:hover {
   border-color: var(--te-green);
   color: var(--te-green);
+  background: rgba(34, 197, 94, 0.08);
+}
+.te-refresh-btn:active {
+  transform: scale(0.96);
 }
 
-/* ── Status Banners ──────────────────────────────── */
+.te-ai-btn {
+  background: linear-gradient(
+    135deg,
+    var(--te-green) 0%,
+    var(--te-green-dim) 100%
+  );
+  border: none;
+  color: #04140a;
+  box-shadow: 0 6px 18px -6px var(--te-green-glow);
+}
+.te-ai-btn:hover {
+  box-shadow: 0 10px 26px -6px var(--te-green-glow);
+  transform: translateY(-1px);
+}
+.te-ai-btn:active {
+  transform: scale(0.96);
+}
+
+/* ── Banners ── */
 .te-status-banner,
 .te-error-banner {
-  max-width: 1200px;
-  margin: 16px auto 0;
-  padding: 12px 24px;
+  margin: 16px var(--te-pad) 0;
+  padding: 13px 20px;
   border-radius: var(--te-radius-sm);
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
-  margin-left: 24px;
-  margin-right: 24px;
 }
-
 .te-status-banner {
-  background: rgba(34,197,94,0.08);
-  border: 1px solid rgba(34,197,94,0.2);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
   color: var(--te-green);
 }
-
 .te-error-banner {
-  background: rgba(239,68,68,0.08);
-  border: 1px solid rgba(239,68,68,0.2);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   color: #f87171;
 }
 
-/* ── Loading Animation ───────────────────────────── */
+/* ── Loading / empty ── */
 .te-loading,
 .te-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 24px;
+  padding: 96px 24px;
   gap: 16px;
   color: var(--te-text-dim);
 }
-
-.te-empty p { margin: 0; font-size: 1.1rem; }
-.te-empty-sub { font-size: 0.9rem !important; }
+.te-empty p {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.te-empty-sub {
+  font-size: 0.9rem !important;
+}
 
 .te-spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid rgba(34,197,94,0.2);
+  border: 3px solid rgba(34, 197, 94, 0.2);
   border-top-color: var(--te-green);
   border-radius: 50%;
   animation: te-spin 0.8s linear infinite;
 }
-
 .te-spinner-sm {
   width: 16px;
   height: 16px;
@@ -261,41 +365,60 @@
   animation: te-spin 0.8s linear infinite;
   flex-shrink: 0;
 }
-
-@keyframes te-spin { to { transform: rotate(360deg); } }
-
-/* ── Responsive Grids ────────────────────────────── */
-.te-grid {
-  max-width: 1200px;
-  margin: 24px auto 0;
-  padding: 0 24px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+@keyframes te-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* ── Individual Cards ────────────────────────────── */
+/* ── Fluid grid — true full-bleed, auto-fill ── */
+.te-grid {
+  width: 100%;
+  padding: 28px var(--te-pad) 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* ── Card ── */
 .te-card {
   background: var(--te-card-bg);
   border: 1px solid var(--te-card-border);
   border-radius: var(--te-radius);
   overflow: hidden;
   cursor: pointer;
-  backdrop-filter: blur(12px);
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  box-shadow: var(--te-shadow-card);
+  transition: transform 0.35s var(--te-ease), box-shadow 0.35s var(--te-ease),
+    background 0.3s;
+  animation: te-fade-in 0.5s var(--te-ease) both;
 }
 
 .te-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(34,197,94,0.4);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 24px var(--te-green-glow);
+  transform: translateY(-6px);
+  background: var(--te-card-bg-hover);
+  box-shadow: var(--te-shadow-hover);
+}
+
+@keyframes te-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .te-card-image-wrap {
   position: relative;
-  height: 200px;
+  height: 220px;
   overflow: hidden;
-  background: rgba(34,197,94,0.05);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.06),
+    rgba(0, 0, 0, 0.35)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,10 +428,26 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s;
+  transition: transform 0.6s var(--te-ease);
+}
+.te-card:hover .te-card-img {
+  transform: scale(1.06);
 }
 
-.te-card:hover .te-card-img { transform: scale(1.05); }
+/* Gradient scrim so badges stay legible over any photo */
+.te-card-image-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.35) 0%,
+    transparent 32%,
+    transparent 68%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  pointer-events: none;
+}
 
 .te-card-img-placeholder {
   width: 100%;
@@ -316,60 +455,88 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(34,197,94,0.05) 0%, rgba(0,0,0,0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.05),
+    rgba(0, 0, 0, 0.3)
+  );
 }
 
 .te-card-badges {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  z-index: 2;
 }
 
 .te-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 20px;
-  backdrop-filter: blur(8px);
-  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 50px;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(10px);
 }
-
-.te-badge-open { background: rgba(34,197,94,0.85); color: #000; }
-.te-badge-closed { background: rgba(239,68,68,0.8); color: #fff; }
-.te-badge-dist { background: rgba(0,0,0,0.7); color: var(--te-text); border: 1px solid rgba(255,255,255,0.15); }
+.te-badge-open {
+  background: rgba(34, 197, 94, 0.9);
+  color: #04140a;
+}
+.te-badge-closed {
+  background: rgba(239, 68, 68, 0.85);
+  color: #fff;
+}
+.te-badge-dist {
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--te-text);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
 
 .te-save-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #fff;
   font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s var(--te-ease), background 0.2s, border-color 0.2s;
   line-height: 1;
+  z-index: 2;
+}
+.te-save-btn:hover {
+  background: rgba(239, 68, 68, 0.7);
+  border-color: #f87171;
+  transform: scale(1.12);
+}
+.te-save-btn:active {
+  transform: scale(0.92);
+}
+.te-save-btn.te-saved {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.45);
 }
 
-.te-save-btn:hover { background: rgba(239,68,68,0.7); border-color: #f87171; transform: scale(1.1); }
-.te-save-btn.te-saved { color: #f87171; background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
-
-.te-card-body { padding: 16px; }
+.te-card-body {
+  padding: 18px;
+}
 
 .te-card-name {
   margin: 0 0 6px;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--te-text);
   line-height: 1.3;
   display: -webkit-box;
@@ -379,20 +546,19 @@
 }
 
 .te-card-address {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 0.82rem;
   color: var(--te-text-dim);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .te-card-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .te-stars {
@@ -400,98 +566,77 @@
   font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
-
 .te-rating-num {
   font-weight: 700;
   color: var(--te-text);
   font-size: 0.85rem;
 }
-
-.te-no-rating { color: var(--te-text-dim); font-size: 0.8rem; }
-.te-review-count { color: var(--te-text-dim); font-size: 0.8rem; }
+.te-no-rating,
+.te-review-count {
+  color: var(--te-text-dim);
+  font-size: 0.8rem;
+}
 
 .te-card-actions {
   display: flex;
   gap: 8px;
 }
 
-/* ── Standardized Base Actions ───────────────────── */
+/* ── Card action buttons — equal height, three treatments ── */
 .te-btn {
+  height: 44px;
   border: none;
   border-radius: var(--te-radius-sm);
-  padding: 9px 18px;
-  font-size: 0.85rem;
+  padding: 0 16px;
+  font-size: 0.84rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
+  transition: transform 0.15s var(--te-ease), background 0.2s, border-color 0.2s,
+    color 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
+}
+.te-btn:active {
+  transform: scale(0.96);
 }
 
 .te-btn-primary {
   background: var(--te-green);
-  color: #000;
+  color: #04140a;
   flex: 1;
 }
-
-.te-btn-primary:hover { background: #1ea316; transform: translateY(-1px); }
-
-.te-btn-ghost {
-  background: rgba(255,255,255,0.05);
-  color: var(--te-text-dim);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.te-btn-ghost:hover {
-  background: rgba(34,197,94,0.1);
-  color: var(--te-green);
-  border-color: rgba(34,197,94,0.3);
+.te-btn-primary:hover {
+  background: var(--te-green-bright);
 }
 
 .te-btn-ai {
-  background: linear-gradient(135deg, #0d2016, #1a3a2a);
-  border: 1px solid #2a5a3a;
-  color: #4caf50;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 600;
-  transition: all 0.2s;
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: var(--te-green);
 }
 .te-btn-ai:hover {
-  background: #1a4a2a;
-  border-color: #4caf50;
-  color: #fff;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: var(--te-green);
 }
 
-.te-ai-btn {
-  background: #4caf50;
-  border: none;
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: background 0.2s;
+.te-btn-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--te-text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
-.te-ai-btn:hover {
-  background: #388e3c;
+.te-btn-ghost:hover {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--te-green);
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
-.te-chat-overlay {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  z-index: 9999;
-}
-
-/* ── Hamburger toggle button configurations (Hidden on Desktop) ── */
+/* ── Hamburger (mobile only) ── */
 .te-hamburger-btn {
   display: none;
   background: rgba(255, 255, 255, 0.05);
@@ -504,150 +649,93 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  transition: all 0.2s ease;
+  transition: background 0.2s, border-color 0.2s;
 }
-
 .te-hamburger-btn:hover {
   background: rgba(34, 197, 94, 0.1);
   border-color: var(--te-green);
 }
 
-/* ── Mobile Dark Transparent Backdrop Backdrop ── */
 .te-mobile-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 1100; /* Directly sits underneath sidebar drawer layout */
+  z-index: 1100;
 }
 
-/* ── Pad Left Margin to shift Content Root on Desktop viewports ── */
-@media (min-width: 769px) {
-  .te-root {
-    margin-left: 250px; /* Perfectly matches your Sidebar width specification */
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+  :root {
+    --te-pad: 24px;
+  }
+  .te-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
   }
 }
 
-/* ── Responsive Mobile Media Queries ── */
+/* ── Mobile: sidebar becomes drawer, content full-width ── */
 @media (max-width: 768px) {
+  :root {
+    --te-pad: 16px;
+  }
+  .te-root {
+    margin-left: 0;
+    width: 100%;
+  }
   .te-hamburger-btn {
     display: inline-flex;
   }
-
+  .te-header {
+    padding: 22px 16px 18px;
+  }
   .te-header-title {
     gap: 12px;
   }
-
-  .te-page-layout {
-    position: relative;
-    width: 100%;
-    min-height: 100vh;
-    overflow-x: hidden;
+  .te-header-title h1 {
+    font-size: 1.55rem;
   }
-
-  .te-root {
-    width: 100%;
-    padding-left: 0;
-    z-index: 1;
+  .te-header-icon {
+    width: 52px;
+    height: 52px;
   }
-
-  .te-header { padding: 20px 16px 16px; }
-  .te-header-title h1 { font-size: 1.5rem; }
-
+  .te-search-form {
+    max-width: none;
+  }
   .te-controls {
-    padding: 0 16px;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 16px;
   }
-
   .te-meta {
-    width: 100%;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
   }
-
   .te-grid {
-    padding: 0 16px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* ── Small phones ── */
+@media (max-width: 480px) {
+  .te-search-wrap {
+    height: 52px;
+  }
+  .te-search-btn {
+    padding: 0 18px;
+  }
+  .te-grid {
     grid-template-columns: 1fr;
   }
-
-  .te-status-banner,
-  .te-error-banner { margin-left: 16px; margin-right: 16px; }
-}
-
-@media (max-width: 480px) {
-  .te-search-btn { padding: 10px 16px; font-size: 0.8rem; }
-  .te-filter-btn { padding: 7px 14px; font-size: 0.8rem; }
-  .te-card-actions { flex-direction: column; }
-  .te-btn-primary { flex: unset; width: 100%; }
-}
-
-
-/* ── Spacing fixes ───────────────────────────────── */
-
-/* Fix header overcrowding */
-.te-header {
-  padding: 28px 28px 20px;
-}
-
-.te-header-content {
-  max-width: 1160px;
-  margin: 0 auto;
-  gap: 18px;
-}
-
-/* Fix controls row alignment */
-.te-controls {
-  max-width: 1160px;
-  margin: 16px auto 0;
-  padding: 0 28px;
-  gap: 10px;
-}
-
-/* Fix grid padding */
-.te-grid {
-  max-width: 1160px;
-  margin: 20px auto 0;
-  padding: 0 28px 40px;
-  gap: 18px;
-}
-
-/* Better card body padding */
-.te-card-body {
-  padding: 14px 16px 16px;
-}
-
-/* Fix card action spacing */
-.te-card-actions {
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.te-btn {
-  padding: 8px 14px;
-  font-size: 0.82rem;
-}
-
-/* Fix banners */
-.te-status-banner,
-.te-error-banner {
-  margin: 14px 28px 0;
-  max-width: calc(1160px);
-}
-
-/* Desktop: content shifts past sidebar */
-@media (min-width: 769px) {
-  .te-root {
-    margin-left: 250px;
+  .te-card-actions {
+    flex-wrap: wrap;
   }
-}
-
-/* Fix chat overlay position */
-.te-chat-overlay {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  z-index: 9999;
+  .te-btn-primary,
+  .te-btn-ai {
+    flex: 1 1 calc(50% - 4px);
+  }
+  .te-btn-ghost {
+    flex: 1 1 100%;
+  }
 }
