@@ -1,17 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
-import Sidebar from "../Sidebar/Sidebar";
-import OverviewTab from "./tabs/OverviewTab";
-import HistoryTab from "./tabs/HistoryTab";
-import RitualsTab from "./tabs/RitualsTab";
-import FestivalsTab from "./tabs/FestivalsTab";
-import VideosTab from "./tabs/VideosTab";
-import TravelGuideTab from "./tabs/TravelGuideTab";
-import ChatPanel from "../ChatPanel/ChatPanel";
 import "./TempleDetails.css";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
-const TempleDetails = () => {
+const TempleDetailsPage = () => {
   const [temples, setTemples] = useState([]);
   const [filteredTemples, setFilteredTemples] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +18,9 @@ const TempleDetails = () => {
   const itemsPerPage = 12;
   const location = useLocation();
 
+  // ═══════════════════════════════════════════════════════════════════════════
   // Get user location
+  // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -42,7 +37,9 @@ const TempleDetails = () => {
     }
   }, []);
 
+  // ═══════════════════════════════════════════════════════════════════════════
   // Parse city from URL
+  // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const city = params.get("city");
@@ -51,7 +48,9 @@ const TempleDetails = () => {
     }
   }, [location.search]);
 
-  // Fetch temples
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Fetch temples from backend
+  // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     const fetchTemples = async () => {
       try {
@@ -87,7 +86,9 @@ const TempleDetails = () => {
     }
   }, [selectedCity, userLocation]);
 
-  // Handle search
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Handle search and filter
+  // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     const filtered = temples.filter((temple) => {
       const matchesSearch =
@@ -108,7 +109,9 @@ const TempleDetails = () => {
     setCurrentPage(1);
   }, [searchTerm, filterType, temples]);
 
-  // Pagination
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Pagination logic
+  // ═══════════════════════════════════════════════════════════════════════════
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentTemples = filteredTemples.slice(
@@ -117,13 +120,45 @@ const TempleDetails = () => {
   );
   const totalPages = Math.ceil(filteredTemples.length / itemsPerPage);
 
-  // Handle AI button click
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Event handlers
+  // ═══════════════════════════════════════════════════════════════════════════
   const handleAIClick = () => {
     console.log("Sarathi AI clicked");
+    // Add your AI handler logic here
   };
 
+  const handleRefresh = () => {
+    setLoading(true);
+    // Re-fetch temples
+    if (selectedCity || userLocation) {
+      window.location.reload();
+    }
+  };
+
+  const handleLocationClick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          alert("Unable to get your location. Please enable location services.");
+        }
+      );
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="temple-details-wrapper">
+      {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content Area - Full Width */}
@@ -152,10 +187,10 @@ const TempleDetails = () => {
             <button className="search-button">
               <i className="fa-solid fa-magnifying-glass"></i> Search
             </button>
-            <button className="location-button">
+            <button className="location-button" onClick={handleLocationClick}>
               <i className="fa-solid fa-location-dot"></i> Using your location
             </button>
-            <button className="refresh-button">
+            <button className="refresh-button" onClick={handleRefresh}>
               <i className="fa-solid fa-rotate-right"></i> Refresh
             </button>
             <button className="ai-button" onClick={handleAIClick}>
@@ -195,6 +230,9 @@ const TempleDetails = () => {
         ) : error ? (
           <div className="error-container">
             <p>{error}</p>
+            <button onClick={handleRefresh} className="retry-button">
+              Retry
+            </button>
           </div>
         ) : currentTemples.length === 0 ? (
           <div className="no-results">
@@ -237,7 +275,7 @@ const TempleDetails = () => {
                     )}
 
                     {/* Like Button */}
-                    <button className="like-button">
+                    <button className="like-button" aria-label="Add to favorites">
                       <i className="fa-solid fa-heart"></i>
                     </button>
                   </div>
@@ -273,13 +311,13 @@ const TempleDetails = () => {
 
                     {/* Card Actions */}
                     <div className="card-actions">
-                      <button className="action-btn">
+                      <button className="action-btn" aria-label="View temple details">
                         <i className="fa-solid fa-eye"></i> View Details
                       </button>
-                      <button className="action-btn">
+                      <button className="action-btn" aria-label="Ask Sarathi AI about this temple">
                         <i className="fa-solid fa-message"></i> Ask AI
                       </button>
-                      <button className="action-btn">
+                      <button className="action-btn" aria-label="Open in Google Maps">
                         <i className="fa-solid fa-map"></i> Maps
                       </button>
                     </div>
@@ -297,6 +335,7 @@ const TempleDetails = () => {
                     setCurrentPage((prev) => Math.max(prev - 1, 1))
                   }
                   disabled={currentPage === 1}
+                  aria-label="Previous page"
                 >
                   <i className="fa-solid fa-chevron-left"></i>
                 </button>
@@ -317,6 +356,8 @@ const TempleDetails = () => {
                             currentPage === pageNum ? "active" : ""
                           }`}
                           onClick={() => setCurrentPage(pageNum)}
+                          aria-label={`Go to page ${pageNum}`}
+                          aria-current={currentPage === pageNum ? "page" : undefined}
                         >
                           {pageNum}
                         </button>
@@ -341,6 +382,7 @@ const TempleDetails = () => {
                     setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                   }
                   disabled={currentPage === totalPages}
+                  aria-label="Next page"
                 >
                   <i className="fa-solid fa-chevron-right"></i>
                 </button>
@@ -353,4 +395,4 @@ const TempleDetails = () => {
   );
 };
 
-export default TempleDetails;
+export default TempleDetailsPage;
