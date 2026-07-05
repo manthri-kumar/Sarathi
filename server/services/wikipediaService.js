@@ -1,5 +1,20 @@
 "use strict";
 
+/**
+ * Sarathi Wikipedia Service — Temple-Aware, Locality-Resolved
+ * ───────────────────────────────────────────────────────────
+ * Articles are scored against the TEMPLE's Google Places location and an
+ * entity-type signal. Temple pages get a large bonus; geography pages a
+ * large penalty. A temple-classified candidate that matches the ADDRESS
+ * LOCALITY is accepted even at name-similarity 0 — this resolves temples
+ * named by deity but titled by place (e.g. "Bhadrachalam Temple" for
+ * "Seetha Ramachandraswamy Devasthanam"). Coordinates are a bonus, never
+ * a veto.
+ *
+ * getTempleWikiData(templeName, locationCtx) → { title, url, extract } | null
+ *   locationCtx: { address, city?, district?, state?, lat?, lng? }
+ */
+
 const axios = require("axios");
 
 const WIKI_HEADERS = {
@@ -69,7 +84,7 @@ const classifyEntity = (title) => {
   return "neutral";
 };
 
-/* ── Location- + temple-qualified search variants ─────────────── */
+/* ── Locality-first + temple-qualified search variants ─────────── */
 const buildSearchVariants = (templeName, loc) => {
   const variants = [];
   const raw = templeName.trim();
@@ -88,7 +103,15 @@ const buildSearchVariants = (templeName, loc) => {
   const cityRaw = loc.city ? titleCase(loc.city) : "";
   const stateRaw = loc.state ? titleCase(loc.state) : "";
 
-  // Temple-qualified queries FIRST — surface the temple article, not the hill.
+  // LOCALITY-FIRST: the article is often titled by place, not deity
+  // ("Bhadrachalam Temple" not "Seetha Ramachandraswamy").
+  if (localityRaw) {
+    variants.push(`${localityRaw} Temple`);
+    variants.push(`${localityRaw} temple ${stateRaw}`.trim());
+  }
+  if (cityRaw && cityRaw !== localityRaw) variants.push(`${cityRaw} Temple`);
+
+  // Then deity-qualified (prior behaviour retained).
   variants.push(`${core} temple`);
   variants.push(`Sri ${core} temple`);
   variants.push(`${core} devasthanam`);
@@ -98,7 +121,7 @@ const buildSearchVariants = (templeName, loc) => {
     variants.push(`${core} temple ${localityRaw}`);
   if (cityRaw) variants.push(`${core} temple ${cityRaw}`);
 
-  // Raw/location variants (prior behaviour retained).
+  // Raw/location variants.
   if (localityRaw) variants.push(`${noParens} ${localityRaw}`);
   if (cityRaw) variants.push(`${noParens} ${cityRaw}`);
   if (stateRaw) variants.push(`${noParens} ${stateRaw}`);
@@ -214,9 +237,7 @@ const fetchExtract = async (pageTitle) => {
   };
 };
 
-/* ── Section-marked extract — preserves "== History ==" headings ──
-   Full article, exsectionformat=wiki keeps heading markers for the
-   section splitter. Cached separately under `sectioned:`. */
+/* ── Section-marked extract — preserves "== History ==" headings ── */
 const getSectionedExtract = async (pageTitle) => {
   if (!pageTitle) return null;
 
@@ -291,14 +312,21 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
     const { score, breakdown, nameSim, entity } = scoreCandidate(cand, templeName, loc);
     const coordBonus = await fetchCoordBonus(cand.title, loc);
     const total = score + coordBonus;
-    console.log(`[WIKI] candidate "${cand.title}" [${entity}] → ${total} (name:${breakdown.name} city:${breakdown.city} dist:${breakdown.district} state:${breakdown.state} type:${breakdown.type} coord:${coordBonus})`);
 
-    // Confirmed temple titles get a relaxed name-gate: deity-only titles
-    // share few tokens with a query like "Simhachalam Temple" yet are
-    // unambiguously the correct page.
-    const nameGate = entity === "temple" ? 0.12 : 0.34;
-    if (nameSim < nameGate) {
-      console.log(`[WIKI]   ↳ name gate failed (sim ${(nameSim * 100).toFixed(0)}%, gate ${nameGate})`);
+    // Locality-match escape hatch: a temple-classified candidate whose
+    // title/snippet contains an address locality token is valid EVEN AT
+    // nameSim 0 (deity-named temple, place-titled article).
+    const nhay = norm(`${cand.title} ${cand.snippet || ""}`);
+    const localityMatch = loc.rawTokens.some((t) => t.length > 4 && t !== loc.state && nhay.includes(t));
+
+    console.log(`[WIKI] candidate "${cand.title}" [${entity}] → ${total} (name:${breakdown.name} city:${breakdown.city} dist:${breakdown.district} state:${breakdown.state} type:${breakdown.type} coord:${coordBonus} locality:${localityMatch})`);
+
+    const gatePass =
+      (entity === "temple" && localityMatch) ||
+      nameSim >= (entity === "temple" ? 0.12 : 0.34);
+
+    if (!gatePass) {
+      console.log(`[WIKI]   ↳ gate failed (sim ${(nameSim * 100).toFixed(0)}%, locality ${localityMatch})`);
       continue;
     }
     if (!best || total > best.total) best = { cand, total };
