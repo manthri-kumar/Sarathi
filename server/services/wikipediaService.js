@@ -1,17 +1,5 @@
 "use strict";
 
-/**
- * Sarathi Wikipedia Service — Temple-Aware, Validation-Gated
- * ──────────────────────────────────────────────────────────
- * Articles are scored against the TEMPLE's Google Places location AND an
- * entity-type signal: temple pages receive a large bonus, geography pages
- * (hill/town/district/river) a large penalty, so a temple always outranks
- * a same-named hill. Coordinates are a confidence BONUS — never a veto.
- *
- * getTempleWikiData(templeName, locationCtx) → { title, url, extract } | null
- *   locationCtx: { address, city?, district?, state?, lat?, lng? }
- */
-
 const axios = require("axios");
 
 const WIKI_HEADERS = {
