@@ -1,18 +1,17 @@
 "use strict";
 
 /**
- * Sarathi Wikipedia Service — Temple-Aware, Locality-Resolved
- * ───────────────────────────────────────────────────────────
- * Articles are scored against the TEMPLE's Google Places location and an
- * entity-type signal. Temple pages get a large bonus; geography pages a
- * large penalty. A temple-classified candidate that matches the ADDRESS
- * LOCALITY is accepted even at name-similarity 0 — this resolves temples
- * named by deity but titled by place (e.g. "Bhadrachalam Temple" for
- * "Seetha Ramachandraswamy Devasthanam"). Coordinates are a bonus, never
- * a veto.
+ * Sarathi Wikipedia Service — Temple-Aware, Locality-Resolved, Image-Enabled
+ * ──────────────────────────────────────────────────────────────────────────
+ * Resolution: temple pages get a large bonus, geography a large penalty; a
+ * temple-classified candidate matching the address locality is accepted even
+ * at name-similarity 0. Coordinates are a bonus, never a veto.
  *
- * getTempleWikiData(templeName, locationCtx) → { title, url, extract } | null
- *   locationCtx: { address, city?, district?, state?, lat?, lng? }
+ * Images: getTempleWikiData now also returns { image } — the page's lead
+ * image (pageimages original), preferring Wikimedia Commons. getWikiImages
+ * returns a gallery of article images for the section-level enhancement.
+ *
+ * getTempleWikiData(templeName, locationCtx) → { title, url, extract, image } | null
  */
 
 const axios = require("axios");
@@ -79,7 +78,7 @@ const GEO_TITLE_RE = /\b(hill|hills|hill range|range|mountain|mount|village|town
 
 const classifyEntity = (title) => {
   const t = title.toLowerCase();
-  if (TEMPLE_TITLE_RE.test(t)) return "temple";     // explicit worship word wins outright
+  if (TEMPLE_TITLE_RE.test(t)) return "temple";
   if (GEO_TITLE_RE.test(t)) return "geography";
   return "neutral";
 };
@@ -91,7 +90,6 @@ const buildSearchVariants = (templeName, loc) => {
   const noParens = raw.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
   const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
-  // Bare deity/place core — strip honorifics + temple words.
   const core = noParens
     .replace(/\b(sri|shri|sree)\b/gi, "")
     .replace(TEMPLE_TITLE_RE, "")
@@ -103,15 +101,12 @@ const buildSearchVariants = (templeName, loc) => {
   const cityRaw = loc.city ? titleCase(loc.city) : "";
   const stateRaw = loc.state ? titleCase(loc.state) : "";
 
-  // LOCALITY-FIRST: the article is often titled by place, not deity
-  // ("Bhadrachalam Temple" not "Seetha Ramachandraswamy").
   if (localityRaw) {
     variants.push(`${localityRaw} Temple`);
     variants.push(`${localityRaw} temple ${stateRaw}`.trim());
   }
   if (cityRaw && cityRaw !== localityRaw) variants.push(`${cityRaw} Temple`);
 
-  // Then deity-qualified (prior behaviour retained).
   variants.push(`${core} temple`);
   variants.push(`Sri ${core} temple`);
   variants.push(`${core} devasthanam`);
@@ -121,7 +116,6 @@ const buildSearchVariants = (templeName, loc) => {
     variants.push(`${core} temple ${localityRaw}`);
   if (cityRaw) variants.push(`${core} temple ${cityRaw}`);
 
-  // Raw/location variants.
   if (localityRaw) variants.push(`${noParens} ${localityRaw}`);
   if (cityRaw) variants.push(`${noParens} ${cityRaw}`);
   if (stateRaw) variants.push(`${noParens} ${stateRaw}`);
@@ -152,7 +146,6 @@ const scoreCandidate = (candidate, templeName, loc) => {
   breakdown.state = loc.state && nhay.includes(loc.state) ? 10 : 0;
   score += breakdown.state;
 
-  // ── Entity-type — dominates location overlap ──
   const entity = classifyEntity(candidate.title);
   if (entity === "temple") breakdown.type = 50;
   else if (entity === "geography") breakdown.type = -55;
@@ -201,7 +194,6 @@ const coordDistanceKm = (lat1, lng1, lat2, lng2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-/* ── Coordinate BONUS only — never a penalty/veto ────────────── */
 const fetchCoordBonus = async (title, loc) => {
   if (!loc.lat || !loc.lng) return 0;
   try {
@@ -217,6 +209,87 @@ const fetchCoordBonus = async (title, loc) => {
     return dist <= 25 ? 15 : (dist <= 75 ? 8 : 0);
   } catch {
     return 0;
+  }
+};
+
+/* ── Lead image (pageimages original) for a resolved title ─────── */
+const fetchLeadImage = async (pageTitle) => {
+  if (!pageTitle) return null;
+  const cacheKey = `image:${pageTitle.toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached !== null) return cached;
+
+  try {
+    const res = await axios.get(WIKI_API, {
+      params: {
+        action: "query", prop: "pageimages", piprop: "original|thumbnail",
+        pithumbsize: 1200, titles: pageTitle, redirects: 1, format: "json",
+      },
+      headers: WIKI_HEADERS, timeout: 10000,
+    });
+    const page = Object.values(res.data?.query?.pages || {})[0];
+    const url = page?.original?.source || page?.thumbnail?.source || null;
+    setCache(cacheKey, url);
+    return url;
+  } catch (err) {
+    console.warn(`[WIKI] Lead image failed for "${pageTitle}": ${err.response?.status || err.message}`);
+    setCache(cacheKey, null);
+    return null;
+  }
+};
+
+/* ── Article image gallery — Wikimedia Commons, filtered ───────── */
+const IMG_BLOCK_RE = /(commons-logo|wikimedia|edit-icon|ambox|question_book|red_x|padlock|symbol|flag_of|\.svg$|icon|map_of|locator|OOjs)/i;
+
+const getWikiImages = async (pageTitle) => {
+  if (!pageTitle) return [];
+  const cacheKey = `gallery:${pageTitle.toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached !== null) return cached;
+
+  try {
+    // 1. List image file titles on the page.
+    const listRes = await axios.get(WIKI_API, {
+      params: {
+        action: "query", prop: "images", imlimit: 20,
+        titles: pageTitle, redirects: 1, format: "json",
+      },
+      headers: WIKI_HEADERS, timeout: 10000,
+    });
+    const page = Object.values(listRes.data?.query?.pages || {})[0];
+    const files = (page?.images || [])
+      .map((i) => i.title)
+      .filter((t) => /\.(jpe?g|png)$/i.test(t) && !IMG_BLOCK_RE.test(t))
+      .slice(0, 8);
+
+    if (!files.length) { setCache(cacheKey, []); return []; }
+
+    // 2. Resolve each file title to a Commons URL.
+    const infoRes = await axios.get(WIKI_API, {
+      params: {
+        action: "query", prop: "imageinfo", iiprop: "url|extmetadata",
+        iiurlwidth: 1000, titles: files.join("|"), format: "json",
+      },
+      headers: WIKI_HEADERS, timeout: 12000,
+    });
+    const pages = infoRes.data?.query?.pages || {};
+    const gallery = [];
+    for (const p of Object.values(pages)) {
+      const info = p?.imageinfo?.[0];
+      if (!info?.url) continue;
+      if (IMG_BLOCK_RE.test(info.url)) continue;
+      gallery.push({
+        url: info.thumburl || info.url,
+        credit: info.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, "").trim() || "Wikimedia Commons",
+        license: info.extmetadata?.LicenseShortName?.value || "",
+      });
+    }
+    setCache(cacheKey, gallery);
+    return gallery;
+  } catch (err) {
+    console.warn(`[WIKI] Gallery failed for "${pageTitle}": ${err.response?.status || err.message}`);
+    setCache(cacheKey, []);
+    return [];
   }
 };
 
@@ -237,17 +310,14 @@ const fetchExtract = async (pageTitle) => {
   };
 };
 
-/* ── Section-marked extract — preserves "== History ==" headings ── */
 const getSectionedExtract = async (pageTitle) => {
   if (!pageTitle) return null;
-
   const cacheKey = `sectioned:${pageTitle.toLowerCase()}`;
   const cached = getCached(cacheKey);
   if (cached !== null) {
     console.log(`[WIKI] Sectioned cache hit for "${pageTitle}"`);
     return cached;
   }
-
   try {
     const res = await axios.get(WIKI_API, {
       params: {
@@ -313,9 +383,6 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
     const coordBonus = await fetchCoordBonus(cand.title, loc);
     const total = score + coordBonus;
 
-    // Locality-match escape hatch: a temple-classified candidate whose
-    // title/snippet contains an address locality token is valid EVEN AT
-    // nameSim 0 (deity-named temple, place-titled article).
     const nhay = norm(`${cand.title} ${cand.snippet || ""}`);
     const localityMatch = loc.rawTokens.some((t) => t.length > 4 && t !== loc.state && nhay.includes(t));
 
@@ -346,7 +413,10 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
     return null;
   }
 
-  console.log(`[WIKI] Success — "${data.title}", ${data.extract.length} chars`);
+  // Attach the lead image (Wikimedia Commons original preferred).
+  data.image = await fetchLeadImage(data.title);
+
+  console.log(`[WIKI] Success — "${data.title}", ${data.extract.length} chars, image:${!!data.image}`);
   setCache(cacheKey, data);
   return data;
 };
@@ -384,6 +454,8 @@ const getWikiCacheStats = () => ({ size: wikiCache.size, entries: [...wikiCache.
 module.exports = {
   getTempleWikiData,
   getSectionedExtract,
+  getWikiImages,
+  fetchLeadImage,
   getWikipediaAttractions,
   clearWikiCache,
   getWikiCacheStats,
