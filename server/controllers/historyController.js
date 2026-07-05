@@ -2,8 +2,8 @@
 
 /**
  * RAG temple-story endpoint. Wikipedia-first, Groq-synthesized, dual-shaped.
- * Reuses the existing validated retrieval + cache. Never invents; returns
- * null sections when the source lacks them.
+ * Reuses the temple-aware validated retrieval + cache. Never invents;
+ * returns null sections when the source lacks them.
  */
 
 const { getTempleWikiData, getSectionedExtract } = require("../services/wikipediaService");
@@ -35,7 +35,7 @@ const getTempleStory = async (req, res) => {
   try {
     console.log(`[STORY] Building for: ${name}`);
 
-    // 1. Validated retrieval (REUSED — confidence-gated, coord-aware).
+    // 1. Temple-aware validated retrieval (confidence-gated, coord-aware).
     const wiki = await getTempleWikiData(name, {
       address: address || "",
       lat: lat ? Number(lat) : null,
@@ -49,16 +49,16 @@ const getTempleStory = async (req, res) => {
       return res.json(empty);
     }
 
-    // 2. Section-marked extract for the SAME validated title.
+    // 2. Full section-marked extract for the SAME validated title.
     const sectioned = await getSectionedExtract(wiki.title);
     const rawExtract = sectioned?.extract || wiki.extract;
     const sources = [sectioned?.url || wiki.url].filter(Boolean);
 
-    // 3. Split into RAG buckets (pure).
+    // 3. Split into RAG buckets (pure, specificity-first routing).
     const buckets = splitSections(rawExtract);
     console.log("[STORY] Sections present:", presentSections(buckets));
 
-    // 4. Groq reorganizes retrieved content into structured JSON.
+    // 4. Groq reorganizes retrieved content into structured JSON (askGroq transport).
     const snake = await synthesize(wiki.title, buckets);
 
     // 5. Dual-shape (snake_case + legacy camelCase) and cache.

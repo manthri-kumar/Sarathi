@@ -1,11 +1,12 @@
 "use strict";
 
 /**
- * Sarathi Wikipedia Service — Validation-Gated
- * ────────────────────────────────────────────
- * Articles are scored against the TEMPLE's Google Places location only
- * (never the user's browser location). Coordinates are a confidence
- * BONUS — a mismatch can never veto a strong name+city+state match.
+ * Sarathi Wikipedia Service — Temple-Aware, Validation-Gated
+ * ──────────────────────────────────────────────────────────
+ * Articles are scored against the TEMPLE's Google Places location AND an
+ * entity-type signal: temple pages receive a large bonus, geography pages
+ * (hill/town/district/river) a large penalty, so a temple always outranks
+ * a same-named hill. Coordinates are a confidence BONUS — never a veto.
  *
  * getTempleWikiData(templeName, locationCtx) → { title, url, extract } | null
  *   locationCtx: { address, city?, district?, state?, lat?, lng? }
@@ -69,19 +70,49 @@ const parseLocation = (locationCtx = {}) => {
   };
 };
 
-/* ── Location-qualified search queries ───────────────────────── */
+/* ── Entity-type classification — temple vs. geography ─────────── */
+const TEMPLE_TITLE_RE = /\b(temple|mandir|devasthanam|devasthanams|shrine|math|matha|pagoda|kovil|koil|gudi|kshetram|church|mosque|cathedral|masjid|dargah)\b/i;
+const GEO_TITLE_RE = /\b(hill|hills|hill range|range|mountain|mount|village|town|city|district|mandal|taluk|tehsil|tourism|tourist|river|forest|reserve|lake|road|highway|neighbourhood|neighborhood|valley|plateau|peak|beach|falls|dam|reservoir|junction|railway station|assembly|constituency)\b/i;
+
+const classifyEntity = (title) => {
+  const t = title.toLowerCase();
+  if (TEMPLE_TITLE_RE.test(t)) return "temple";     // explicit worship word wins outright
+  if (GEO_TITLE_RE.test(t)) return "geography";
+  return "neutral";
+};
+
+/* ── Location- + temple-qualified search variants ─────────────── */
 const buildSearchVariants = (templeName, loc) => {
   const variants = [];
   const raw = templeName.trim();
   const noParens = raw.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
   const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
+  // Bare deity/place core — strip honorifics + temple words.
+  const core = noParens
+    .replace(/\b(sri|shri|sree)\b/gi, "")
+    .replace(TEMPLE_TITLE_RE, "")
+    .replace(/\s+/g, " ")
+    .trim() || noParens;
+
   const locality = loc.rawTokens.find((t) => t.length > 3 && t !== loc.state) || "";
-  const cityRaw  = loc.city ? titleCase(loc.city) : "";
+  const localityRaw = locality ? titleCase(locality) : "";
+  const cityRaw = loc.city ? titleCase(loc.city) : "";
   const stateRaw = loc.state ? titleCase(loc.state) : "";
 
-  if (locality) variants.push(`${noParens} ${titleCase(locality)}`);
-  if (cityRaw)  variants.push(`${noParens} ${cityRaw}`);
+  // Temple-qualified queries FIRST — surface the temple article, not the hill.
+  variants.push(`${core} temple`);
+  variants.push(`Sri ${core} temple`);
+  variants.push(`${core} devasthanam`);
+  variants.push(`${core} mandir`);
+  variants.push(`${core} shrine`);
+  if (localityRaw && localityRaw.toLowerCase() !== core.toLowerCase())
+    variants.push(`${core} temple ${localityRaw}`);
+  if (cityRaw) variants.push(`${core} temple ${cityRaw}`);
+
+  // Raw/location variants (prior behaviour retained).
+  if (localityRaw) variants.push(`${noParens} ${localityRaw}`);
+  if (cityRaw) variants.push(`${noParens} ${cityRaw}`);
   if (stateRaw) variants.push(`${noParens} ${stateRaw}`);
   variants.push(noParens);
   variants.push(raw);
@@ -89,7 +120,7 @@ const buildSearchVariants = (templeName, loc) => {
   return [...new Set(variants.map((v) => v.trim()).filter(Boolean))];
 };
 
-/* ── Confidence scoring ──────────────────────────────────────── */
+/* ── Confidence scoring — entity-type-aware ───────────────────── */
 const scoreCandidate = (candidate, templeName, loc) => {
   const nhay = norm(`${candidate.title} ${candidate.snippet || ""}`);
   let score = 0;
@@ -110,8 +141,15 @@ const scoreCandidate = (candidate, templeName, loc) => {
   breakdown.state = loc.state && nhay.includes(loc.state) ? 10 : 0;
   score += breakdown.state;
 
+  // ── Entity-type — dominates location overlap ──
+  const entity = classifyEntity(candidate.title);
+  if (entity === "temple") breakdown.type = 50;
+  else if (entity === "geography") breakdown.type = -55;
+  else breakdown.type = 0;
+  score += breakdown.type;
+
   breakdown.coord = 0;
-  return { score, breakdown, nameSim };
+  return { score, breakdown, nameSim, entity };
 };
 
 /* ── Hard veto: a famous DIFFERENT place ─────────────────────── */
@@ -165,8 +203,6 @@ const fetchCoordBonus = async (title, loc) => {
     if (!c) return 0;
     const dist = coordDistanceKm(loc.lat, loc.lng, c.lat, c.lon);
     console.log(`[WIKI] Coord distance for "${title}": ${dist.toFixed(1)} km`);
-    // Bonus only. A mismatch returns 0 — it must NEVER veto a strong
-    // name+city+state match (Places/Wiki coords are often imprecise).
     return dist <= 25 ? 15 : (dist <= 75 ? 8 : 0);
   } catch {
     return 0;
@@ -190,6 +226,45 @@ const fetchExtract = async (pageTitle) => {
   };
 };
 
+/* ── Section-marked extract — preserves "== History ==" headings ──
+   Full article, exsectionformat=wiki keeps heading markers for the
+   section splitter. Cached separately under `sectioned:`. */
+const getSectionedExtract = async (pageTitle) => {
+  if (!pageTitle) return null;
+
+  const cacheKey = `sectioned:${pageTitle.toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached !== null) {
+    console.log(`[WIKI] Sectioned cache hit for "${pageTitle}"`);
+    return cached;
+  }
+
+  try {
+    const res = await axios.get(WIKI_API, {
+      params: {
+        action: "query", prop: "extracts|info", explaintext: 1,
+        exsectionformat: "wiki", titles: pageTitle, inprop: "url", redirects: 1, format: "json",
+      },
+      headers: WIKI_HEADERS, timeout: 15000,
+    });
+    const page = Object.values(res.data?.query?.pages || {})[0];
+    if (!page || page.missing !== undefined || !page.extract) {
+      setCache(cacheKey, null);
+      return null;
+    }
+    const data = {
+      title: page.title,
+      extract: page.extract,
+      url: page.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
+    };
+    setCache(cacheKey, data);
+    return data;
+  } catch (err) {
+    console.warn(`[WIKI] Sectioned extract failed for "${pageTitle}": ${err.response?.status || err.message}`);
+    return null;
+  }
+};
+
 /* ── MAIN ────────────────────────────────────────────────────── */
 const getTempleWikiData = async (templeName, locationCtx = {}) => {
   if (!templeName?.trim()) return null;
@@ -210,7 +285,7 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
   for (const q of variants) {
     const hits = await searchCandidates(q);
     for (const h of hits) if (!candidateMap.has(h.title)) candidateMap.set(h.title, h);
-    if (candidateMap.size >= 12) break;
+    if (candidateMap.size >= 14) break;
   }
 
   if (!candidateMap.size) {
@@ -225,13 +300,17 @@ const getTempleWikiData = async (templeName, locationCtx = {}) => {
       console.log(`[WIKI] ✗ REJECT "${cand.title}" — different place`);
       continue;
     }
-    const { score, breakdown, nameSim } = scoreCandidate(cand, templeName, loc);
+    const { score, breakdown, nameSim, entity } = scoreCandidate(cand, templeName, loc);
     const coordBonus = await fetchCoordBonus(cand.title, loc);
     const total = score + coordBonus;
-    console.log(`[WIKI] candidate "${cand.title}" → ${total} (name:${breakdown.name} city:${breakdown.city} dist:${breakdown.district} state:${breakdown.state} coord:${coordBonus})`);
+    console.log(`[WIKI] candidate "${cand.title}" [${entity}] → ${total} (name:${breakdown.name} city:${breakdown.city} dist:${breakdown.district} state:${breakdown.state} type:${breakdown.type} coord:${coordBonus})`);
 
-    if (nameSim < 0.34) {
-      console.log(`[WIKI]   ↳ name gate failed (sim ${(nameSim * 100).toFixed(0)}%)`);
+    // Confirmed temple titles get a relaxed name-gate: deity-only titles
+    // share few tokens with a query like "Simhachalam Temple" yet are
+    // unambiguously the correct page.
+    const nameGate = entity === "temple" ? 0.12 : 0.34;
+    if (nameSim < nameGate) {
+      console.log(`[WIKI]   ↳ name gate failed (sim ${(nameSim * 100).toFixed(0)}%, gate ${nameGate})`);
       continue;
     }
     if (!best || total > best.total) best = { cand, total };
@@ -286,4 +365,10 @@ const getWikipediaAttractions = async (city = "") => {
 const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache cleared"); };
 const getWikiCacheStats = () => ({ size: wikiCache.size, entries: [...wikiCache.keys()] });
 
-module.exports = { getTempleWikiData, getWikipediaAttractions, clearWikiCache, getWikiCacheStats };
+module.exports = {
+  getTempleWikiData,
+  getSectionedExtract,
+  getWikipediaAttractions,
+  clearWikiCache,
+  getWikiCacheStats,
+};
