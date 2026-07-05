@@ -318,8 +318,7 @@ export default function TempleExplorer() {
               >
                 ☰
               </button>
-              <span className="te-hero-icon">
-              </span>
+             
               <div className="te-hero-heading">
                 <h1>Temple Discovery</h1>
                 <p>Find sacred temples near you, powered by Google Places</p>
@@ -328,7 +327,7 @@ export default function TempleExplorer() {
 
             <form className="te-search-form" onSubmit={handleSearch}>
               <div className="te-search-wrap">
-                <span className="te-search-icon"></span>
+                <span className="te-search-icon">🔍</span>
                 <input
                   type="text"
                   placeholder="Search temples by city or name…"
@@ -364,7 +363,7 @@ export default function TempleExplorer() {
 
           <div className="te-meta">
             {locationStatus === "granted" && (
-              <span className="te-location-tag"> Using your location</span>
+              <span className="te-location-tag">📍 Using your location</span>
             )}
             {temples.length > 0 && (
               <span className="te-count">
