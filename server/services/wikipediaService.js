@@ -190,46 +190,6 @@ const fetchExtract = async (pageTitle) => {
   };
 };
 
-/* ── Section-marked extract — preserves "== History ==" headings ──
-   Same page, but exsectionformat=wiki keeps heading markers so the
-   RAG section splitter can bucket History/Legend/Festivals/etc.
-   Cached separately under `sectioned:` via the existing cache. */
-const getSectionedExtract = async (pageTitle) => {
-  if (!pageTitle) return null;
-
-  const cacheKey = `sectioned:${pageTitle.toLowerCase()}`;
-  const cached = getCached(cacheKey);
-  if (cached !== null) {
-    console.log(`[WIKI] Sectioned cache hit for "${pageTitle}"`);
-    return cached;
-  }
-
-  try {
-    const res = await axios.get(WIKI_API, {
-      params: {
-        action: "query", prop: "extracts|info", explaintext: 1,
-        exsectionformat: "wiki", titles: pageTitle, inprop: "url", redirects: 1, format: "json",
-      },
-      headers: WIKI_HEADERS, timeout: 15000,
-    });
-    const page = Object.values(res.data?.query?.pages || {})[0];
-    if (!page || page.missing !== undefined || !page.extract) {
-      setCache(cacheKey, null);
-      return null;
-    }
-    const data = {
-      title: page.title,
-      extract: page.extract,
-      url: page.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
-    };
-    setCache(cacheKey, data);
-    return data;
-  } catch (err) {
-    console.warn(`[WIKI] Sectioned extract failed for "${pageTitle}": ${err.response?.status || err.message}`);
-    return null;
-  }
-};
-
 /* ── MAIN ────────────────────────────────────────────────────── */
 const getTempleWikiData = async (templeName, locationCtx = {}) => {
   if (!templeName?.trim()) return null;
@@ -326,10 +286,4 @@ const getWikipediaAttractions = async (city = "") => {
 const clearWikiCache = () => { wikiCache.clear(); console.log("[WIKI] Cache cleared"); };
 const getWikiCacheStats = () => ({ size: wikiCache.size, entries: [...wikiCache.keys()] });
 
-module.exports = {
-  getTempleWikiData,
-  getSectionedExtract,
-  getWikipediaAttractions,
-  clearWikiCache,
-  getWikiCacheStats,
-};
+module.exports = { getTempleWikiData, getWikipediaAttractions, clearWikiCache, getWikiCacheStats };
