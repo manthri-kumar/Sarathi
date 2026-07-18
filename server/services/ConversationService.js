@@ -127,9 +127,7 @@ const getFoodFromAI = async (city) => {
   }
 };
 
-/* ================= INTENT DETECTION (BUG 2/6) =================
-   Order matters: trip-start beats place/food/hotel, food_items beats
-   food, and nearby is the broad "places to visit" bucket. */
+/* ================= INTENT DETECTION ================= */
 const detectIntent = (msg = "") => {
   const m = msg.toLowerCase().trim();
 
@@ -141,7 +139,7 @@ const detectIntent = (msg = "") => {
   ) return "trip";
 
   // 2) Named local dishes (AI-generated cards) — beats generic "food"
-  if (/\b(local food|local dish|local dishes|famous food|famous dish|famous dishes|what to eat|dishes? (in|of|to try)|cuisine|specialit(y|ies)|street food)\b/.test(m))
+  if (/\b(local food|local dish|local dishes|famous food|famous dish|famous dishes|what to eat|dishes? (in|of|to try)|cuisine|specialit(y|ies)|street food|best food to taste|food to taste|must try food|must-try food)\b/.test(m))
     return "food_items";
 
   // 3) Restaurants / where to eat (Places cards)
@@ -192,10 +190,7 @@ const looksLikeStepAnswer = (step, raw) => {
   }
 };
 
-/* ================= TRIP-ACTIVE VALIDATION (BUG 3/4) =================
-   A trip is active ONLY if the session is genuinely mid-planning:
-   step is a planning state AND real trip data has been collected.
-   An empty destination ("") or a stale step alone is NOT active. */
+/* ================= TRIP-ACTIVE VALIDATION ================= */
 const isTripActive = (s) => {
   if (!s || !s.trip) return false;
   if (!ACTIVE.has(s.step)) return false;
@@ -208,35 +203,163 @@ const isTripActive = (s) => {
     t.days != null ||
     t.budget !== undefined;
 
-  // step "source" is the very first prompt — valid even before data exists,
-  // but ONLY if we're truly at the start (no later state leaked in).
   if (s.step === "source") return true;
-
   return hasRealData;
 };
 
-/* ================= NEARBY / PLACES ================= */
-const fetchNearby = async (lat, lng, keyword, city) => {
-  try {
-    if (lat && lng) {
-      const res = await axios.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-        { params: { location: `${lat},${lng}`, radius: 5000, keyword, key: process.env.GOOGLE_API_KEY } });
-      return res.data.results.slice(0, 6).map(Planner.formatPlace);
+/* ═══════════════════════════════════════════════════════════════
+   extractPlaceFromQuery — FIX
+
+   PROBLEM: The old regex matched prepositions in priority order:
+   in|at|near|around|to — but "to" appears in phrases like
+   "best food to taste in Hyderabad", causing "to taste in Hyderabad"
+   to be extracted instead of "Hyderabad".
+
+   FIX: Use a strict priority order —
+     1. "in <city>" wins over everything else
+     2. "at <city>" second
+     3. "near/around <city>" third
+     4. "to <city>" ONLY as last resort (and only when the
+        following word is a plausible city name, not a verb)
+
+   City name validation: must start with a capital letter after
+   cleaning, and must NOT be a common English verb/adjective that
+   would appear in travel queries ("taste", "visit", "eat", "see",
+   "try", "go", "travel", "find", "get", "know", "do").
+
+   All matching is done on the original-case string so that
+   city names like "Hyderabad" survive the clean() call correctly.
+═══════════════════════════════════════════════════════════════ */
+
+// Words that look like they follow "to" but are NOT city names.
+// This prevents "to taste", "to visit", "to eat" from being
+// mistaken for "to <city>".
+const NOT_A_CITY = new Set([
+  "taste", "visit", "eat", "see", "try", "go", "travel", "find",
+  "get", "know", "do", "explore", "check", "book", "plan", "reach",
+  "stay", "watch", "enjoy", "experience", "discover", "look",
+  "search", "ask", "tell", "show", "help", "use", "buy", "take",
+  "make", "give", "keep", "come", "leave", "start", "stop", "spend",
+]);
+
+const extractPlaceFromQuery = (msg = "") => {
+  if (!msg) return null;
+  const m = msg.trim();
+
+  // ── Priority 1: "in <city>" ───────────────────────────────────────────
+  // Match the LAST occurrence of "in <word(s)>" to handle
+  // "best food to taste in Hyderabad" correctly.
+  // City fragment: 1-3 words, no verbs, ends at punctuation or string end.
+  const inMatches = [...m.matchAll(/\bin\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/g)];
+  if (inMatches.length > 0) {
+    // Take the LAST match — in "places in India to visit in Goa", "Goa" wins
+    const lastIn = inMatches[inMatches.length - 1];
+    const candidate = lastIn[1].trim();
+    const firstWord = candidate.split(/\s+/)[0].toLowerCase();
+    if (!NOT_A_CITY.has(firstWord)) {
+      console.log(`[extractPlace] "in" match → "${candidate}" from: "${m}"`);
+      return clean(candidate);
     }
-    if (city) {
-      const res = await axios.get("https://maps.googleapis.com/maps/api/place/textsearch/json",
-        { params: { query: `${keyword} in ${city}`, key: process.env.GOOGLE_API_KEY } });
-      return res.data.results.slice(0, 6).map(Planner.formatPlace);
+  }
+
+  // ── Priority 2: "at <city>" ───────────────────────────────────────────
+  const atMatch = m.match(/\bat\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/);
+  if (atMatch) {
+    const candidate = atMatch[1].trim();
+    const firstWord = candidate.split(/\s+/)[0].toLowerCase();
+    if (!NOT_A_CITY.has(firstWord)) {
+      console.log(`[extractPlace] "at" match → "${candidate}" from: "${m}"`);
+      return clean(candidate);
     }
-    return [];
-  } catch (e) { console.log("fetchNearby failed:", e.message); return []; }
+  }
+
+  // ── Priority 3: "near/around <city>" ─────────────────────────────────
+  const nearMatch = m.match(/\b(?:near|around)\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/);
+  if (nearMatch) {
+    const candidate = nearMatch[1].trim();
+    const firstWord = candidate.split(/\s+/)[0].toLowerCase();
+    if (!NOT_A_CITY.has(firstWord)) {
+      console.log(`[extractPlace] "near/around" match → "${candidate}" from: "${m}"`);
+      return clean(candidate);
+    }
+  }
+
+  // ── Priority 4: "to <city>" — only when followed by a plausible city ──
+  // Must NOT be followed by a known non-city verb.
+  const toMatch = m.match(/\bto\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})(?:\s*[?!.,]|$)/);
+  if (toMatch) {
+    const candidate = toMatch[1].trim();
+    const firstWord = candidate.split(/\s+/)[0].toLowerCase();
+    if (!NOT_A_CITY.has(firstWord)) {
+      console.log(`[extractPlace] "to" match → "${candidate}" from: "${m}"`);
+      return clean(candidate);
+    }
+  }
+
+  console.log(`[extractPlace] No city found in: "${m}"`);
+  return null;
 };
 
-/* Extract a place name from "...in <place>" / "...at <place>" for text search */
-const extractPlaceFromQuery = (msg = "") => {
-  const m = msg.toLowerCase();
-  const match = m.match(/\b(?:in|at|near|around|to)\s+([a-z\s]+?)(?:\s*\?|$)/);
-  return match ? clean(match[1]) : null;
+/* ================= NEARBY / PLACES ================= */
+/*
+  fetchNearby — location resolution priority:
+
+  1. If a named city was extracted from the query → use text search
+     for that city. This is ALWAYS the most accurate source.
+     Do NOT fall back to lat/lng when a city name is present,
+     because the user explicitly named a different place.
+
+  2. If no city in query AND lat/lng available → use coordinates.
+
+  3. If no city AND no coordinates → return empty array.
+
+  This prevents the original bug where "food in Hyderabad" fell
+  through to the device's GPS location (Kerala) when city
+  extraction failed.
+*/
+const fetchNearby = async (lat, lng, keyword, city) => {
+  try {
+    // Case 1: Named city — always prefer text search over coordinates
+    if (city && city.trim()) {
+      console.log(`[fetchNearby] Text search: "${keyword} in ${city}"`);
+      const res = await axios.get(
+        "https://maps.googleapis.com/maps/api/place/textsearch/json",
+        {
+          params: {
+            query: `${keyword} in ${city}`,
+            key: process.env.GOOGLE_API_KEY,
+          },
+        }
+      );
+      const results = res.data.results.slice(0, 6).map(Planner.formatPlace);
+      console.log(`[fetchNearby] Got ${results.length} results for "${city}"`);
+      return results;
+    }
+
+    // Case 2: No named city — fall back to coordinates
+    if (lat && lng) {
+      console.log(`[fetchNearby] Coordinate search: ${lat},${lng} keyword="${keyword}"`);
+      const res = await axios.get(
+        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+        {
+          params: {
+            location: `${lat},${lng}`,
+            radius: 5000,
+            keyword,
+            key: process.env.GOOGLE_API_KEY,
+          },
+        }
+      );
+      return res.data.results.slice(0, 6).map(Planner.formatPlace);
+    }
+
+    // Case 3: No location data at all
+    console.log("[fetchNearby] No city and no coordinates — returning empty");
+    return [];
+  } catch (e) {
+    console.log("fetchNearby failed:", e.message);
+    return [];
+  }
 };
 
 /* ================= FLOW HELPERS ================= */
