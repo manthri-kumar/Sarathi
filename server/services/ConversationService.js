@@ -50,6 +50,169 @@ const extractJSONBlock = (s) => {
   return null;
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   normalizeQuery — NEW
+
+   Runs BEFORE all intent detection, keyword extraction, and
+   place detection. Fixes:
+
+   1. Spell corrections for common Indian travel query misspellings
+   2. Synonym normalization (temples → temple, templs → temple, etc.)
+   3. Spacing normalization (near by → nearby, with in → within)
+   4. Punctuation removal
+   5. Indian city name corrections
+
+   Returns a lowercase normalized string.
+   The original raw message is preserved for display; only the
+   normalized version is used for intent/keyword/location detection.
+
+   Design principle: every correction is a simple string replacement
+   on a lowercased input. No regex complexity, no Groq call needed,
+   zero latency overhead.
+═══════════════════════════════════════════════════════════════ */
+
+// Ordered pairs: [misspelling_pattern, canonical_form]
+// Patterns are applied left-to-right as whole-word replacements.
+// Using word-boundary aware replacements via replaceAll on lowercased text.
+const SPELL_CORRECTIONS = [
+  // ── Temple variants ────────────────────────────────────────────────
+  ["templs",        "temple"],
+  ["temples",       "temple"],
+  ["tempel",        "temple"],
+  ["tempple",       "temple"],
+  ["tempal",        "temple"],
+  ["temle",         "temple"],
+  ["templr",        "temple"],
+  ["mandir",        "temple"],
+  ["mandirs",       "temple"],
+  ["devasthanam",   "temple"],
+  ["devasthanamam", "temple"],
+  ["kovils",        "temple"],
+  ["kovil",         "temple"],
+  ["kshetram",      "temple"],
+  ["kshetrams",     "temple"],
+  ["shrines",       "temple shrine"],
+  // ── Restaurant / food ─────────────────────────────────────────────
+  ["restarunt",     "restaurant"],
+  ["restarant",     "restaurant"],
+  ["resturant",     "restaurant"],
+  ["restuarant",    "restaurant"],
+  ["restaurent",    "restaurant"],
+  ["restaurnt",     "restaurant"],
+  ["restrant",      "restaurant"],
+  ["restraunt",     "restaurant"],
+  ["eatery",        "restaurant"],
+  ["eateries",      "restaurant"],
+  ["dhabas",        "dhaba"],
+  ["cafes",         "cafe"],
+  ["cafeteria",     "cafe"],
+  // ── Hotel variants ─────────────────────────────────────────────────
+  ["hottel",        "hotel"],
+  ["hotell",        "hotel"],
+  ["hottell",       "hotel"],
+  ["hotl",          "hotel"],
+  ["resorts",       "resort"],
+  ["lodges",        "lodge"],
+  ["lodging",       "lodge"],
+  ["accomodation",  "accommodation"],
+  ["accomadation",  "accommodation"],
+  ["accommodations","accommodation"],
+  // ── Nearby / location ─────────────────────────────────────────────
+  ["near by",       "nearby"],
+  ["nearbye",       "nearby"],
+  ["nreby",         "nearby"],
+  ["with in",       "within"],
+  ["with-in",       "within"],
+  ["arround",       "around"],
+  ["closeby",       "nearby"],
+  ["close by",      "nearby"],
+  ["close to me",   "nearby"],
+  ["around me",     "nearby"],
+  // ── Trip / travel ──────────────────────────────────────────────────
+  ["journy",        "journey"],
+  ["vacaction",     "vacation"],
+  ["holliday",      "holiday"],
+  ["holyday",       "holiday"],
+  ["travell",       "travel"],
+  ["travle",        "travel"],
+  // ── Food / dish ────────────────────────────────────────────────────
+  ["foods",         "food"],
+  ["dishs",         "dish"],
+  ["cuisines",      "cuisine"],
+  ["cuisne",        "cuisine"],
+  // ── Indian city name corrections ───────────────────────────────────
+  ["hydrabad",      "hyderabad"],
+  ["hyderbad",      "hyderabad"],
+  ["hderabad",      "hyderabad"],
+  ["huderbad",      "hyderabad"],
+  ["kerla",         "kerala"],
+  ["kerela",        "kerala"],
+  ["keral",         "kerala"],
+  ["gooa",          "goa"],
+  ["banglore",      "bangalore"],
+  ["bangalroe",     "bangalore"],
+  ["bangalorr",     "bangalore"],
+  ["mumabi",        "mumbai"],
+  ["mumbay",        "mumbai"],
+  ["dilli",         "delhi"],
+  ["delhy",         "delhi"],
+  ["tirupthi",      "tirupati"],
+  ["tirupathi",     "tirupati"],
+  ["tirupathi",     "tirupati"],
+  ["mysor",         "mysore"],
+  ["mysuru",        "mysore"],
+  ["kochy",         "kochi"],
+  ["cochin",        "kochi"],
+  ["vishakhapatnam","visakhapatnam"],
+  ["vizag",         "visakhapatnam"],
+  ["simhachallam",  "simhachalam"],
+  ["simhachalem",   "simhachalam"],
+  ["bhadrachallam", "bhadrachalam"],
+  ["srikalahasthi", "srikalahasti"],
+];
+
+/**
+ * normalizeQuery(raw)
+ *
+ * Lowercases, strips punctuation, fixes spacing, then applies
+ * SPELL_CORRECTIONS in order. Returns normalized string.
+ *
+ * Used internally by detectIntent(), extractPlaceKeyword(),
+ * and extractPlaceFromQuery() so ALL downstream logic benefits
+ * from a single normalization pass.
+ *
+ * The original `raw` string is NEVER modified — normalization
+ * only affects the string used for analysis, not the displayed message.
+ */
+const normalizeQuery = (raw = "") => {
+  let m = raw.toLowerCase();
+
+  // 1. Fix spacing around punctuation / special chars
+  m = m.replace(/[!?.,;:'"()[\]{}]/g, " ");
+
+  // 2. Collapse multiple spaces
+  m = m.replace(/\s+/g, " ").trim();
+
+  // 3. Apply spell corrections — simple substring replacement
+  //    We wrap each target in spaces to avoid partial-word matches
+  //    e.g. "temples" → "temple" but not "contemplate" → "contemplate"
+  const padded = ` ${m} `;
+  let corrected = padded;
+  for (const [wrong, right] of SPELL_CORRECTIONS) {
+    // Replace all occurrences, word-boundary-safe via space padding
+    const search = ` ${wrong} `;
+    const replace = ` ${right} `;
+    while (corrected.includes(search)) {
+      corrected = corrected.replace(search, replace);
+    }
+  }
+
+  // 4. Trim padding and collapse spaces again
+  m = corrected.trim().replace(/\s+/g, " ");
+
+  return m;
+};
+
 /* ================= REGEX SLOT FALLBACK ================= */
 const regexExtract = (msg = "") => {
   const m = msg.toLowerCase();
@@ -128,31 +291,18 @@ const getFoodFromAI = async (city) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   extractRadius — NEW
-
-   Parses radius/distance expressions from the user's message.
-   Returns radius in METRES (Google Places API unit).
-
-   Examples:
-     "within 3km"     → 3000
-     "3 km range"     → 3000
-     "within 500m"    → 500
-     "10 kilometer"   → 10000
-     "nearby"         → 5000  (default when no radius stated)
-     "near me"        → 5000  (default)
-
-   Supports: km, kilometer, kilometres, kms, m, meter, metres, miles
-   Caps at 50 km (50000 m) — beyond that Google Places accuracy drops.
+   extractRadius
+   Parses radius/distance expressions. Returns metres.
 ═══════════════════════════════════════════════════════════════ */
 const extractRadius = (msg = "") => {
-  const m = msg.toLowerCase();
+  // Normalize first so "with in 3km" becomes "within 3km"
+  const m = normalizeQuery(msg);
 
-  // Pattern: optional "within/around/in" + number + optional space + unit
   const match = m.match(
     /(?:within|around|in|upto|up to|radius|range)?\s*(\d+(?:\.\d+)?)\s*(km|kilometer|kilometres|kms|k|m|meter|metres|mile|miles)/
   );
 
-  if (!match) return 5000; // default 5 km
+  if (!match) return 5000;
 
   const value = parseFloat(match[1]);
   const unit = match[2];
@@ -163,31 +313,28 @@ const extractRadius = (msg = "") => {
   } else if (unit === "m" || unit === "meter" || unit === "metres") {
     metres = Math.round(value);
   } else {
-    // km / kilometer / kilometres / kms / k
     metres = Math.round(value * 1000);
   }
 
-  // Clamp: minimum 500 m, maximum 50 km
   const clamped = Math.min(Math.max(metres, 500), 50000);
   console.log(`[extractRadius] "${msg}" → ${value} ${unit} → ${clamped} m`);
   return clamped;
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   extractPlaceKeyword — NEW
-
-   Maps the user's query to the most specific Google Places keyword.
-   Google Places uses the keyword param as a freetext filter, so
-   "hindu temple" is far more precise than "tourist attraction".
-
-   Without this, "temple near me" was searching for "tourist attraction"
-   and returning US national parks when coordinates were off.
+   extractPlaceKeyword
+   Maps normalized query to the most specific Google Places keyword.
+   NOW normalizes the input first so misspellings are corrected
+   before keyword matching.
 ═══════════════════════════════════════════════════════════════ */
 const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
-  const m = msg.toLowerCase();
+  // Normalize FIRST — this fixes "templs" → "temple" before matching
+  const m = normalizeQuery(msg);
 
-  // Temple variants — most specific first
-  if (/\b(temple|mandir|kovil|kovil|devasthanam|shrine|mutt|math|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m))
+  console.log(`[extractPlaceKeyword] normalized: "${m}"`);
+
+  // Temple — after normalization, "templs"/"temples"/"mandir" all become "temple"
+  if (/\b(temple|shrine|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m))
     return "hindu temple";
 
   // Museum
@@ -215,32 +362,43 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
   return defaultKeyword;
 };
 
-/* ================= INTENT DETECTION ================= */
+/* ═══════════════════════════════════════════════════════════════
+   detectIntent
+   NOW normalizes input first so variant phrasings all resolve
+   correctly regardless of spelling or word order.
+═══════════════════════════════════════════════════════════════ */
 const detectIntent = (msg = "") => {
-  const m = msg.toLowerCase().trim();
+  // Normalize FIRST — fixes spelling, synonyms, spacing
+  const m = normalizeQuery(msg);
+
+  console.log(`[detectIntent] normalized: "${m}"`);
 
   // 1) Explicit trip planning
   if (
-    /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway)\b/.test(m) ||
-    /\b(trip|tour|holiday|vacation|getaway)\b.*\b(to|from)\b/.test(m) ||
+    /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway|journey)\b/.test(m) ||
+    /\b(trip|tour|holiday|vacation|getaway|journey)\b.*\b(to|from)\b/.test(m) ||
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // 2) Named local dishes (AI-generated cards)
-  if (/\b(local food|local dish|local dishes|famous food|famous dish|famous dishes|what to eat|dishes? (in|of|to try)|cuisine|specialit(y|ies)|street food|best food to taste|food to taste|must try food|must-try food)\b/.test(m))
+  // 2) Named local dishes
+  if (/\b(local food|local dish|famous food|famous dish|what to eat|dish in|dish of|cuisine|street food|best food to taste|food to taste|must try food|must-try food)\b/.test(m))
     return "food_items";
 
   // 3) Restaurants
-  if (/\b(restaurant|restaurants|where to eat|places to eat|food near|eateries|dhaba|cafe|cafes|dining)\b/.test(m))
+  if (/\b(restaurant|where to eat|places to eat|food near|dhaba|cafe|dining)\b/.test(m))
     return "food";
   if (/\bfood\b/.test(m)) return "food";
 
-  // 4) Hotels
-  if (/\b(hotel|hotels|stay|stays|lodge|lodging|resort|resorts|accommodation|where to stay|place to stay)\b/.test(m))
+  // 4) Hotels / accommodation
+  if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay)\b/.test(m))
     return "hotel";
 
-  // 5) Attractions / nearby
-  if (/\b(places? to visit|place to visit|best places?|tourist (place|places|spot|spots|attraction|attractions)|must[\s-]?visit|attractions?|things to do|sightseeing|sight seeing|visit in|explore|famous places?|landmarks?|temples? (near|in|to visit))\b/.test(m))
+  // 5) Temple — explicit check BEFORE generic nearby
+  //    After normalization "templs" and "temples" are now "temple"
+  if (/\btemple\b/.test(m)) return "nearby";
+
+  // 6) Generic attractions / nearby
+  if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark)\b/.test(m))
     return "nearby";
   if (/\bnear me\b/.test(m) || /\bnearby\b/.test(m)) return "nearby";
 
@@ -296,7 +454,9 @@ const isTripActive = (s) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   extractPlaceFromQuery — FIXED (same as previous fix, preserved)
+   extractPlaceFromQuery
+   NOW normalizes input first so city detection benefits from
+   spell correction (e.g. "hydrabad" → "hyderabad").
 ═══════════════════════════════════════════════════════════════ */
 const NOT_A_CITY = new Set([
   "taste", "visit", "eat", "see", "try", "go", "travel", "find",
@@ -304,77 +464,71 @@ const NOT_A_CITY = new Set([
   "stay", "watch", "enjoy", "experience", "discover", "look",
   "search", "ask", "tell", "show", "help", "use", "buy", "take",
   "make", "give", "keep", "come", "leave", "start", "stop", "spend",
-  "me",   // prevents "near me" → city = "Me"
+  "me", "temple", "food", "hotel", "restaurant", "beach", "park",
 ]);
 
 const extractPlaceFromQuery = (msg = "") => {
   if (!msg) return null;
-  const m = msg.trim();
+
+  // Normalize for analysis — corrects city spellings like "hydrabad" → "hyderabad"
+  const normalized = normalizeQuery(msg);
+  // Use normalized for pattern matching, but return clean() of the matched fragment
+  const m = normalized;
 
   // Priority 1: "in <city>"
-  const inMatches = [...m.matchAll(/\bin\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/g)];
+  const inMatches = [...m.matchAll(/\bin\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/g)];
   if (inMatches.length > 0) {
     const lastIn = inMatches[inMatches.length - 1];
     const candidate = lastIn[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
     if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "in" match → "${candidate}" from: "${m}"`);
+      console.log(`[extractPlace] "in" match → "${candidate}" from normalized: "${m}"`);
       return clean(candidate);
     }
   }
 
   // Priority 2: "at <city>"
-  const atMatch = m.match(/\bat\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/);
+  const atMatch = m.match(/\bat\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/);
   if (atMatch) {
     const candidate = atMatch[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
     if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "at" match → "${candidate}" from: "${m}"`);
+      console.log(`[extractPlace] "at" match → "${candidate}" from normalized: "${m}"`);
       return clean(candidate);
     }
   }
 
   // Priority 3: "near/around <city>" — but NOT "near me"
-  const nearMatch = m.match(/\b(?:near|around)\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/);
+  const nearMatch = m.match(/\b(?:near|around)\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/);
   if (nearMatch) {
     const candidate = nearMatch[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
     if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "near/around" match → "${candidate}" from: "${m}"`);
+      console.log(`[extractPlace] "near/around" match → "${candidate}" from normalized: "${m}"`);
       return clean(candidate);
     }
   }
 
   // Priority 4: "to <city>" — only plausible cities
-  const toMatch = m.match(/\bto\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})(?:\s*[?!.,]|$)/);
+  const toMatch = m.match(/\bto\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})(?:\s*[?!.,]|$)/);
   if (toMatch) {
     const candidate = toMatch[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
     if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "to" match → "${candidate}" from: "${m}"`);
+      console.log(`[extractPlace] "to" match → "${candidate}" from normalized: "${m}"`);
       return clean(candidate);
     }
   }
 
-  console.log(`[extractPlace] No city found in: "${m}"`);
+  console.log(`[extractPlace] No city found in normalized: "${m}"`);
   return null;
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   fetchNearby — FIXED
-
-   Changes from the original:
-   1. `keyword` param is now the SPECIFIC place type (e.g. "hindu temple")
-      instead of always "tourist attraction".
-   2. `radius` is now passed in from the query rather than hardcoded to 5000.
-   3. Coordinate search adds `region: "in"` to bias results to India.
-   4. City-based text search unchanged (already correct).
-   5. Added `rankby: "distance"` when radius is user-specified and small
-      (≤ 3 km) so closest results appear first.
+   fetchNearby
 ═══════════════════════════════════════════════════════════════ */
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
   try {
-    // Case 1: Named city — always prefer text search over coordinates
     if (city && city.trim()) {
       console.log(`[fetchNearby] Text search: "${keyword} in ${city}"`);
       const res = await axios.get(
@@ -391,7 +545,6 @@ const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
       return results;
     }
 
-    // Case 2: No named city — use coordinates with India region bias
     if (lat && lng) {
       console.log(`[fetchNearby] Coordinate search: ${lat},${lng} keyword="${keyword}" radius=${radiusMetres}m`);
       const res = await axios.get(
@@ -401,7 +554,7 @@ const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
             location: `${lat},${lng}`,
             radius: radiusMetres,
             keyword,
-            region: "in",          // bias to India
+            region: "in",
             key: process.env.GOOGLE_API_KEY,
           },
         }
@@ -443,6 +596,7 @@ const ensureRoute = async (trip) => {
 
 module.exports = {
   ACTIVE, QUESTION, clean,
+  normalizeQuery,
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
