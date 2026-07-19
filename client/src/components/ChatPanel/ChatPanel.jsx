@@ -8,32 +8,49 @@ const API_BASE =
 
 const TEMPLE_QUICK_ACTIONS = [
   "What is special about this temple?",
-  "What are the darshan timings?",
-  "What festivals are celebrated here?",
+  "Darshan timings",
+  "Festivals here",
   "Who is the presiding deity?",
-  "How to reach this temple?",
+  "How to reach",
 ];
 
-// Client-side follow-up heuristics — no backend contract change required.
-// Backend can override any of this by sending msg.followUps: string[].
-const getFollowUps = (msg, isTempleMode, askedSet) => {
-  if (msg.followUps?.length) return msg.followUps.filter((f) => !askedSet.has(f));
+const GENERAL_QUICK_ACTIONS = ["Plan a trip", "Places near me", "Food near me", "Nearby hotels"];
 
-  let pool = [];
-  if (msg.type === "places") {
-    pool = isTempleMode
-      ? ["Temple timings", "Why is this famous?", "Festivals here", "Nearby food"]
-      : ["More like this", "Best time to visit", "How do I get there?"];
-  } else if (!msg.type && isTempleMode) {
-    pool = ["Darshan timings", "Festivals celebrated here", "Nearby temples", "How to reach"];
-  } else if (!msg.type && !isTempleMode) {
-    pool = ["Plan a trip", "Places near me", "Food recommendations"];
-  }
-  return pool.filter((f) => !askedSet.has(f)).slice(0, 4);
+const TEMPLE_NAME_RE = /temple|mandir|kovil|devasthanam|shrine|\bmath\b/i;
+const looksLikeTemple = (name = "") => TEMPLE_NAME_RE.test(name);
+
+// Content-based follow-up chips — classified from the reply itself,
+// not a fixed per-mode list, so chips actually track what was just said.
+const FOLLOWUP_POOLS = {
+  temple: ["Temple timings", "Festivals here", "Nearby food", "Temple story", "How to reach", "Who built this?"],
+  food: ["Best restaurants", "Budget food", "Vegetarian options", "Local desserts", "Street food spots"],
+  trip: ["Hotels", "Transport options", "Budget breakdown", "Weather forecast", "Best time to visit"],
+  places: ["More like this", "Best time to visit", "How do I get there?", "Nearby food"],
+  general: ["Plan a trip", "Places near me", "Food recommendations", "Nearby hotels"],
+};
+
+const classifyReply = (msg, isTempleMode) => {
+  if (msg.type === "places") return isTempleMode ? "temple" : "places";
+  const t = (msg.text || "").toLowerCase();
+  if (isTempleMode || /temple|deity|darshan|shrine/.test(t)) return "temple";
+  if (/food|dish|restaurant|cuisine\b|\beat\b|sadya|thali/.test(t)) return "food";
+  if (/\btrip\b|itinerary|\bhotel\b|\bbudget\b|transport|travel plan/.test(t)) return "trip";
+  return "general";
+};
+
+// Backend can override via msg.followUps: string[] — no contract change required otherwise.
+const getFollowUps = (msg, isTempleMode, askedSet) => {
+  if (msg.followUps?.length) return msg.followUps.filter((f) => !askedSet.has(f)).slice(0, 4);
+
+  const pool = FOLLOWUP_POOLS[classifyReply(msg, isTempleMode)] || FOLLOWUP_POOLS.general;
+  let remaining = pool.filter((f) => !askedSet.has(f));
+  if (remaining.length < 3) remaining = pool; // recycle instead of chips silently vanishing
+  return remaining.slice(0, 4);
 };
 
 const ChatPanel = ({ closeChat, templeContext = null }) => {
   const isTempleMode = !!templeContext;
+  const QUICK_ACTIONS = isTempleMode ? TEMPLE_QUICK_ACTIONS : GENERAL_QUICK_ACTIONS;
 
   const getInitialMessage = () =>
     isTempleMode
@@ -263,29 +280,54 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
               {msg.type === "places" && (
                 <div className="chat-cards">
-                  {msg.data?.map((p, idx) => (
-                    <div key={idx} className="chat-card">
-                      <div className="chat-card-media">
-                        <img src={p.image} alt={p.name} loading="lazy" />
-                        {p.openNow != null && (
-                          <span className={`chat-card-badge ${p.openNow ? "open" : "closed"}`}>
-                            {p.openNow ? "Open" : "Closed"}
-                          </span>
-                        )}
+                  {msg.data?.map((p, idx) => {
+                    const isDish = p.lat == null || p.lng == null;
+                    const isTemple = !isDish && (isTempleMode || looksLikeTemple(p.name));
+                    return (
+                      <div key={idx} className={`chat-card ${isDish ? "chat-card-dish" : ""}`}>
+                        <div className="chat-card-media">
+                          <img src={p.image} alt={p.name} loading="lazy" />
+                          {!isDish && p.openNow != null && (
+                            <span className={`chat-card-badge ${p.openNow ? "open" : "closed"}`}>
+                              {p.openNow ? "Open" : "Closed"}
+                            </span>
+                          )}
+                          {isDish && <span className="chat-card-badge dish">🍽 Must Try</span>}
+                        </div>
+                        <div className="card-content">
+                          <h4>{p.name}</h4>
+                          <p className="card-meta">
+                            {p.rating && <span className="card-rating">⭐ {p.rating}</span>}
+                            {p.reviewsCount != null && <span className="card-dot">·</span>}
+                            {p.reviewsCount != null && <span>{p.reviewsCount} reviews</span>}
+                            {!isDish && p.distanceKm != null && <span className="card-dot">·</span>}
+                            {!isDish && p.distanceKm != null && <span>{p.distanceKm} km</span>}
+                          </p>
+                          {p.bestTime && <p className="subtitle">{p.bestTime}</p>}
+                          {p.description && <p className="desc">{p.description}</p>}
+                          <div className="card-actions">
+                            {!isDish && <button onClick={() => navigateTo(p)}>Navigate</button>}
+                            {isTemple && (
+                              <button
+                                className="card-secondary"
+                                onClick={() => sendMessage(`Tell me the story of ${p.name}`)}
+                              >
+                                Temple Story
+                              </button>
+                            )}
+                            {isDish && (
+                              <button
+                                className="card-secondary"
+                                onClick={() => sendMessage(`Best restaurants for ${p.name}`)}
+                              >
+                                Find Restaurants
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="card-content">
-                        <h4>{p.name}</h4>
-                        <p className="card-meta">
-                          <span className="card-rating">⭐ {p.rating}</span>
-                          {p.distanceKm != null && <span className="card-dot">·</span>}
-                          {p.distanceKm != null && <span>{p.distanceKm} km away</span>}
-                        </p>
-                        <p className="subtitle">{p.bestTime}</p>
-                        <p className="desc">{p.description}</p>
-                        <button onClick={() => navigateTo(p)}>Navigate</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -538,9 +580,8 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           <div className="chat-row bot">
             <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>
             <div className="chat-typing">
-              <span />
-              <span />
-              <span />
+              <span className="sr-only">Sarathi is typing…</span>
+              <span /><span /><span />
             </div>
           </div>
         )}
@@ -550,48 +591,38 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
       {/* ── FOOTER ── */}
       <div className="chat-footer">
-        {isTempleMode && (
-          <div className="chat-quick-actions-wrap">
-            <button
-              className="chat-quick-toggle"
-              onClick={() => setShowQuickActions((prev) => !prev)}
-              aria-expanded={showQuickActions}
-              aria-label="Toggle quick questions"
-            >
-              <span className="chat-quick-toggle-label">💬 Quick Questions</span>
-              <span className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}>▲</span>
-            </button>
+        <div className="chat-quick-actions-wrap">
+          <button
+            className="chat-quick-toggle"
+            onClick={() => setShowQuickActions((prev) => !prev)}
+            aria-expanded={showQuickActions}
+            aria-label="Toggle quick actions"
+          >
+            <span className="chat-quick-toggle-label">{isTempleMode ? "💬 Quick Questions" : "✨ Quick Actions"}</span>
+            <span className={`chat-quick-toggle-arrow ${showQuickActions ? "open" : ""}`}>▲</span>
+          </button>
 
-            <div
-              className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
-              aria-hidden={!showQuickActions}
-            >
-              <div className="chat-suggestions">
-                {TEMPLE_QUICK_ACTIONS.map((s, i) => (
-                  <button
-                    key={i}
-                    className="chat-sug-pill"
-                    onClick={() => {
-                      setShowQuickActions(false);
-                      sendMessage(s);
-                    }}
-                    tabIndex={showQuickActions ? 0 : -1}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+          <div
+            className={`chat-suggestions-collapse ${showQuickActions ? "expanded" : "collapsed"}`}
+            aria-hidden={!showQuickActions}
+          >
+            <div className="chat-suggestions">
+              {QUICK_ACTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  className="chat-sug-pill"
+                  onClick={() => {
+                    setShowQuickActions(false);
+                    sendMessage(s);
+                  }}
+                  tabIndex={showQuickActions ? 0 : -1}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
-        )}
-
-        {!isTempleMode && (
-          <div className="quick-actions">
-            <button onClick={() => sendMessage("plan trip")}>✈️ Trip</button>
-            <button onClick={() => sendMessage("places near me")}>📍 Nearby</button>
-            <button onClick={() => sendMessage("food near me")}>🍽 Food</button>
-          </div>
-        )}
+        </div>
 
         <div className="chat-input-row">
           <input
