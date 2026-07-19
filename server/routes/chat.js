@@ -49,62 +49,26 @@ router.post("/", async (req, res) => {
     const raw = message.trim();
     const lower = raw.toLowerCase();
     const s = await loadSession(userId);
+
     /* ===== DATE / DAY / TIME HANDLER ===== */
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentDay  = now.toLocaleDateString("en-IN", { weekday: "long" });
+    const currentDate = now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const currentTime = now.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
 
-const now = new Date(
-  new Date().toLocaleString("en-US", {
-    timeZone: "Asia/Kolkata",
-  })
-);
-const currentDay = now.toLocaleDateString("en-IN", {
-  weekday: "long",
-});
+    if (/^(day|today day|what day is today|which day is today)$/i.test(lower))
+      return res.json({ reply: `📅 Today is **${currentDay}**.` });
 
-const currentDate = now.toLocaleDateString("en-IN", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+    if (/today.?s date|current date|date today|what is today's date/i.test(lower))
+      return res.json({ reply: `📅 Today's date is **${currentDate}**.` });
 
-const currentTime = now.toLocaleTimeString("en-IN", {
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
+    if (/current time|what time is it|time now|current time now/i.test(lower))
+      return res.json({ reply: `⏰ Current time is **${currentTime}**.` });
 
-if (
-  /^(day|today day|what day is today|which day is today)$/i.test(lower)
-) {
-  return res.json({
-    reply: `📅 Today is **${currentDay}**.`,
-  });
-}
+    if (/^(today|what is today|date and day)$/i.test(lower))
+      return res.json({ reply: `📅 Today is **${currentDay}, ${currentDate}**.` });
 
-if (
-  /today.?s date|current date|date today|what is today's date/i.test(lower)
-) {
-  return res.json({
-    reply: `📅 Today's date is **${currentDate}**.`,
-  });
-}
-
-if (
-  /current time|what time is it|time now|current time now/i.test(lower)
-) {
-  return res.json({
-    reply: `⏰ Current time is **${currentTime}**.`,
-  });
-}
-
-if (
-  /^(today|what is today|date and day)$/i.test(lower)
-) {
-  return res.json({
-    reply: `📅 Today is **${currentDay}, ${currentDate}**.`,
-  });
-}
-
-    /* ===== EDIT / CONTROL COMMANDS (only meaningful with a real trip) ===== */
+    /* ===== EDIT / CONTROL COMMANDS ===== */
     if (lower === "update budget" && s.trip?.destination) {
       s.trip.budget = undefined; s.step = "budget"; await saveSession(s);
       return res.json({ reply: "💰 Sure — what's your new budget?\n\nExamples:\n₹15000\n₹20000\n₹30000" });
@@ -139,28 +103,20 @@ if (
       }
     }
 
-    /* ===== FLOW DETECTION (BUG 3/4) ===== */
+    /* ===== FLOW DETECTION ===== */
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
     console.log("[INTENT]", raw, "=>", intent);
-    console.log("[FLOW]", {
-      step: s.step,
-      inFlow,
-      destination: s.trip?.destination,
-      source: s.trip?.source,
-    });
+    console.log("[FLOW]", { step: s.step, inFlow, destination: s.trip?.destination, source: s.trip?.source });
 
-    /* ===== STALE-SESSION SAFETY (BUG 4) =====
-       Not really mid-planning, but step is dirty → reset to IDLE.
-       Trip subdocument is preserved (not deleted). */
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
       await saveSession(s);
       console.log("[FLOW] stale planning step cleared → IDLE");
     }
 
-    /* ===== EXPLICIT TRIP START (always allowed, even from IDLE) ===== */
+    /* ===== EXPLICIT TRIP START ===== */
     if (!inFlow && intent === "trip") {
       const slots = await C.extractTripSlots(raw);
       s.trip = {
@@ -182,39 +138,70 @@ if (
 
     /* ===== NOT IN FLOW → places / food / hotel / general ===== */
     if (!inFlow) {
+
       if (intent === "food_items") {
         const place = C.extractPlaceFromQuery(raw) || city || "your city";
         const dishes = await C.getFoodFromAI(place);
         if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
-        const payload = { type: "places", data: dishes.map((d) => ({
-          name: d.name, description: d.description, rating: 4.5, bestTime: "Anytime 🍽️",
-          image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}` })) };
+        const payload = {
+          type: "places",
+          data: dishes.map((d) => ({
+            name: d.name, description: d.description, rating: 4.5, bestTime: "Anytime 🍽️",
+            image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}`,
+          })),
+        };
         console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
       if (intent === "food") {
         const placeCity = C.extractPlaceFromQuery(raw) || city;
-        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "restaurant", placeCity) };
+        // Extract radius in case user said "restaurants within 2km"
+        const radiusMetres = C.extractRadius(raw);
+        const payload = {
+          type: "places",
+          data: await C.fetchNearby(lat, lng, "restaurant", placeCity, radiusMetres),
+        };
         console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
       if (intent === "nearby") {
         const placeCity = C.extractPlaceFromQuery(raw) || city;
-        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "tourist attraction", placeCity) };
+
+        // ── FIX 1: Extract specific place type from the query ──────────
+        // "temple near me" → "hindu temple"
+        // "museum near me" → "museum"
+        // "places near me" → "tourist attraction" (default)
+        const placeKeyword = C.extractPlaceKeyword(raw, "tourist attraction");
+
+        // ── FIX 2: Extract radius if user specified one ────────────────
+        // "temple near me within 3km" → 3000 metres
+        // "temple near me"            → 5000 metres (default)
+        const radiusMetres = C.extractRadius(raw);
+
+        console.log(`[CHAT] nearby → keyword="${placeKeyword}" radius=${radiusMetres}m city="${placeCity}"`);
+
+        const payload = {
+          type: "places",
+          data: await C.fetchNearby(lat, lng, placeKeyword, placeCity, radiusMetres),
+        };
         console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
       if (intent === "hotel") {
         const placeCity = C.extractPlaceFromQuery(raw) || city;
-        const payload = { type: "places", data: await C.fetchNearby(lat, lng, "hotel", placeCity) };
+        const radiusMetres = C.extractRadius(raw);
+        const payload = {
+          type: "places",
+          data: await C.fetchNearby(lat, lng, "hotel", placeCity, radiusMetres),
+        };
         console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
-      // general → natural AI answer (dual-mode B). NEVER a trip prompt.
+      // general → natural AI answer
       const reply = await C.askAI(raw, city);
       console.log("[RESPONSE_TYPE]", "text");
       return res.json({ reply });
@@ -222,7 +209,6 @@ if (
 
     /* ===== IN FLOW → dual-mode off-topic guard ===== */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      // Mid-planning but user asked something off-topic → answer, keep state.
       const answer = await C.askAI(raw, city);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
@@ -267,10 +253,10 @@ if (
       if (!t) return res.json({ reply: "❌ Reply 1 (Train) · 2 (Car) · 3 (Bus) · 4 (Flight)" });
       s.trip.transport = t;
       const route = await C.ensureRoute(s.trip);
-      if (t === "train")  { s.step = "train_class"; await saveSession(s); return res.json({ reply: C.Train.trainClassMenu(route.km) }); }
-      if (t === "bus")    { s.step = "bus_type";    await saveSession(s); return res.json({ reply: C.T.busMenu(route.km) }); }
-      if (t === "flight") { s.step = "flight_class";await saveSession(s); return res.json({ reply: C.T.flightMenu(route.km) }); }
-      if (t === "car")    { s.step = "car_fuel";    await saveSession(s); return res.json({ reply: C.QUESTION.car_fuel }); }
+      if (t === "train")  { s.step = "train_class";  await saveSession(s); return res.json({ reply: C.Train.trainClassMenu(route.km) }); }
+      if (t === "bus")    { s.step = "bus_type";      await saveSession(s); return res.json({ reply: C.T.busMenu(route.km) }); }
+      if (t === "flight") { s.step = "flight_class";  await saveSession(s); return res.json({ reply: C.T.flightMenu(route.km) }); }
+      if (t === "car")    { s.step = "car_fuel";      await saveSession(s); return res.json({ reply: C.QUESTION.car_fuel }); }
     }
 
     if (s.step === "train_class") {
@@ -331,6 +317,7 @@ if (
 
     const reply = await C.askAI(raw, city);
     return res.json({ reply });
+
   } catch (err) {
     console.error("CHAT ERROR:", err);
     return res.status(500).json({ reply: "Something went wrong ❌" });

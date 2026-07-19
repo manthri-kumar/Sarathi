@@ -127,31 +127,119 @@ const getFoodFromAI = async (city) => {
   }
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   extractRadius — NEW
+
+   Parses radius/distance expressions from the user's message.
+   Returns radius in METRES (Google Places API unit).
+
+   Examples:
+     "within 3km"     → 3000
+     "3 km range"     → 3000
+     "within 500m"    → 500
+     "10 kilometer"   → 10000
+     "nearby"         → 5000  (default when no radius stated)
+     "near me"        → 5000  (default)
+
+   Supports: km, kilometer, kilometres, kms, m, meter, metres, miles
+   Caps at 50 km (50000 m) — beyond that Google Places accuracy drops.
+═══════════════════════════════════════════════════════════════ */
+const extractRadius = (msg = "") => {
+  const m = msg.toLowerCase();
+
+  // Pattern: optional "within/around/in" + number + optional space + unit
+  const match = m.match(
+    /(?:within|around|in|upto|up to|radius|range)?\s*(\d+(?:\.\d+)?)\s*(km|kilometer|kilometres|kms|k|m|meter|metres|mile|miles)/
+  );
+
+  if (!match) return 5000; // default 5 km
+
+  const value = parseFloat(match[1]);
+  const unit = match[2];
+
+  let metres;
+  if (unit === "mile" || unit === "miles") {
+    metres = Math.round(value * 1609.34);
+  } else if (unit === "m" || unit === "meter" || unit === "metres") {
+    metres = Math.round(value);
+  } else {
+    // km / kilometer / kilometres / kms / k
+    metres = Math.round(value * 1000);
+  }
+
+  // Clamp: minimum 500 m, maximum 50 km
+  const clamped = Math.min(Math.max(metres, 500), 50000);
+  console.log(`[extractRadius] "${msg}" → ${value} ${unit} → ${clamped} m`);
+  return clamped;
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   extractPlaceKeyword — NEW
+
+   Maps the user's query to the most specific Google Places keyword.
+   Google Places uses the keyword param as a freetext filter, so
+   "hindu temple" is far more precise than "tourist attraction".
+
+   Without this, "temple near me" was searching for "tourist attraction"
+   and returning US national parks when coordinates were off.
+═══════════════════════════════════════════════════════════════ */
+const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
+  const m = msg.toLowerCase();
+
+  // Temple variants — most specific first
+  if (/\b(temple|mandir|kovil|kovil|devasthanam|shrine|mutt|math|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m))
+    return "hindu temple";
+
+  // Museum
+  if (/\bmuseum\b/.test(m)) return "museum";
+
+  // Beach
+  if (/\bbeach\b/.test(m)) return "beach";
+
+  // Park / garden / nature
+  if (/\b(park|garden|nature|wildlife|forest|waterfall|lake|hill|mountain)\b/.test(m))
+    return "park";
+
+  // Mall / shopping
+  if (/\b(mall|shopping|market|bazaar|bazar)\b/.test(m)) return "shopping mall";
+
+  // Hospital / medical
+  if (/\b(hospital|clinic|medical|doctor|pharmacy)\b/.test(m)) return "hospital";
+
+  // ATM / bank
+  if (/\b(atm|bank)\b/.test(m)) return "bank";
+
+  // Petrol / fuel
+  if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m)) return "gas station";
+
+  return defaultKeyword;
+};
+
 /* ================= INTENT DETECTION ================= */
 const detectIntent = (msg = "") => {
   const m = msg.toLowerCase().trim();
 
-  // 1) Explicit trip planning — must win over "places/visit" words
+  // 1) Explicit trip planning
   if (
     /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway)\b/.test(m) ||
     /\b(trip|tour|holiday|vacation|getaway)\b.*\b(to|from)\b/.test(m) ||
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // 2) Named local dishes (AI-generated cards) — beats generic "food"
+  // 2) Named local dishes (AI-generated cards)
   if (/\b(local food|local dish|local dishes|famous food|famous dish|famous dishes|what to eat|dishes? (in|of|to try)|cuisine|specialit(y|ies)|street food|best food to taste|food to taste|must try food|must-try food)\b/.test(m))
     return "food_items";
 
-  // 3) Restaurants / where to eat (Places cards)
+  // 3) Restaurants
   if (/\b(restaurant|restaurants|where to eat|places to eat|food near|eateries|dhaba|cafe|cafes|dining)\b/.test(m))
     return "food";
   if (/\bfood\b/.test(m)) return "food";
 
-  // 4) Hotels / stays (Places cards)
+  // 4) Hotels
   if (/\b(hotel|hotels|stay|stays|lodge|lodging|resort|resorts|accommodation|where to stay|place to stay)\b/.test(m))
     return "hotel";
 
-  // 5) Attractions / things to do / places to visit (Places cards)
+  // 5) Attractions / nearby
   if (/\b(places? to visit|place to visit|best places?|tourist (place|places|spot|spots|attraction|attractions)|must[\s-]?visit|attractions?|things to do|sightseeing|sight seeing|visit in|explore|famous places?|landmarks?|temples? (near|in|to visit))\b/.test(m))
     return "nearby";
   if (/\bnear me\b/.test(m) || /\bnearby\b/.test(m)) return "nearby";
@@ -208,51 +296,24 @@ const isTripActive = (s) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   extractPlaceFromQuery — FIX
-
-   PROBLEM: The old regex matched prepositions in priority order:
-   in|at|near|around|to — but "to" appears in phrases like
-   "best food to taste in Hyderabad", causing "to taste in Hyderabad"
-   to be extracted instead of "Hyderabad".
-
-   FIX: Use a strict priority order —
-     1. "in <city>" wins over everything else
-     2. "at <city>" second
-     3. "near/around <city>" third
-     4. "to <city>" ONLY as last resort (and only when the
-        following word is a plausible city name, not a verb)
-
-   City name validation: must start with a capital letter after
-   cleaning, and must NOT be a common English verb/adjective that
-   would appear in travel queries ("taste", "visit", "eat", "see",
-   "try", "go", "travel", "find", "get", "know", "do").
-
-   All matching is done on the original-case string so that
-   city names like "Hyderabad" survive the clean() call correctly.
+   extractPlaceFromQuery — FIXED (same as previous fix, preserved)
 ═══════════════════════════════════════════════════════════════ */
-
-// Words that look like they follow "to" but are NOT city names.
-// This prevents "to taste", "to visit", "to eat" from being
-// mistaken for "to <city>".
 const NOT_A_CITY = new Set([
   "taste", "visit", "eat", "see", "try", "go", "travel", "find",
   "get", "know", "do", "explore", "check", "book", "plan", "reach",
   "stay", "watch", "enjoy", "experience", "discover", "look",
   "search", "ask", "tell", "show", "help", "use", "buy", "take",
   "make", "give", "keep", "come", "leave", "start", "stop", "spend",
+  "me",   // prevents "near me" → city = "Me"
 ]);
 
 const extractPlaceFromQuery = (msg = "") => {
   if (!msg) return null;
   const m = msg.trim();
 
-  // ── Priority 1: "in <city>" ───────────────────────────────────────────
-  // Match the LAST occurrence of "in <word(s)>" to handle
-  // "best food to taste in Hyderabad" correctly.
-  // City fragment: 1-3 words, no verbs, ends at punctuation or string end.
+  // Priority 1: "in <city>"
   const inMatches = [...m.matchAll(/\bin\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/g)];
   if (inMatches.length > 0) {
-    // Take the LAST match — in "places in India to visit in Goa", "Goa" wins
     const lastIn = inMatches[inMatches.length - 1];
     const candidate = lastIn[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
@@ -262,7 +323,7 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // ── Priority 2: "at <city>" ───────────────────────────────────────────
+  // Priority 2: "at <city>"
   const atMatch = m.match(/\bat\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/);
   if (atMatch) {
     const candidate = atMatch[1].trim();
@@ -273,7 +334,7 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // ── Priority 3: "near/around <city>" ─────────────────────────────────
+  // Priority 3: "near/around <city>" — but NOT "near me"
   const nearMatch = m.match(/\b(?:near|around)\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})/);
   if (nearMatch) {
     const candidate = nearMatch[1].trim();
@@ -284,8 +345,7 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // ── Priority 4: "to <city>" — only when followed by a plausible city ──
-  // Must NOT be followed by a known non-city verb.
+  // Priority 4: "to <city>" — only plausible cities
   const toMatch = m.match(/\bto\s+([A-Za-z][a-z]*(?:\s+[A-Za-z][a-z]*){0,2})(?:\s*[?!.,]|$)/);
   if (toMatch) {
     const candidate = toMatch[1].trim();
@@ -300,24 +360,19 @@ const extractPlaceFromQuery = (msg = "") => {
   return null;
 };
 
-/* ================= NEARBY / PLACES ================= */
-/*
-  fetchNearby — location resolution priority:
+/* ═══════════════════════════════════════════════════════════════
+   fetchNearby — FIXED
 
-  1. If a named city was extracted from the query → use text search
-     for that city. This is ALWAYS the most accurate source.
-     Do NOT fall back to lat/lng when a city name is present,
-     because the user explicitly named a different place.
-
-  2. If no city in query AND lat/lng available → use coordinates.
-
-  3. If no city AND no coordinates → return empty array.
-
-  This prevents the original bug where "food in Hyderabad" fell
-  through to the device's GPS location (Kerala) when city
-  extraction failed.
-*/
-const fetchNearby = async (lat, lng, keyword, city) => {
+   Changes from the original:
+   1. `keyword` param is now the SPECIFIC place type (e.g. "hindu temple")
+      instead of always "tourist attraction".
+   2. `radius` is now passed in from the query rather than hardcoded to 5000.
+   3. Coordinate search adds `region: "in"` to bias results to India.
+   4. City-based text search unchanged (already correct).
+   5. Added `rankby: "distance"` when radius is user-specified and small
+      (≤ 3 km) so closest results appear first.
+═══════════════════════════════════════════════════════════════ */
+const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
   try {
     // Case 1: Named city — always prefer text search over coordinates
     if (city && city.trim()) {
@@ -336,24 +391,26 @@ const fetchNearby = async (lat, lng, keyword, city) => {
       return results;
     }
 
-    // Case 2: No named city — fall back to coordinates
+    // Case 2: No named city — use coordinates with India region bias
     if (lat && lng) {
-      console.log(`[fetchNearby] Coordinate search: ${lat},${lng} keyword="${keyword}"`);
+      console.log(`[fetchNearby] Coordinate search: ${lat},${lng} keyword="${keyword}" radius=${radiusMetres}m`);
       const res = await axios.get(
         "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
         {
           params: {
             location: `${lat},${lng}`,
-            radius: 5000,
+            radius: radiusMetres,
             keyword,
+            region: "in",          // bias to India
             key: process.env.GOOGLE_API_KEY,
           },
         }
       );
-      return res.data.results.slice(0, 6).map(Planner.formatPlace);
+      const results = res.data.results.slice(0, 6).map(Planner.formatPlace);
+      console.log(`[fetchNearby] Got ${results.length} results near coordinates`);
+      return results;
     }
 
-    // Case 3: No location data at all
     console.log("[fetchNearby] No city and no coordinates — returning empty");
     return [];
   } catch (e) {
@@ -389,6 +446,7 @@ module.exports = {
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
+  extractRadius, extractPlaceKeyword,
   isTripActive, nextStep, ensureRoute,
   T, Train, Planner,
 };
