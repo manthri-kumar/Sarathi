@@ -2,18 +2,15 @@ const express = require("express");
 const router = express.Router();
 const ChatSession = require("../models/ChatSession");
 const C = require("../services/ConversationService");
-const Ctx = require("../services/ContextService");
 
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
-  if (!s) s = await ChatSession.create({ userId, step: null, trip: {}, history: [] });
+  if (!s) s = await ChatSession.create({ userId, step: null, trip: {} });
   return s;
 };
-
 const saveSession = async (s) => {
   s.updatedAt = new Date();
   s.markModified("trip");
-  s.markModified("history");
   await s.save();
 };
 
@@ -26,6 +23,7 @@ const advance = async (s, res, prefix = "") => {
   if (s.step === "summary") {
     await saveSession(s);
     const payload = C.Planner.buildSummary(s.trip);
+    console.log("[RESPONSE_TYPE]", payload.type);
     return res.json(payload);
   }
   await saveSession(s);
@@ -38,6 +36,7 @@ const finalizeTransport = async (s, res, details) => {
   if (s.step === "summary") {
     await saveSession(s);
     const payload = C.Planner.buildSummary(s.trip);
+    console.log("[RESPONSE_TYPE]", payload.type);
     return res.json(payload);
   }
   await saveSession(s);
@@ -59,10 +58,13 @@ router.post("/", async (req, res) => {
 
     if (/^(day|today day|what day is today|which day is today)$/i.test(lower))
       return res.json({ reply: `📅 Today is **${currentDay}**.` });
+
     if (/today.?s date|current date|date today|what is today's date/i.test(lower))
       return res.json({ reply: `📅 Today's date is **${currentDate}**.` });
+
     if (/current time|what time is it|time now|current time now/i.test(lower))
       return res.json({ reply: `⏰ Current time is **${currentTime}**.` });
+
     if (/^(today|what is today|date and day)$/i.test(lower))
       return res.json({ reply: `📅 Today is **${currentDay}, ${currentDate}**.` });
 
@@ -79,6 +81,7 @@ router.post("/", async (req, res) => {
       const payload = await C.Planner.buildItinerary(s.trip);
       s.step = payload.type === "itinerary" ? "completed" : "blocked";
       await saveSession(s);
+      console.log("[RESPONSE_TYPE]", payload.type);
       return res.json(payload);
     }
     if (lower.startsWith("edit ") && s.trip?.destination) {
@@ -100,19 +103,20 @@ router.post("/", async (req, res) => {
       }
     }
 
-    /* ===== FLOW & INTENT DETECTION ===== */
+    /* ===== FLOW DETECTION ===== */
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
     console.log("[INTENT]", raw, "=>", intent);
-    console.log("[FLOW]", { step: s.step, inFlow, destination: s.trip?.destination });
+    console.log("[FLOW]", { step: s.step, inFlow, destination: s.trip?.destination, source: s.trip?.source });
 
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
       await saveSession(s);
+      console.log("[FLOW] stale planning step cleared → IDLE");
     }
 
-    /* ===== TRIP START ===== */
+    /* ===== EXPLICIT TRIP START ===== */
     if (!inFlow && intent === "trip") {
       const slots = await C.extractTripSlots(raw);
       s.trip = {
@@ -132,26 +136,11 @@ router.post("/", async (req, res) => {
       return advance(s, res, ack);
     }
 
-    /* ===== NOT IN FLOW ===== */
+    /* ===== NOT IN FLOW → places / food / hotel / general ===== */
     if (!inFlow) {
 
-      /* ── WEATHER — real Open-Meteo data, no Groq hallucination ── */
-      if (intent === "weather") {
-        console.log(`[CHAT] weather → lat=${lat} lng=${lng} city=${city}`);
-        const weatherResult = await C.fetchWeather(lat, lng, city || s.activeCity);
-        // Save to history so follow-ups like "what about tomorrow?" have context
-        await Ctx.updateSessionContext(s, raw, weatherResult.reply, {
-          intent: "weather",
-          city: city || null,
-          extractTopic: false,
-        });
-        await saveSession(s);
-        return res.json({ reply: weatherResult.reply });
-      }
-
-      /* ── FOOD ITEMS (local dishes) ── */
       if (intent === "food_items") {
-        const place = C.extractPlaceFromQuery(raw) || city || s.activeCity || "your city";
+        const place = C.extractPlaceFromQuery(raw) || city || "your city";
         const dishes = await C.getFoodFromAI(place);
         if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
         const payload = {
@@ -161,79 +150,74 @@ router.post("/", async (req, res) => {
             image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}`,
           })),
         };
+        console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
-      /* ── RESTAURANTS (Google Places) ── */
       if (intent === "food") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const placeCity = C.extractPlaceFromQuery(raw) || city;
+        // Extract radius in case user said "restaurants within 2km"
         const radiusMetres = C.extractRadius(raw);
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, "restaurant", placeCity, radiusMetres),
         };
-        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
+        console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
-      /* ── NEARBY PLACES / TEMPLES (Google Places) ── */
       if (intent === "nearby") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const placeCity = C.extractPlaceFromQuery(raw) || city;
+
+        // ── FIX 1: Extract specific place type from the query ──────────
+        // "temple near me" → "hindu temple"
+        // "museum near me" → "museum"
+        // "places near me" → "tourist attraction" (default)
         const placeKeyword = C.extractPlaceKeyword(raw, "tourist attraction");
+
+        // ── FIX 2: Extract radius if user specified one ────────────────
+        // "temple near me within 3km" → 3000 metres
+        // "temple near me"            → 5000 metres (default)
         const radiusMetres = C.extractRadius(raw);
+
         console.log(`[CHAT] nearby → keyword="${placeKeyword}" radius=${radiusMetres}m city="${placeCity}"`);
+
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, placeKeyword, placeCity, radiusMetres),
         };
-        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
+        console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
-      /* ── HOTELS (Google Places) ── */
       if (intent === "hotel") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const placeCity = C.extractPlaceFromQuery(raw) || city;
         const radiusMetres = C.extractRadius(raw);
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, "hotel", placeCity, radiusMetres),
         };
-        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
+        console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
-      /* ── GENERAL — context-aware multi-turn with hallucination guard ── */
-      let messageForAI = raw;
-      const isFollowUp = Ctx.isContextualFollowUp(raw);
-
-      if (isFollowUp && s.history && s.history.length > 0) {
-        console.log(`[CHAT] Follow-up detected: "${raw}" — resolving context`);
-        messageForAI = await Ctx.resolveContext(s, raw);
-      }
-
-      const reply = await Ctx.askAIWithContext(s, messageForAI, city || s.activeCity);
-
-      await Ctx.updateSessionContext(s, raw, reply, {
-        intent: "general",
-        city: city || null,
-        extractTopic: true,
-      });
-      await saveSession(s);
+      // general → natural AI answer
+      const reply = await C.askAI(raw, city);
+      console.log("[RESPONSE_TYPE]", "text");
       return res.json({ reply });
     }
 
-    /* ===== IN FLOW — dual-mode off-topic ===== */
+    /* ===== IN FLOW → dual-mode off-topic guard ===== */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      const answer = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
+      const answer = await C.askAI(raw, city);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
         : `\n\n${C.QUESTION[s.step]}`;
-      await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
-      await saveSession(s);
+      console.log("[RESPONSE_TYPE]", "text(dual-mode)");
       return res.json({ reply: `${answer}${reprompt}` });
     }
 
-    /* ===== IN FLOW — step handlers (all unchanged) ===== */
+    /* ===== IN FLOW → step handlers ===== */
     if (s.step === "source") {
       s.trip.source = ["current", "use current", "📍"].some((x) => lower.includes(x)) && city ? city : C.clean(raw);
       return advance(s, res, "Got it 👍\n\n");
