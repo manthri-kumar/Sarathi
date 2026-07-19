@@ -51,166 +51,66 @@ const extractJSONBlock = (s) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   normalizeQuery — NEW
-
-   Runs BEFORE all intent detection, keyword extraction, and
-   place detection. Fixes:
-
-   1. Spell corrections for common Indian travel query misspellings
-   2. Synonym normalization (temples → temple, templs → temple, etc.)
-   3. Spacing normalization (near by → nearby, with in → within)
-   4. Punctuation removal
-   5. Indian city name corrections
-
-   Returns a lowercase normalized string.
-   The original raw message is preserved for display; only the
-   normalized version is used for intent/keyword/location detection.
-
-   Design principle: every correction is a simple string replacement
-   on a lowercased input. No regex complexity, no Groq call needed,
-   zero latency overhead.
+   normalizeQuery
+   Lowercases, fixes spacing/punctuation, applies spell corrections.
+   All downstream functions (detectIntent, extractPlaceKeyword,
+   extractPlaceFromQuery) call this first.
 ═══════════════════════════════════════════════════════════════ */
-
-// Ordered pairs: [misspelling_pattern, canonical_form]
-// Patterns are applied left-to-right as whole-word replacements.
-// Using word-boundary aware replacements via replaceAll on lowercased text.
 const SPELL_CORRECTIONS = [
-  // ── Temple variants ────────────────────────────────────────────────
-  ["templs",        "temple"],
-  ["temples",       "temple"],
-  ["tempel",        "temple"],
-  ["tempple",       "temple"],
-  ["tempal",        "temple"],
-  ["temle",         "temple"],
-  ["templr",        "temple"],
-  ["mandir",        "temple"],
-  ["mandirs",       "temple"],
-  ["devasthanam",   "temple"],
-  ["devasthanamam", "temple"],
-  ["kovils",        "temple"],
-  ["kovil",         "temple"],
-  ["kshetram",      "temple"],
-  ["kshetrams",     "temple"],
-  ["shrines",       "temple shrine"],
-  // ── Restaurant / food ─────────────────────────────────────────────
-  ["restarunt",     "restaurant"],
-  ["restarant",     "restaurant"],
-  ["resturant",     "restaurant"],
-  ["restuarant",    "restaurant"],
-  ["restaurent",    "restaurant"],
-  ["restaurnt",     "restaurant"],
-  ["restrant",      "restaurant"],
-  ["restraunt",     "restaurant"],
-  ["eatery",        "restaurant"],
-  ["eateries",      "restaurant"],
-  ["dhabas",        "dhaba"],
-  ["cafes",         "cafe"],
-  ["cafeteria",     "cafe"],
-  // ── Hotel variants ─────────────────────────────────────────────────
-  ["hottel",        "hotel"],
-  ["hotell",        "hotel"],
-  ["hottell",       "hotel"],
-  ["hotl",          "hotel"],
-  ["resorts",       "resort"],
-  ["lodges",        "lodge"],
-  ["lodging",       "lodge"],
-  ["accomodation",  "accommodation"],
-  ["accomadation",  "accommodation"],
-  ["accommodations","accommodation"],
-  // ── Nearby / location ─────────────────────────────────────────────
-  ["near by",       "nearby"],
-  ["nearbye",       "nearby"],
-  ["nreby",         "nearby"],
-  ["with in",       "within"],
-  ["with-in",       "within"],
-  ["arround",       "around"],
-  ["closeby",       "nearby"],
-  ["close by",      "nearby"],
-  ["close to me",   "nearby"],
-  ["around me",     "nearby"],
-  // ── Trip / travel ──────────────────────────────────────────────────
-  ["journy",        "journey"],
-  ["vacaction",     "vacation"],
-  ["holliday",      "holiday"],
-  ["holyday",       "holiday"],
-  ["travell",       "travel"],
-  ["travle",        "travel"],
-  // ── Food / dish ────────────────────────────────────────────────────
-  ["foods",         "food"],
-  ["dishs",         "dish"],
-  ["cuisines",      "cuisine"],
-  ["cuisne",        "cuisine"],
-  // ── Indian city name corrections ───────────────────────────────────
-  ["hydrabad",      "hyderabad"],
-  ["hyderbad",      "hyderabad"],
-  ["hderabad",      "hyderabad"],
-  ["huderbad",      "hyderabad"],
-  ["kerla",         "kerala"],
-  ["kerela",        "kerala"],
-  ["keral",         "kerala"],
-  ["gooa",          "goa"],
-  ["banglore",      "bangalore"],
-  ["bangalroe",     "bangalore"],
-  ["bangalorr",     "bangalore"],
-  ["mumabi",        "mumbai"],
-  ["mumbay",        "mumbai"],
-  ["dilli",         "delhi"],
-  ["delhy",         "delhi"],
-  ["tirupthi",      "tirupati"],
-  ["tirupathi",     "tirupati"],
-  ["tirupathi",     "tirupati"],
-  ["mysor",         "mysore"],
-  ["mysuru",        "mysore"],
-  ["kochy",         "kochi"],
-  ["cochin",        "kochi"],
-  ["vishakhapatnam","visakhapatnam"],
-  ["vizag",         "visakhapatnam"],
-  ["simhachallam",  "simhachalam"],
-  ["simhachalem",   "simhachalam"],
-  ["bhadrachallam", "bhadrachalam"],
-  ["srikalahasthi", "srikalahasti"],
+  ["templs", "temple"], ["temples", "temple"], ["tempel", "temple"],
+  ["tempal", "temple"], ["temle", "temple"], ["templr", "temple"],
+  ["tempple", "temple"], ["mandir", "temple"], ["mandirs", "temple"],
+  ["devasthanam", "temple"], ["devasthanamam", "temple"],
+  ["kovils", "temple"], ["kovil", "temple"],
+  ["kshetram", "temple"], ["kshetrams", "temple"],
+  ["shrines", "temple shrine"],
+  ["restarunt", "restaurant"], ["restarant", "restaurant"],
+  ["resturant", "restaurant"], ["restuarant", "restaurant"],
+  ["restaurent", "restaurant"], ["restaurnt", "restaurant"],
+  ["restrant", "restaurant"], ["restraunt", "restaurant"],
+  ["eatery", "restaurant"], ["eateries", "restaurant"],
+  ["hottel", "hotel"], ["hotell", "hotel"], ["hottell", "hotel"], ["hotl", "hotel"],
+  ["resorts", "resort"], ["lodges", "lodge"], ["lodging", "lodge"],
+  ["accomodation", "accommodation"], ["accomadation", "accommodation"],
+  ["accommodations", "accommodation"],
+  ["near by", "nearby"], ["nearbye", "nearby"], ["nreby", "nearby"],
+  ["with in", "within"], ["with-in", "within"], ["arround", "around"],
+  ["closeby", "nearby"], ["close by", "nearby"],
+  ["close to me", "nearby"], ["around me", "nearby"],
+  ["journy", "journey"], ["vacaction", "vacation"],
+  ["holliday", "holiday"], ["holyday", "holiday"],
+  ["travell", "travel"], ["travle", "travel"],
+  ["foods", "food"], ["dishs", "dish"],
+  ["cuisines", "cuisine"], ["cuisne", "cuisine"],
+  ["hydrabad", "hyderabad"], ["hyderbad", "hyderabad"],
+  ["hderabad", "hyderabad"], ["huderbad", "hyderabad"],
+  ["kerla", "kerala"], ["kerela", "kerala"], ["keral", "kerala"],
+  ["gooa", "goa"],
+  ["banglore", "bangalore"], ["bangalroe", "bangalore"], ["bangalorr", "bangalore"],
+  ["mumabi", "mumbai"], ["mumbay", "mumbai"],
+  ["dilli", "delhi"], ["delhy", "delhi"],
+  ["tirupthi", "tirupati"], ["tirupathi", "tirupati"],
+  ["mysor", "mysore"], ["mysuru", "mysore"],
+  ["kochy", "kochi"], ["cochin", "kochi"],
+  ["vishakhapatnam", "visakhapatnam"], ["vizag", "visakhapatnam"],
+  ["simhachallam", "simhachalam"], ["simhachalem", "simhachalam"],
+  ["bhadrachallam", "bhadrachalam"], ["srikalahasthi", "srikalahasti"],
 ];
 
-/**
- * normalizeQuery(raw)
- *
- * Lowercases, strips punctuation, fixes spacing, then applies
- * SPELL_CORRECTIONS in order. Returns normalized string.
- *
- * Used internally by detectIntent(), extractPlaceKeyword(),
- * and extractPlaceFromQuery() so ALL downstream logic benefits
- * from a single normalization pass.
- *
- * The original `raw` string is NEVER modified — normalization
- * only affects the string used for analysis, not the displayed message.
- */
 const normalizeQuery = (raw = "") => {
   let m = raw.toLowerCase();
-
-  // 1. Fix spacing around punctuation / special chars
   m = m.replace(/[!?.,;:'"()[\]{}]/g, " ");
-
-  // 2. Collapse multiple spaces
   m = m.replace(/\s+/g, " ").trim();
-
-  // 3. Apply spell corrections — simple substring replacement
-  //    We wrap each target in spaces to avoid partial-word matches
-  //    e.g. "temples" → "temple" but not "contemplate" → "contemplate"
   const padded = ` ${m} `;
   let corrected = padded;
   for (const [wrong, right] of SPELL_CORRECTIONS) {
-    // Replace all occurrences, word-boundary-safe via space padding
     const search = ` ${wrong} `;
     const replace = ` ${right} `;
     while (corrected.includes(search)) {
       corrected = corrected.replace(search, replace);
     }
   }
-
-  // 4. Trim padding and collapse spaces again
-  m = corrected.trim().replace(/\s+/g, " ");
-
-  return m;
+  return corrected.trim().replace(/\s+/g, " ");
 };
 
 /* ================= REGEX SLOT FALLBACK ================= */
@@ -262,6 +162,7 @@ Message: "${msg}"`;
 };
 
 /* ================= GENERAL TRAVEL Q&A ================= */
+// Simple single-turn version (used in trip flow dual-mode)
 const askAI = async (raw, contextCity) => {
   try {
     const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant. Answer the user's question helpfully and concisely in 2-4 sentences.${
@@ -290,114 +191,60 @@ const getFoodFromAI = async (city) => {
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   extractRadius
-   Parses radius/distance expressions. Returns metres.
-═══════════════════════════════════════════════════════════════ */
+/* ================= RADIUS EXTRACTION ================= */
 const extractRadius = (msg = "") => {
-  // Normalize first so "with in 3km" becomes "within 3km"
   const m = normalizeQuery(msg);
-
   const match = m.match(
     /(?:within|around|in|upto|up to|radius|range)?\s*(\d+(?:\.\d+)?)\s*(km|kilometer|kilometres|kms|k|m|meter|metres|mile|miles)/
   );
-
   if (!match) return 5000;
-
   const value = parseFloat(match[1]);
-  const unit = match[2];
-
+  const unit  = match[2];
   let metres;
-  if (unit === "mile" || unit === "miles") {
-    metres = Math.round(value * 1609.34);
-  } else if (unit === "m" || unit === "meter" || unit === "metres") {
-    metres = Math.round(value);
-  } else {
-    metres = Math.round(value * 1000);
-  }
-
+  if (unit === "mile" || unit === "miles") metres = Math.round(value * 1609.34);
+  else if (unit === "m" || unit === "meter" || unit === "metres") metres = Math.round(value);
+  else metres = Math.round(value * 1000);
   const clamped = Math.min(Math.max(metres, 500), 50000);
-  console.log(`[extractRadius] "${msg}" → ${value} ${unit} → ${clamped} m`);
+  console.log(`[extractRadius] "${msg}" → ${clamped} m`);
   return clamped;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   extractPlaceKeyword
-   Maps normalized query to the most specific Google Places keyword.
-   NOW normalizes the input first so misspellings are corrected
-   before keyword matching.
-═══════════════════════════════════════════════════════════════ */
+/* ================= PLACE KEYWORD EXTRACTION ================= */
 const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
-  // Normalize FIRST — this fixes "templs" → "temple" before matching
   const m = normalizeQuery(msg);
-
   console.log(`[extractPlaceKeyword] normalized: "${m}"`);
-
-  // Temple — after normalization, "templs"/"temples"/"mandir" all become "temple"
-  if (/\b(temple|shrine|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m))
-    return "hindu temple";
-
-  // Museum
+  if (/\b(temple|shrine|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m)) return "hindu temple";
   if (/\bmuseum\b/.test(m)) return "museum";
-
-  // Beach
   if (/\bbeach\b/.test(m)) return "beach";
-
-  // Park / garden / nature
-  if (/\b(park|garden|nature|wildlife|forest|waterfall|lake|hill|mountain)\b/.test(m))
-    return "park";
-
-  // Mall / shopping
+  if (/\b(park|garden|nature|wildlife|forest|waterfall|lake|hill|mountain)\b/.test(m)) return "park";
   if (/\b(mall|shopping|market|bazaar|bazar)\b/.test(m)) return "shopping mall";
-
-  // Hospital / medical
   if (/\b(hospital|clinic|medical|doctor|pharmacy)\b/.test(m)) return "hospital";
-
-  // ATM / bank
   if (/\b(atm|bank)\b/.test(m)) return "bank";
-
-  // Petrol / fuel
   if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m)) return "gas station";
-
   return defaultKeyword;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   detectIntent
-   NOW normalizes input first so variant phrasings all resolve
-   correctly regardless of spelling or word order.
-═══════════════════════════════════════════════════════════════ */
+/* ================= INTENT DETECTION ================= */
 const detectIntent = (msg = "") => {
-  // Normalize FIRST — fixes spelling, synonyms, spacing
   const m = normalizeQuery(msg);
-
   console.log(`[detectIntent] normalized: "${m}"`);
 
-  // 1) Explicit trip planning
   if (
     /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway|journey)\b/.test(m) ||
     /\b(trip|tour|holiday|vacation|getaway|journey)\b.*\b(to|from)\b/.test(m) ||
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // 2) Named local dishes
   if (/\b(local food|local dish|famous food|famous dish|what to eat|dish in|dish of|cuisine|street food|best food to taste|food to taste|must try food|must-try food)\b/.test(m))
     return "food_items";
 
-  // 3) Restaurants
-  if (/\b(restaurant|where to eat|places to eat|food near|dhaba|cafe|dining)\b/.test(m))
-    return "food";
+  if (/\b(restaurant|where to eat|places to eat|food near|dhaba|cafe|dining)\b/.test(m)) return "food";
   if (/\bfood\b/.test(m)) return "food";
 
-  // 4) Hotels / accommodation
-  if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay)\b/.test(m))
-    return "hotel";
+  if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay)\b/.test(m)) return "hotel";
 
-  // 5) Temple — explicit check BEFORE generic nearby
-  //    After normalization "templs" and "temples" are now "temple"
   if (/\btemple\b/.test(m)) return "nearby";
 
-  // 6) Generic attractions / nearby
   if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark)\b/.test(m))
     return "nearby";
   if (/\bnear me\b/.test(m) || /\bnearby\b/.test(m)) return "nearby";
@@ -410,29 +257,16 @@ const looksLikeStepAnswer = (step, raw) => {
   const lower = raw.toLowerCase().trim();
   if (lower.endsWith("?")) return false;
   if (/^(what|why|how|when|where|which|who|tell me|explain|is |are |can |should |best )/.test(lower)) return false;
-
   switch (step) {
-    case "travellers":
-    case "days":
-    case "car_mileage":
-      return /\d/.test(lower);
-    case "budget":
-      return lower === "skip" || /\d/.test(lower);
-    case "transport":
-      return /^[1-4]$/.test(lower) || /train|car|bus|flight/.test(lower);
-    case "car_fuel":
-      return /^[1-4]$/.test(lower) || /petrol|diesel|cng|ev/.test(lower);
-    case "bus_type":
-      return /^[1-5]$/.test(lower) || /ordinary|express|luxury|sleeper|ac/.test(lower);
-    case "flight_class":
-      return /^[1-3]$/.test(lower) || /economy|business|premium/.test(lower);
-    case "hotel":
-      return /^[1-3]$/.test(lower) || /budget|standard|luxury|no|skip|none/.test(lower);
-    case "source":
-    case "destination":
-      return lower.split(" ").length <= 4;
-    default:
-      return false;
+    case "travellers": case "days": case "car_mileage": return /\d/.test(lower);
+    case "budget": return lower === "skip" || /\d/.test(lower);
+    case "transport": return /^[1-4]$/.test(lower) || /train|car|bus|flight/.test(lower);
+    case "car_fuel": return /^[1-4]$/.test(lower) || /petrol|diesel|cng|ev/.test(lower);
+    case "bus_type": return /^[1-5]$/.test(lower) || /ordinary|express|luxury|sleeper|ac/.test(lower);
+    case "flight_class": return /^[1-3]$/.test(lower) || /economy|business|premium/.test(lower);
+    case "hotel": return /^[1-3]$/.test(lower) || /budget|standard|luxury|no|skip|none/.test(lower);
+    case "source": case "destination": return lower.split(" ").length <= 4;
+    default: return false;
   }
 };
 
@@ -440,24 +274,16 @@ const looksLikeStepAnswer = (step, raw) => {
 const isTripActive = (s) => {
   if (!s || !s.trip) return false;
   if (!ACTIVE.has(s.step)) return false;
-
   const t = s.trip;
   const hasRealData =
     (typeof t.source === "string" && t.source.trim() !== "") ||
     (typeof t.destination === "string" && t.destination.trim() !== "") ||
-    t.travellers != null ||
-    t.days != null ||
-    t.budget !== undefined;
-
+    t.travellers != null || t.days != null || t.budget !== undefined;
   if (s.step === "source") return true;
   return hasRealData;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   extractPlaceFromQuery
-   NOW normalizes input first so city detection benefits from
-   spell correction (e.g. "hydrabad" → "hyderabad").
-═══════════════════════════════════════════════════════════════ */
+/* ================= PLACE FROM QUERY ================= */
 const NOT_A_CITY = new Set([
   "taste", "visit", "eat", "see", "try", "go", "travel", "find",
   "get", "know", "do", "explore", "check", "book", "plan", "reach",
@@ -469,102 +295,57 @@ const NOT_A_CITY = new Set([
 
 const extractPlaceFromQuery = (msg = "") => {
   if (!msg) return null;
+  const m = normalizeQuery(msg);
 
-  // Normalize for analysis — corrects city spellings like "hydrabad" → "hyderabad"
-  const normalized = normalizeQuery(msg);
-  // Use normalized for pattern matching, but return clean() of the matched fragment
-  const m = normalized;
-
-  // Priority 1: "in <city>"
   const inMatches = [...m.matchAll(/\bin\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/g)];
   if (inMatches.length > 0) {
-    const lastIn = inMatches[inMatches.length - 1];
-    const candidate = lastIn[1].trim();
+    const candidate = inMatches[inMatches.length - 1][1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
-    if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "in" match → "${candidate}" from normalized: "${m}"`);
-      return clean(candidate);
-    }
+    if (!NOT_A_CITY.has(firstWord)) { console.log(`[extractPlace] "in" → "${candidate}"`); return clean(candidate); }
   }
 
-  // Priority 2: "at <city>"
   const atMatch = m.match(/\bat\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/);
   if (atMatch) {
     const candidate = atMatch[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
-    if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "at" match → "${candidate}" from normalized: "${m}"`);
-      return clean(candidate);
-    }
+    if (!NOT_A_CITY.has(firstWord)) { console.log(`[extractPlace] "at" → "${candidate}"`); return clean(candidate); }
   }
 
-  // Priority 3: "near/around <city>" — but NOT "near me"
   const nearMatch = m.match(/\b(?:near|around)\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/);
   if (nearMatch) {
     const candidate = nearMatch[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
-    if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "near/around" match → "${candidate}" from normalized: "${m}"`);
-      return clean(candidate);
-    }
+    if (!NOT_A_CITY.has(firstWord)) { console.log(`[extractPlace] "near/around" → "${candidate}"`); return clean(candidate); }
   }
 
-  // Priority 4: "to <city>" — only plausible cities
   const toMatch = m.match(/\bto\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})(?:\s*[?!.,]|$)/);
   if (toMatch) {
     const candidate = toMatch[1].trim();
     const firstWord = candidate.split(/\s+/)[0].toLowerCase();
-    if (!NOT_A_CITY.has(firstWord)) {
-      console.log(`[extractPlace] "to" match → "${candidate}" from normalized: "${m}"`);
-      return clean(candidate);
-    }
+    if (!NOT_A_CITY.has(firstWord)) { console.log(`[extractPlace] "to" → "${candidate}"`); return clean(candidate); }
   }
 
-  console.log(`[extractPlace] No city found in normalized: "${m}"`);
+  console.log(`[extractPlace] No city found in: "${m}"`);
   return null;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   fetchNearby
-═══════════════════════════════════════════════════════════════ */
+/* ================= FETCH NEARBY ================= */
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
   try {
     if (city && city.trim()) {
       console.log(`[fetchNearby] Text search: "${keyword} in ${city}"`);
-      const res = await axios.get(
-        "https://maps.googleapis.com/maps/api/place/textsearch/json",
-        {
-          params: {
-            query: `${keyword} in ${city}`,
-            key: process.env.GOOGLE_API_KEY,
-          },
-        }
-      );
-      const results = res.data.results.slice(0, 6).map(Planner.formatPlace);
-      console.log(`[fetchNearby] Got ${results.length} results for "${city}"`);
-      return results;
+      const res = await axios.get("https://maps.googleapis.com/maps/api/place/textsearch/json", {
+        params: { query: `${keyword} in ${city}`, key: process.env.GOOGLE_API_KEY },
+      });
+      return res.data.results.slice(0, 6).map(Planner.formatPlace);
     }
-
     if (lat && lng) {
       console.log(`[fetchNearby] Coordinate search: ${lat},${lng} keyword="${keyword}" radius=${radiusMetres}m`);
-      const res = await axios.get(
-        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-        {
-          params: {
-            location: `${lat},${lng}`,
-            radius: radiusMetres,
-            keyword,
-            region: "in",
-            key: process.env.GOOGLE_API_KEY,
-          },
-        }
-      );
-      const results = res.data.results.slice(0, 6).map(Planner.formatPlace);
-      console.log(`[fetchNearby] Got ${results.length} results near coordinates`);
-      return results;
+      const res = await axios.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", {
+        params: { location: `${lat},${lng}`, radius: radiusMetres, keyword, region: "in", key: process.env.GOOGLE_API_KEY },
+      });
+      return res.data.results.slice(0, 6).map(Planner.formatPlace);
     }
-
-    console.log("[fetchNearby] No city and no coordinates — returning empty");
     return [];
   } catch (e) {
     console.log("fetchNearby failed:", e.message);
@@ -595,8 +376,7 @@ const ensureRoute = async (trip) => {
 };
 
 module.exports = {
-  ACTIVE, QUESTION, clean,
-  normalizeQuery,
+  ACTIVE, QUESTION, clean, normalizeQuery,
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,

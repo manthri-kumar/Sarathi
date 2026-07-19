@@ -2,15 +2,18 @@ const express = require("express");
 const router = express.Router();
 const ChatSession = require("../models/ChatSession");
 const C = require("../services/ConversationService");
+const Ctx = require("../services/ContextService");
 
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
-  if (!s) s = await ChatSession.create({ userId, step: null, trip: {} });
+  if (!s) s = await ChatSession.create({ userId, step: null, trip: {}, history: [] });
   return s;
 };
+
 const saveSession = async (s) => {
   s.updatedAt = new Date();
   s.markModified("trip");
+  s.markModified("history");
   await s.save();
 };
 
@@ -58,13 +61,10 @@ router.post("/", async (req, res) => {
 
     if (/^(day|today day|what day is today|which day is today)$/i.test(lower))
       return res.json({ reply: `📅 Today is **${currentDay}**.` });
-
     if (/today.?s date|current date|date today|what is today's date/i.test(lower))
       return res.json({ reply: `📅 Today's date is **${currentDate}**.` });
-
     if (/current time|what time is it|time now|current time now/i.test(lower))
       return res.json({ reply: `⏰ Current time is **${currentTime}**.` });
-
     if (/^(today|what is today|date and day)$/i.test(lower))
       return res.json({ reply: `📅 Today is **${currentDay}, ${currentDate}**.` });
 
@@ -108,7 +108,7 @@ router.post("/", async (req, res) => {
     const intent = C.detectIntent(raw);
 
     console.log("[INTENT]", raw, "=>", intent);
-    console.log("[FLOW]", { step: s.step, inFlow, destination: s.trip?.destination, source: s.trip?.source });
+    console.log("[FLOW]", { step: s.step, inFlow, destination: s.trip?.destination });
 
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
@@ -140,7 +140,7 @@ router.post("/", async (req, res) => {
     if (!inFlow) {
 
       if (intent === "food_items") {
-        const place = C.extractPlaceFromQuery(raw) || city || "your city";
+        const place = C.extractPlaceFromQuery(raw) || city || s.activeCity || "your city";
         const dishes = await C.getFoodFromAI(place);
         if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
         const payload = {
@@ -155,69 +155,98 @@ router.post("/", async (req, res) => {
       }
 
       if (intent === "food") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city;
-        // Extract radius in case user said "restaurants within 2km"
+        // Inherit city from session if not in current message
+        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, "restaurant", placeCity, radiusMetres),
         };
         console.log("[RESPONSE_TYPE]", payload.type);
+        // Update activeCity if we found one
+        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
       if (intent === "nearby") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city;
-
-        // ── FIX 1: Extract specific place type from the query ──────────
-        // "temple near me" → "hindu temple"
-        // "museum near me" → "museum"
-        // "places near me" → "tourist attraction" (default)
+        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const placeKeyword = C.extractPlaceKeyword(raw, "tourist attraction");
-
-        // ── FIX 2: Extract radius if user specified one ────────────────
-        // "temple near me within 3km" → 3000 metres
-        // "temple near me"            → 5000 metres (default)
         const radiusMetres = C.extractRadius(raw);
-
         console.log(`[CHAT] nearby → keyword="${placeKeyword}" radius=${radiusMetres}m city="${placeCity}"`);
-
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, placeKeyword, placeCity, radiusMetres),
         };
         console.log("[RESPONSE_TYPE]", payload.type);
+        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
       if (intent === "hotel") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city;
+        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, "hotel", placeCity, radiusMetres),
         };
         console.log("[RESPONSE_TYPE]", payload.type);
+        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
-      // general → natural AI answer
-      const reply = await C.askAI(raw, city);
+      /* ══════════════════════════════════════════════════════════════
+         GENERAL INTENT — Context-Aware Multi-Turn Handler
+         This is where conversation memory and pronoun resolution live.
+
+         Flow:
+         1. Check if message is a contextual follow-up
+            (contains pronouns, is very short, starts with follow-up words)
+         2. If yes → resolve context using conversation history
+         3. Generate answer with full history injected into Groq prompt
+         4. Save user message + reply to history
+         5. Update active topic for next-turn pronoun resolution
+      ══════════════════════════════════════════════════════════════ */
+
+      let messageForAI = raw;
+      const isFollowUp = Ctx.isContextualFollowUp(raw);
+
+      if (isFollowUp && s.history && s.history.length > 0) {
+        console.log(`[CHAT] Follow-up detected: "${raw}" — resolving context`);
+        messageForAI = await Ctx.resolveContext(s, raw);
+        console.log(`[CHAT] Resolved: "${messageForAI}"`);
+      }
+
+      // Generate context-aware reply
+      const reply = await Ctx.askAIWithContext(s, messageForAI, city || s.activeCity);
       console.log("[RESPONSE_TYPE]", "text");
+
+      // Save to history and update topic
+      await Ctx.updateSessionContext(s, raw, reply, {
+        intent:        "general",
+        city:          city || null,
+        extractTopic:  true,  // async topic extraction for next-turn pronoun resolution
+      });
+
+      await saveSession(s);
       return res.json({ reply });
     }
 
     /* ===== IN FLOW → dual-mode off-topic guard ===== */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      const answer = await C.askAI(raw, city);
+      // Mid-planning off-topic → answer with context, keep trip state
+      const answer = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
         : `\n\n${C.QUESTION[s.step]}`;
       console.log("[RESPONSE_TYPE]", "text(dual-mode)");
+
+      // Save the off-topic exchange to history too
+      await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
+      await saveSession(s);
       return res.json({ reply: `${answer}${reprompt}` });
     }
 
-    /* ===== IN FLOW → step handlers ===== */
+    /* ===== IN FLOW → step handlers (all unchanged) ===== */
     if (s.step === "source") {
       s.trip.source = ["current", "use current", "📍"].some((x) => lower.includes(x)) && city ? city : C.clean(raw);
       return advance(s, res, "Got it 👍\n\n");
