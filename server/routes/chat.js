@@ -26,7 +26,6 @@ const advance = async (s, res, prefix = "") => {
   if (s.step === "summary") {
     await saveSession(s);
     const payload = C.Planner.buildSummary(s.trip);
-    console.log("[RESPONSE_TYPE]", payload.type);
     return res.json(payload);
   }
   await saveSession(s);
@@ -39,7 +38,6 @@ const finalizeTransport = async (s, res, details) => {
   if (s.step === "summary") {
     await saveSession(s);
     const payload = C.Planner.buildSummary(s.trip);
-    console.log("[RESPONSE_TYPE]", payload.type);
     return res.json(payload);
   }
   await saveSession(s);
@@ -81,7 +79,6 @@ router.post("/", async (req, res) => {
       const payload = await C.Planner.buildItinerary(s.trip);
       s.step = payload.type === "itinerary" ? "completed" : "blocked";
       await saveSession(s);
-      console.log("[RESPONSE_TYPE]", payload.type);
       return res.json(payload);
     }
     if (lower.startsWith("edit ") && s.trip?.destination) {
@@ -103,7 +100,7 @@ router.post("/", async (req, res) => {
       }
     }
 
-    /* ===== FLOW DETECTION ===== */
+    /* ===== FLOW & INTENT DETECTION ===== */
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
@@ -113,10 +110,9 @@ router.post("/", async (req, res) => {
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
       await saveSession(s);
-      console.log("[FLOW] stale planning step cleared → IDLE");
     }
 
-    /* ===== EXPLICIT TRIP START ===== */
+    /* ===== TRIP START ===== */
     if (!inFlow && intent === "trip") {
       const slots = await C.extractTripSlots(raw);
       s.trip = {
@@ -136,9 +132,24 @@ router.post("/", async (req, res) => {
       return advance(s, res, ack);
     }
 
-    /* ===== NOT IN FLOW → places / food / hotel / general ===== */
+    /* ===== NOT IN FLOW ===== */
     if (!inFlow) {
 
+      /* ── WEATHER — real Open-Meteo data, no Groq hallucination ── */
+      if (intent === "weather") {
+        console.log(`[CHAT] weather → lat=${lat} lng=${lng} city=${city}`);
+        const weatherResult = await C.fetchWeather(lat, lng, city || s.activeCity);
+        // Save to history so follow-ups like "what about tomorrow?" have context
+        await Ctx.updateSessionContext(s, raw, weatherResult.reply, {
+          intent: "weather",
+          city: city || null,
+          extractTopic: false,
+        });
+        await saveSession(s);
+        return res.json({ reply: weatherResult.reply });
+      }
+
+      /* ── FOOD ITEMS (local dishes) ── */
       if (intent === "food_items") {
         const place = C.extractPlaceFromQuery(raw) || city || s.activeCity || "your city";
         const dishes = await C.getFoodFromAI(place);
@@ -150,24 +161,22 @@ router.post("/", async (req, res) => {
             image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}`,
           })),
         };
-        console.log("[RESPONSE_TYPE]", payload.type);
         return res.json(payload);
       }
 
+      /* ── RESTAURANTS (Google Places) ── */
       if (intent === "food") {
-        // Inherit city from session if not in current message
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
         const payload = {
           type: "places",
           data: await C.fetchNearby(lat, lng, "restaurant", placeCity, radiusMetres),
         };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        // Update activeCity if we found one
         if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
+      /* ── NEARBY PLACES / TEMPLES (Google Places) ── */
       if (intent === "nearby") {
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const placeKeyword = C.extractPlaceKeyword(raw, "tourist attraction");
@@ -177,11 +186,11 @@ router.post("/", async (req, res) => {
           type: "places",
           data: await C.fetchNearby(lat, lng, placeKeyword, placeCity, radiusMetres),
         };
-        console.log("[RESPONSE_TYPE]", payload.type);
         if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
+      /* ── HOTELS (Google Places) ── */
       if (intent === "hotel") {
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
@@ -189,64 +198,42 @@ router.post("/", async (req, res) => {
           type: "places",
           data: await C.fetchNearby(lat, lng, "hotel", placeCity, radiusMetres),
         };
-        console.log("[RESPONSE_TYPE]", payload.type);
         if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
-      /* ══════════════════════════════════════════════════════════════
-         GENERAL INTENT — Context-Aware Multi-Turn Handler
-         This is where conversation memory and pronoun resolution live.
-
-         Flow:
-         1. Check if message is a contextual follow-up
-            (contains pronouns, is very short, starts with follow-up words)
-         2. If yes → resolve context using conversation history
-         3. Generate answer with full history injected into Groq prompt
-         4. Save user message + reply to history
-         5. Update active topic for next-turn pronoun resolution
-      ══════════════════════════════════════════════════════════════ */
-
+      /* ── GENERAL — context-aware multi-turn with hallucination guard ── */
       let messageForAI = raw;
       const isFollowUp = Ctx.isContextualFollowUp(raw);
 
       if (isFollowUp && s.history && s.history.length > 0) {
         console.log(`[CHAT] Follow-up detected: "${raw}" — resolving context`);
         messageForAI = await Ctx.resolveContext(s, raw);
-        console.log(`[CHAT] Resolved: "${messageForAI}"`);
       }
 
-      // Generate context-aware reply
       const reply = await Ctx.askAIWithContext(s, messageForAI, city || s.activeCity);
-      console.log("[RESPONSE_TYPE]", "text");
 
-      // Save to history and update topic
       await Ctx.updateSessionContext(s, raw, reply, {
-        intent:        "general",
-        city:          city || null,
-        extractTopic:  true,  // async topic extraction for next-turn pronoun resolution
+        intent: "general",
+        city: city || null,
+        extractTopic: true,
       });
-
       await saveSession(s);
       return res.json({ reply });
     }
 
-    /* ===== IN FLOW → dual-mode off-topic guard ===== */
+    /* ===== IN FLOW — dual-mode off-topic ===== */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      // Mid-planning off-topic → answer with context, keep trip state
       const answer = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
         : `\n\n${C.QUESTION[s.step]}`;
-      console.log("[RESPONSE_TYPE]", "text(dual-mode)");
-
-      // Save the off-topic exchange to history too
       await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
       await saveSession(s);
       return res.json({ reply: `${answer}${reprompt}` });
     }
 
-    /* ===== IN FLOW → step handlers (all unchanged) ===== */
+    /* ===== IN FLOW — step handlers (all unchanged) ===== */
     if (s.step === "source") {
       s.trip.source = ["current", "use current", "📍"].some((x) => lower.includes(x)) && city ? city : C.clean(raw);
       return advance(s, res, "Got it 👍\n\n");
