@@ -46,6 +46,16 @@ const finalizeTransport = async (s, res, details) => {
   return res.json({ reply: C.QUESTION[s.step] });
 };
 
+// keyword each nearby_* intent resolves to when querying Google Places
+const NEARBY_KEYWORD_MAP = {
+  nearby_temple: "hindu temple",
+  nearby_food: "restaurant",
+  nearby_hotel: "hotel",
+  nearby_hospital: "hospital",
+  nearby_bank: "bank",
+  nearby_fuel: "gas station",
+};
+
 router.post("/", async (req, res) => {
   try {
     const { message, userId = "user1", lat, lng, city } = req.body;
@@ -136,75 +146,52 @@ router.post("/", async (req, res) => {
       return advance(s, res, ack);
     }
 
-    /* ===== NOT IN FLOW → places / food / hotel / general ===== */
+    /* ===== NOT IN FLOW → real-time cards / AI guide / general ===== */
     if (!inFlow) {
 
-      if (intent === "food_items") {
-        const place = C.extractPlaceFromQuery(raw) || city || s.activeCity || "your city";
-        const dishes = await C.getFoodFromAI(place);
-        if (!dishes.length) return res.json({ reply: "Couldn't fetch dishes right now 😅" });
-        const payload = {
-          type: "places",
-          data: dishes.map((d) => ({
-            name: d.name, description: d.description, rating: 4.5, bestTime: "Anytime 🍽️",
-            image: `https://source.unsplash.com/featured/?food,${encodeURIComponent(d.name)}`,
-          })),
-        };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        return res.json(payload);
-      }
-
-      if (intent === "food") {
-        // Inherit city from session if not in current message
+      /* ── TYPE 2: REAL-TIME NEARBY SEARCH (Google Places → cards) ──
+         Only reached when detectIntent found an explicit proximity
+         signal ("near me" / "nearby" / "within 3km" / etc). */
+      if (intent.startsWith("nearby_")) {
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
+        const keyword = NEARBY_KEYWORD_MAP[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
+
+        console.log(`[CHAT] real-time search → intent=${intent} keyword="${keyword}" radius=${radiusMetres}m city="${placeCity}"`);
+
         const payload = {
           type: "places",
-          data: await C.fetchNearby(lat, lng, "restaurant", placeCity, radiusMetres),
+          data: await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres),
         };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        // Update activeCity if we found one
+        console.log("[RESPONSE_TYPE]", payload.type, "intent:", intent);
         if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
         return res.json(payload);
       }
 
-      if (intent === "nearby") {
+      /* ── TYPE 1: AI TRAVEL GUIDE (rich formatted text — never cards) ──
+         food_guide, temple_guide, hotel_guide, city_guide, knowledge_guide
+         all land here. This is the fix for "best food to taste in X"
+         previously returning dish cards. */
+      if (intent.startsWith("guide_")) {
+        const topic = intent.replace("guide_", ""); // food | temple | hotel | city | knowledge
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
-        const placeKeyword = C.extractPlaceKeyword(raw, "tourist attraction");
-        const radiusMetres = C.extractRadius(raw);
-        console.log(`[CHAT] nearby → keyword="${placeKeyword}" radius=${radiusMetres}m city="${placeCity}"`);
-        const payload = {
-          type: "places",
-          data: await C.fetchNearby(lat, lng, placeKeyword, placeCity, radiusMetres),
-        };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
-        return res.json(payload);
-      }
 
-      if (intent === "hotel") {
-        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
-        const radiusMetres = C.extractRadius(raw);
-        const payload = {
-          type: "places",
-          data: await C.fetchNearby(lat, lng, "hotel", placeCity, radiusMetres),
-        };
-        console.log("[RESPONSE_TYPE]", payload.type);
-        if (placeCity && placeCity !== city) { s.activeCity = placeCity; await saveSession(s); }
-        return res.json(payload);
+        const reply = await C.askTravelGuide(topic, raw, placeCity);
+        console.log("[RESPONSE_TYPE]", "text(guide)", "topic:", topic);
+
+        await Ctx.updateSessionContext(s, raw, reply, {
+          intent: `guide_${topic}`,
+          city: placeCity || null,
+          extractTopic: true, // keeps pronoun resolution ("she", "it", "that temple") working
+        });
+        if (placeCity && placeCity !== city) s.activeCity = placeCity;
+        await saveSession(s);
+        return res.json({ reply });
       }
 
       /* ══════════════════════════════════════════════════════════════
-         GENERAL INTENT — Context-Aware Multi-Turn Handler
+         GENERAL INTENT — Context-Aware Multi-Turn Handler (unchanged)
          This is where conversation memory and pronoun resolution live.
-
-         Flow:
-         1. Check if message is a contextual follow-up
-            (contains pronouns, is very short, starts with follow-up words)
-         2. If yes → resolve context using conversation history
-         3. Generate answer with full history injected into Groq prompt
-         4. Save user message + reply to history
-         5. Update active topic for next-turn pronoun resolution
       ══════════════════════════════════════════════════════════════ */
 
       let messageForAI = raw;
@@ -216,15 +203,13 @@ router.post("/", async (req, res) => {
         console.log(`[CHAT] Resolved: "${messageForAI}"`);
       }
 
-      // Generate context-aware reply
       const reply = await Ctx.askAIWithContext(s, messageForAI, city || s.activeCity);
       console.log("[RESPONSE_TYPE]", "text");
 
-      // Save to history and update topic
       await Ctx.updateSessionContext(s, raw, reply, {
         intent:        "general",
         city:          city || null,
-        extractTopic:  true,  // async topic extraction for next-turn pronoun resolution
+        extractTopic:  true,
       });
 
       await saveSession(s);
@@ -233,14 +218,12 @@ router.post("/", async (req, res) => {
 
     /* ===== IN FLOW → dual-mode off-topic guard ===== */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      // Mid-planning off-topic → answer with context, keep trip state
       const answer = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
         : `\n\n${C.QUESTION[s.step]}`;
       console.log("[RESPONSE_TYPE]", "text(dual-mode)");
 
-      // Save the off-topic exchange to history too
       await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
       await saveSession(s);
       return res.json({ reply: `${answer}${reprompt}` });

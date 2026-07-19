@@ -214,7 +214,7 @@ Message: "${msg}"`;
   }
 };
 
-/* ================= GENERAL TRAVEL Q&A ================= */
+/* ================= GENERAL TRAVEL Q&A (legacy short-answer path) ================= */
 const askAI = async (raw, contextCity) => {
   try {
     const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant. Answer the user's question helpfully and concisely in 2-4 sentences.${
@@ -230,6 +230,9 @@ User: "${raw}"`;
   }
 };
 
+// Retained for backward compatibility — no longer called from the food_guide
+// path (which now uses askTravelGuide), but left intact in case other
+// call sites depend on it.
 const getFoodFromAI = async (city) => {
   try {
     const prompt = `Respond with ONLY a JSON object shaped exactly as {"dishes":[{"name":"...","description":"..."}]} containing 6 famous local dishes from ${city}. No prose.`;
@@ -240,6 +243,127 @@ const getFoodFromAI = async (city) => {
   } catch (e) {
     console.log("getFoodFromAI failed:", e.message);
     return [];
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   askTravelGuide — TYPE 1 RESPONSE ENGINE (AI Travel Guide)
+   ─────────────────────────────────────────────────────────────
+   Produces rich, section-based text — never place cards — for
+   food recommendations, temple/culture info, hotel guidance,
+   city guides, and general knowledge questions.
+
+   Formatting rules baked into every template map directly onto
+   what MessageFormatter.jsx already parses, with zero frontend
+   changes required:
+     🍽 Emoji + short text   → rendered as a heading
+     1. Item / 2. Item       → rendered as a numbered bullet list
+     - Item                  → rendered as a bullet list
+     💡 Sarathi Recommendation: ...  → rendered as a tip callout
+     Label: value             → rendered as a key-fact row / info-card
+═══════════════════════════════════════════════════════════════ */
+const GUIDE_TEMPLATES = {
+  food: (raw, city) => `You are Sarathi, an expert Indian food and travel guide. Answer this question: "${raw}"${city ? ` The user's location context is ${city}.` : ""}
+
+Respond in EXACTLY this structure. Use real, well-known dishes and restaurants where you're confident, otherwise use solid general knowledge of the region's cuisine. Do not say "Namaste", do not mention Google Maps, do not say you lack real-time data. No preamble, no internal reasoning — go straight into the format below.
+
+🍽 Must-Try Foods
+
+1. [Dish Name]
+[One sentence: what it is and why it's loved]
+
+2. [Dish Name]
+[One sentence]
+
+3. [Dish Name]
+[One sentence]
+
+4. [Dish Name]
+[One sentence]
+
+🍴 Best Restaurants
+- [Name or well-known food area] — [one-line note]
+- [Name or well-known food area] — [one-line note]
+- [Name or well-known food area] — [one-line note]
+
+🗓 One Day Food Plan
+Breakfast: [dish]
+Lunch: [dish]
+Evening: [dish]
+Dinner: [dish]
+
+💡 Sarathi Recommendation: [1-2 warm, personal sentences on what to prioritize and why]`,
+
+  temple: (raw, city) => `You are Sarathi, a knowledgeable Indian temple and culture guide. Answer this question: "${raw}"${city ? ` The user's location context is ${city}.` : ""}
+
+Respond in EXACTLY this structure, using real historical/cultural knowledge where you're confident. No "Namaste", no preamble, no internal reasoning, no mention of Google Maps.
+
+🛕 About the Temple
+[2-3 sentences: history and significance]
+
+📿 Deity
+[1-2 sentences on the presiding deity]
+
+🏛 Architecture
+[1-2 sentences]
+
+🎉 Festivals
+[1-2 sentences, or a short list of the main festivals]
+
+🕒 Best Time & Timings
+[General guidance on darshan timings and best season to visit]
+
+💡 Sarathi Recommendation: [1-2 warm, personal sentences]`,
+
+  hotel: (raw, city) => `You are Sarathi, a travel accommodation expert. Answer this question: "${raw}"${city ? ` The user's location context is ${city}.` : ""}
+
+Respond in EXACTLY this structure. No "Namaste", no preamble, no mention of Google Maps.
+
+🏨 Where to Stay
+[1-2 sentences on the best areas/neighbourhoods to base yourself]
+
+💰 Budget
+- [1-2 sentence recommendation for budget stays]
+
+🛏 Standard
+- [1-2 sentence recommendation for mid-range stays]
+
+✨ Luxury
+- [1-2 sentence recommendation for luxury stays]
+
+💡 Sarathi Recommendation: [1-2 warm, personal sentences]`,
+
+  city: (raw, city) => `You are Sarathi, an expert local trip planner. Answer this question: "${raw}"${city ? ` The user's location context is ${city}.` : ""}
+
+Respond in EXACTLY this structure. No "Namaste", no preamble, no mention of Google Maps.
+
+🌅 Morning
+[1-2 sentences: what to see/do]
+
+☀️ Afternoon
+[1-2 sentences]
+
+🌇 Evening
+[1-2 sentences]
+
+🍽 Local Food to Try
+[1 sentence naming 2-3 dishes]
+
+💡 Sarathi Recommendation: [1-2 warm, personal sentences]`,
+
+  knowledge: (raw, city) => `You are Sarathi, a knowledgeable Indian travel and culture guide. Answer this question clearly and concisely in 3-5 short sentences: "${raw}"${city ? ` The user's location context is ${city}.` : ""}
+
+No "Namaste", no preamble, no internal reasoning, no mention of Google Maps. Give only the final answer.`,
+};
+
+const askTravelGuide = async (topic, raw, city) => {
+  const build = GUIDE_TEMPLATES[topic] || GUIDE_TEMPLATES.knowledge;
+  try {
+    const text = await askGroq(build(raw, city), { maxTokens: 700, temperature: 0.6 });
+    return stripControlTokens(text) || "I couldn't put that together right now — could you try rephrasing?";
+  } catch (e) {
+    console.log(`askTravelGuide(${topic}) failed:`, e.message);
+    return "I couldn't put that together right now — could you try rephrasing?";
   }
 };
 
@@ -294,10 +418,20 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   detectIntent
-   NEW: weather branch added — this was previously missing entirely,
-   so weather questions fell through to the general AI path.
+   detectIntent — REWRITTEN
+
+   The single fix that eliminates "food cards for content questions"
+   and "hallucinated-distance text for real proximity questions":
+   a proximity gate runs FIRST. Only messages carrying an explicit
+   proximity signal ("near me", "nearby", "within 3km"...) can ever
+   route to a nearby_* (real Places API card) intent. Everything else
+   — including "best food in Kerala", "restaurants in Kollam", or
+   "tell me about Tirupati temple" — routes to a guide_* (AI Travel
+   Guide text) intent, regardless of whether it happens to contain
+   the word "temple" or "restaurant".
 ═══════════════════════════════════════════════════════════════ */
+const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
+
 const detectIntent = (msg = "") => {
   const m = normalizeQuery(msg);
   console.log(`[detectIntent] normalized: "${m}"`);
@@ -308,26 +442,39 @@ const detectIntent = (msg = "") => {
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // Weather — checked before the generic "nearby" catch-alls, since
-  // phrases like "weather near me" would otherwise match "near me".
   if (/\b(weather|temperature|forecast|rain|humidity|climate today|how hot|how cold)\b/.test(m))
     return "weather";
 
-  if (/\b(local food|local dish|famous food|famous dish|what to eat|dish in|dish of|cuisine|street food|best food to taste|food to taste|must try food|must-try food)\b/.test(m))
-    return "food_items";
+  const proximity = PROXIMITY_RE.test(m);
 
-  if (/\b(restaurant|where to eat|places to eat|food near|dhaba|cafe|dining)\b/.test(m))
-    return "food";
-  if (/\bfood\b/.test(m)) return "food";
+  /* ── TYPE 2: REAL-TIME NEARBY SEARCH — proximity signal required ── */
+  if (proximity) {
+    if (/\btemple\b/.test(m)) return "nearby_temple";
+    if (/\b(restaurant|dhaba|cafe|dining|eat)\b/.test(m)) return "nearby_food";
+    if (/\b(hotel|stay|lodge|resort|accommodation)\b/.test(m)) return "nearby_hotel";
+    if (/\b(hospital|clinic|medical|pharmacy)\b/.test(m)) return "nearby_hospital";
+    if (/\b(atm|bank)\b/.test(m)) return "nearby_bank";
+    if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m)) return "nearby_fuel";
+    return "nearby_general"; // museums, beaches, malls, parks, general attractions
+  }
+
+  /* ── TYPE 1: AI TRAVEL GUIDE — everything content-oriented ── */
+  if (/\b(local food|local dish|famous food|famous dish|what to eat|dish in|dish of|cuisine|street food|best food|food to taste|must[- ]try food|food in |food of )\b/.test(m))
+    return "guide_food";
+  if (/\b(restaurant|where to eat|places to eat|best restaurants|dining)\b/.test(m))
+    return "guide_food"; // named-place restaurant recs → guide, not cards
+  if (/\bfood\b/.test(m)) return "guide_food";
+
+  if (/\btemple\b/.test(m)) return "guide_temple";
 
   if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay)\b/.test(m))
-    return "hotel";
+    return "guide_hotel";
 
-  if (/\btemple\b/.test(m)) return "nearby";
+  if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark|one day|itinerary)\b/.test(m))
+    return "guide_city";
 
-  if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark)\b/.test(m))
-    return "nearby";
-  if (/\bnear me\b/.test(m) || /\bnearby\b/.test(m)) return "nearby";
+  if (/\b(who is|history of|significance|culture|festival|deity|architecture)\b/.test(m))
+    return "guide_knowledge";
 
   return "general";
 };
@@ -443,15 +590,7 @@ const extractPlaceFromQuery = (msg = "") => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   fetchNearby
-   REWRITTEN: now delegates entirely to PlacesService.fetchPlaces,
-   which always resolves to lat/lng, always calls Nearby Search with
-   an explicit radius, and hard-filters by real distance. The city
-   Text Search fallback (which silently ignored radius) is gone.
-
-   Signature is backward compatible — excludeIds is new and optional,
-   so existing call sites in chat.js keep working unchanged. Wire it
-   up (see chat.js patch notes) to get session-level dedup.
+   fetchNearby — unchanged, delegates to PlacesService.fetchPlaces
 ═══════════════════════════════════════════════════════════════ */
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000, excludeIds = []) => {
   try {
@@ -494,7 +633,7 @@ module.exports = {
   ACTIVE, QUESTION, clean,
   normalizeQuery,
   regexExtract, extractTripSlots,
-  looksLikeStepAnswer, askAI,
+  looksLikeStepAnswer, askAI, askTravelGuide,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
   extractRadius, extractPlaceKeyword,
   isTripActive, nextStep, ensureRoute,
