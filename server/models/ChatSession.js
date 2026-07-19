@@ -60,4 +60,4 @@ const ChatSessionSchema = new mongoose.Schema(
 // TTL: sessions expire after 24 hours of inactivity
 ChatSessionSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 86400 });
 
-module.exports = mongoose.model("ChatSession", ChatSessionSchema);
+module.exports = mongoose.model("ChatSession", );
