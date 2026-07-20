@@ -6,17 +6,6 @@ const ChatSession = require("../models/ChatSession");
 const C  = require("../services/ConversationService");
 const Ctx = require("../services/ContextService");
 
-/* ── Keyword map: nearby_* intent → Google Places search term ── */
-const NEARBY_KEYWORD = {
-  nearby_temple:   "hindu temple",
-  nearby_food:     "restaurant",
-  nearby_hotel:    "hotel",
-  nearby_hospital: "hospital",
-  nearby_bank:     "bank",
-  nearby_fuel:     "gas station",
-  nearby_general:  "tourist attraction",
-};
-
 /* ── Session helpers ── */
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
@@ -28,6 +17,7 @@ const saveSession = async (s) => {
   s.updatedAt = new Date();
   s.markModified("trip");
   s.markModified("history");
+  s.markModified("lastNearbyResults");
   await s.save();
 };
 
@@ -65,6 +55,16 @@ router.post("/", async (req, res) => {
     const raw   = message.trim();
     const lower = raw.toLowerCase();
     const s     = await loadSession(userId);
+
+    // GPS-derived "where the user physically is" — refresh every turn.
+    // This is intentionally kept separate from conversationCity
+    // (Bug 2 fix): a message about Hyderabad food must NEVER cause
+    // "temple near me" to search Hyderabad instead of the user's
+    // actual location.
+    if (city && city !== s.currentLocationCity) {
+      s.currentLocationCity = city;
+      s.activeCity = city; // legacy field, kept in sync
+    }
 
     /* ── Date / time shortcuts ── */
     const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
@@ -121,6 +121,7 @@ router.post("/", async (req, res) => {
 
     console.log("[INTENT]", raw, "=>", intent);
     console.log("[FLOW]", { step: s.step, inFlow, dest: s.trip?.destination });
+    console.log("[ENTITY]", { activePlace: s.activePlace, activePlaceType: s.activePlaceType });
 
     // Clear stale planning step
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
@@ -148,6 +149,10 @@ router.post("/", async (req, res) => {
           distanceKm:       null, travelTime: null,
           transportDetails: {}, carFuelType: null,
         };
+        // Starting a fresh trip is a hard topic switch — clear the
+        // old entity/guide context so a stray "temple timings" from
+        // a previous discussion doesn't bleed into trip planning.
+        Ctx.updateEntityContext(s, { place: null, placeType: null, placeId: null, travelTopic: null });
         const ack = slots.destination
           ? `Great choice — ${slots.destination} is a wonderful pick! Let's sort out the details.\n\n`
           : "Let's plan your trip ✈️\n\n";
@@ -157,26 +162,71 @@ router.post("/", async (req, res) => {
       /* ── Weather (real Open-Meteo data) ── */
       if (intent === "weather") {
         console.log(`[CHAT] weather → lat=${lat} lng=${lng} city=${city}`);
-        const result = await C.fetchWeather(lat, lng, city || s.activeCity);
+        const result = await C.fetchWeather(lat, lng, city || s.currentLocationCity);
         await Ctx.updateSessionContext(s, raw, result.reply, { intent: "weather", city: city || null, extractTopic: false });
         await saveSession(s);
         return res.json({ reply: result.reply });
       }
 
       /* ─────────────────────────────────────────────────────────────
+         BUG 1/3/4 FIX — ENTITY FOLLOW-UP CHECK, ABOVE intent routing.
+
+         "Temple near me" → "Temple timings" used to hit detectIntent()
+         → guide_temple → a brand-new, contextless AI guide call that
+         hallucinated generic temple info. Before we let intent-based
+         routing decide anything, check whether this message is really
+         a follow-up about the place we're already discussing.
+      ───────────────────────────────────────────────────────────── */
+      if (Ctx.isEntityFollowUp(s, raw)) {
+        // If the user explicitly named a different card from the last
+        // nearby result set (e.g. tapped "Temple Story" for a
+        // specific temple), switch the active entity to that one first.
+        const override = Ctx.detectPlaceMentionOverride(s, raw);
+        if (override && override.name !== s.activePlace) {
+          Ctx.updateEntityContext(s, { place: override.name, placeId: override.placeId });
+        }
+
+        console.log(`[CHAT] entity follow-up → "${raw}" about "${s.activePlace}"`);
+        const reply = await Ctx.answerAboutActivePlace(s, raw);
+        await Ctx.updateSessionContext(s, raw, reply, {
+          intent: "entity_followup",
+          extractTopic: false,
+        });
+        await saveSession(s);
+        return res.json({ reply });
+      }
+
+      /* ─────────────────────────────────────────────────────────────
          TYPE 2: REAL-TIME NEARBY SEARCH → Google Places → cards
          Only reached when detectIntent found an explicit proximity
          signal ("near me" / "nearby" / "within Xkm").
+
+         Bug 2 fix: anchor city is ALWAYS an explicit mention in the
+         message itself, or the user's real GPS-derived location —
+         NEVER conversationCity. "Temple near me" while conversationCity
+         is "Hyderabad" must still search near the user.
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("nearby_")) {
-        const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const explicitPlaceCity = C.extractPlaceFromQuery(raw);
+        const placeCity    = explicitPlaceCity || city || s.currentLocationCity;
         const radiusMetres = C.extractRadius(raw);
-        const keyword      = NEARBY_KEYWORD[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
+        const keyword      = C.NEARBY_KEYWORD_MAP[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
+        const placeType     = C.PLACE_TYPE_FOR_INTENT[intent] || null;
 
         console.log(`[CHAT] nearby → intent=${intent} keyword="${keyword}" radius=${radiusMetres}m city="${placeCity}"`);
 
         const places = await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres);
-        if (placeCity && placeCity !== city) { s.activeCity = placeCity; }
+
+        // Store results + set the active entity (Bug 4 fix) so the
+        // very next turn can chain "temple timings" / "temple story"
+        // straight off this search without re-asking Google or the AI.
+        Ctx.updateNearbySearchContext(s, { intent, results: places, radius: radiusMetres, placeType });
+
+        // An explicit place mention in a nearby query is a one-off
+        // lookup, not a lasting conversation pivot — don't let it
+        // overwrite conversationCity.
+        if (explicitPlaceCity) s.lastIntent = intent;
+
         await saveSession(s);
         return res.json({ type: "places", data: places });
       }
@@ -185,28 +235,48 @@ router.post("/", async (req, res) => {
          TYPE 1: AI TRAVEL GUIDE → rich formatted text
          food_guide, temple_guide, hotel_guide, city_guide,
          knowledge_guide all land here. NEVER returns place cards.
+
+         Bug 2 fix: an explicit city in the message sets
+         conversationCity (what the CONVERSATION is about), which is
+         distinct from currentLocationCity (where the user physically
+         is). Only conversationCity feeds guide answers.
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("guide_")) {
         const topic     = intent.replace("guide_", ""); // food | temple | hotel | city | knowledge
-        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const explicitCity = C.extractPlaceFromQuery(raw);
+        if (explicitCity) s.conversationCity = explicitCity;
+        const placeCity = explicitCity || s.conversationCity || city || s.currentLocationCity;
 
         console.log(`[CHAT] guide → topic=${topic} city="${placeCity}"`);
 
         const reply = await C.askTravelGuide(topic, raw, placeCity);
+
+        // A guide answer is a fresh discovery topic, not tied to any
+        // one specific place from a nearby search — clear the entity
+        // (Bug 1) but remember the travel topic/subject for follow-ups
+        // like "tell me more" to land back in askAIWithContext sanely.
+        const placeType = C.PLACE_TYPE_FOR_INTENT[intent] || null;
+        Ctx.updateEntityContext(s, {
+          place: explicitCity ? `${topic} guide: ${placeCity}` : s.activePlace,
+          placeType,
+          placeId: null,
+          travelTopic: topic,
+        });
 
         await Ctx.updateSessionContext(s, raw, reply, {
           intent:       intent,
           city:         placeCity || null,
           extractTopic: true,
         });
-        if (placeCity && placeCity !== city) s.activeCity = placeCity;
         await saveSession(s);
         return res.json({ reply });
       }
 
       /* ─────────────────────────────────────────────────────────────
          GENERAL — multi-turn context-aware conversational fallback.
-         Pronoun resolution and history injection happen here.
+         Bug 3 fix: this is now a true last resort. Trip / weather /
+         nearby / guide / entity-follow-up have all already had a
+         chance to claim the message above.
       ───────────────────────────────────────────────────────────── */
       let messageForAI = raw;
       const isFollowUp = Ctx.isContextualFollowUp(raw);
@@ -217,7 +287,7 @@ router.post("/", async (req, res) => {
         console.log(`[CHAT] Resolved: "${messageForAI}"`);
       }
 
-      const reply = await Ctx.askAIWithContext(s, messageForAI, city || s.activeCity);
+      const reply = await Ctx.askAIWithContext(s, messageForAI, city || s.currentLocationCity);
 
       await Ctx.updateSessionContext(s, raw, reply, {
         intent:       "general",
@@ -232,7 +302,7 @@ router.post("/", async (req, res) => {
        IN FLOW — dual-mode: off-topic question while trip planning
     ══════════════════════════════════════════════════════════════ */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      const answer   = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
+      const answer   = await Ctx.askAIWithContext(s, raw, city || s.currentLocationCity);
       const reprompt = s.step === "summary"
         ? "\n\nWhenever you're ready — tap Confirm to generate your itinerary, or an Edit button to change a detail."
         : `\n\n${C.QUESTION[s.step]}`;

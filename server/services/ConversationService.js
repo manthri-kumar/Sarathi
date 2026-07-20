@@ -52,13 +52,36 @@ const extractJSONBlock = (s) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
+   sanitizeGuideReply — DEFENSE IN DEPTH (Bug 5 fix)
+
+   GUIDE_PROMPTS already instruct the model never to ask trip-
+   planning questions or use "Namaste" preambles. LLMs don't always
+   comply with negative instructions perfectly, especially at
+   higher temperature, so this is a deterministic safety net that
+   strips any trip-planner-flavoured lines that leak through, run
+   on every AI Travel Guide / entity follow-up / general-AI reply
+   before it reaches the user.
+═══════════════════════════════════════════════════════════════ */
+const LEAK_LINE_PATTERNS = [
+  /how many travellers.*joining you\??/i,
+  /how many people (are|will be) (joining|travel)/i,
+  /let'?s sort out the details/i,
+  /^namaste!?\s*$/i,
+  /i must correct you again/i,
+];
+
+const sanitizeGuideReply = (text = "") => {
+  if (!text) return text;
+  const cleanedLines = text
+    .split("\n")
+    .filter((line) => !LEAK_LINE_PATTERNS.some((re) => re.test(line.trim())));
+  return cleanedLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+};
+
+/* ═══════════════════════════════════════════════════════════════
    normalizeQuery — spell correction + synonym normalization.
-   Called first by detectIntent, extractPlaceKeyword,
-   extractPlaceFromQuery, and extractRadius so that ALL downstream
-   logic benefits from a single normalization pass.
 ═══════════════════════════════════════════════════════════════ */
 const SPELL_CORRECTIONS = [
-  // Temple
   ["templs","temple"],["temples","temple"],["tempel","temple"],
   ["tempple","temple"],["tempal","temple"],["temle","temple"],
   ["templr","temple"],["mandir","temple"],["mandirs","temple"],
@@ -66,7 +89,6 @@ const SPELL_CORRECTIONS = [
   ["kovils","temple"],["kovil","temple"],
   ["kshetram","temple"],["kshetrams","temple"],
   ["shrines","temple shrine"],
-  // Restaurant
   ["resturrent","restaurant"],["restarunt","restaurant"],
   ["restarant","restaurant"],["resturant","restaurant"],
   ["restuarant","restaurant"],["restaurent","restaurant"],
@@ -75,29 +97,23 @@ const SPELL_CORRECTIONS = [
   ["restorents","restaurant"],["restaruant","restaurant"],
   ["eatery","restaurant"],["eateries","restaurant"],
   ["dhabas","dhaba"],["cafes","cafe"],["cafeteria","cafe"],
-  // Hotel
   ["hottel","hotel"],["hotell","hotel"],["hottell","hotel"],
   ["hotl","hotel"],["hotles","hotel"],
   ["resorts","resort"],["lodges","lodge"],["lodging","lodge"],
   ["accomodation","accommodation"],["accomadation","accommodation"],
   ["accommodations","accommodation"],
-  // Nearby / location
   ["near by","nearby"],["nearbye","nearby"],["nreby","nearby"],
   ["with in","within"],["with-in","within"],["arround","around"],
   ["closeby","nearby"],["close by","nearby"],
   ["close to me","nearby"],["around me","nearby"],
-  // Weather
   ["wheather","weather"],["wether","weather"],["weater","weather"],
   ["weathr","weather"],["forcast","forecast"],
-  // Trip
   ["journy","journey"],["vacaction","vacation"],
   ["holliday","holiday"],["holyday","holiday"],
   ["travell","travel"],["travle","travel"],
-  // Food
   ["foods","food"],["dishs","dish"],
   ["cuisines","cuisine"],["cuisne","cuisine"],
   ["recomendation","recommendation"],["reccomendation","recommendation"],
-  // Indian cities
   ["hydrabad","hyderabad"],["hyderbad","hyderabad"],
   ["hderabad","hyderabad"],["huderbad","hyderabad"],
   ["kerla","kerala"],["kerela","kerala"],["keral","kerala"],
@@ -183,7 +199,7 @@ const askAI = async (raw, contextCity) => {
 
 User: "${raw}"`;
     const text = await askGroq(prompt);
-    return stripControlTokens(text) || "I can help with travel questions — could you rephrase that?";
+    return sanitizeGuideReply(stripControlTokens(text)) || "I can help with travel questions — could you rephrase that?";
   } catch (e) {
     console.log("askAI failed:", e.message);
     return "I can help with travel questions — could you rephrase that?";
@@ -206,14 +222,6 @@ const getFoodFromAI = async (city) => {
 
 /* ═══════════════════════════════════════════════════════════════
    askTravelGuide — TYPE 1: AI Travel Guide responses
-
-   Produces rich, section-based travel guide text.
-   Formatting uses tokens that MessageFormatter.jsx already parses:
-     🍽 Short text   → rendered as emoji heading
-     1. Item         → numbered bullet
-     - Item          → bullet
-     Label: value    → key-fact row
-     💡 text         → tip callout
 ═══════════════════════════════════════════════════════════════ */
 const GUIDE_PROMPTS = {
 
@@ -221,7 +229,7 @@ const GUIDE_PROMPTS = {
 `You are Sarathi, an expert Indian food and travel guide.
 User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
 
-Reply in EXACTLY this format. Use real, well-known dishes. No "Namaste", no preamble, no "How many travellers", no mention of Google Maps.
+Reply in EXACTLY this format. Use real, well-known dishes. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
 
 🍽 Must-Try Foods
 
@@ -254,7 +262,7 @@ Dinner: [dish]
 `You are Sarathi, a knowledgeable Indian temple and culture guide.
 User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
 
-Reply in EXACTLY this format. Use real historical/cultural knowledge. No "Namaste", no preamble, no "How many travellers", no mention of Google Maps.
+Reply in EXACTLY this format. Use real historical/cultural knowledge. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
 
 🛕 About the Temple
 [2-3 sentences: history and significance]
@@ -281,7 +289,7 @@ Reply in EXACTLY this format. Use real historical/cultural knowledge. No "Namast
 `You are Sarathi, a travel accommodation expert.
 User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
 
-Reply in EXACTLY this format. No "Namaste", no preamble, no "How many travellers", no mention of Google Maps.
+Reply in EXACTLY this format. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
 
 🏨 Best Areas to Stay
 [1-2 sentences on the best neighbourhoods]
@@ -301,7 +309,7 @@ Reply in EXACTLY this format. No "Namaste", no preamble, no "How many travellers
 `You are Sarathi, an expert local trip planner.
 User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
 
-Reply in EXACTLY this format. No "Namaste", no preamble, no "How many travellers", no mention of Google Maps.
+Reply in EXACTLY this format. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
 
 🌅 Morning
 [1-2 sentences: what to see/do]
@@ -326,14 +334,14 @@ Reply in EXACTLY this format. No "Namaste", no preamble, no "How many travellers
 `You are Sarathi, a knowledgeable Indian travel and culture guide.
 Answer this question clearly in 3-6 short sentences: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
 
-No "Namaste", no preamble, no "How many travellers", no mention of Google Maps. Give only the final answer with relevant travel tips if applicable.`,
+Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Give only the final answer with relevant travel tips if applicable.`,
 };
 
 const askTravelGuide = async (topic, raw, city) => {
   const buildPrompt = GUIDE_PROMPTS[topic] || GUIDE_PROMPTS.knowledge;
   try {
     const text = await askGroq(buildPrompt(raw, city), { maxTokens: 700, temperature: 0.55 });
-    return stripControlTokens(text) || "I couldn't put that together right now — please try rephrasing.";
+    return sanitizeGuideReply(stripControlTokens(text)) || "I couldn't put that together right now — please try rephrasing.";
   } catch (e) {
     console.log(`[askTravelGuide] topic=${topic} failed:`, e.message);
     return "I couldn't put that together right now — please try rephrasing.";
@@ -342,7 +350,6 @@ const askTravelGuide = async (topic, raw, city) => {
 
 /* ═══════════════════════════════════════════════════════════════
    fetchWeather — Open-Meteo (free, no API key required)
-   NEVER generates weather data via AI.
 ═══════════════════════════════════════════════════════════════ */
 const WMO = {
   0:"Clear sky ☀️",1:"Mainly clear 🌤",2:"Partly cloudy ⛅",3:"Overcast ☁️",
@@ -440,20 +447,32 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
 };
 
 /* ═══════════════════════════════════════════════════════════════
+   Shared intent → place-type maps (single source of truth, used
+   by both chat.js for the Google Places keyword and ContextService
+   for tagging session.activePlaceType).
+═══════════════════════════════════════════════════════════════ */
+const NEARBY_KEYWORD_MAP = {
+  nearby_temple:   "hindu temple",
+  nearby_food:     "restaurant",
+  nearby_hotel:    "hotel",
+  nearby_hospital: "hospital",
+  nearby_bank:     "bank",
+  nearby_fuel:     "gas station",
+  nearby_general:  "tourist attraction",
+};
+
+const PLACE_TYPE_FOR_INTENT = {
+  nearby_temple: "temple",   guide_temple: "temple",
+  nearby_food:   "restaurant", guide_food:   "restaurant",
+  nearby_hotel:  "hotel",    guide_hotel:  "hotel",
+  nearby_hospital: "hospital",
+  nearby_bank:   "bank",
+  nearby_fuel:   "fuel",
+  nearby_general: "attraction", guide_city: "attraction",
+};
+
+/* ═══════════════════════════════════════════════════════════════
    detectIntent — THE SINGLE DECISION POINT
-
-   Architecture:
-   1. trip     — explicit planning phrases
-   2. weather  — any weather/forecast/temperature mention
-   3. nearby_* — ONLY when explicit proximity signal present
-                 (near me / nearby / within Xkm)
-   4. guide_*  — content questions about food, temples, hotels,
-                 cities, general knowledge
-   5. general  — multi-turn conversational fallback
-
-   The PROXIMITY_RE gate is the key architectural decision:
-   "best restaurants in Hyderabad" → guide_food (AI text)
-   "restaurants near me"           → nearby_food (Google Places cards)
 ═══════════════════════════════════════════════════════════════ */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
@@ -461,20 +480,17 @@ const detectIntent = (msg = "") => {
   const m = normalizeQuery(msg);
   console.log(`[detectIntent] normalized: "${m}"`);
 
-  // 1. Trip planning
   if (
     /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway|journey)\b/.test(m) ||
     /\b(trip|tour|holiday|vacation|getaway|journey)\b.*\b(to|from)\b/.test(m) ||
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // 2. Weather — must be before general to prevent hallucination
   if (/\b(weather|temperature|forecast|rain|humidity|climate today|how hot|how cold|uv index|sunrise|sunset)\b/.test(m))
     return "weather";
 
   const hasProximity = PROXIMITY_RE.test(m);
 
-  // 3. TYPE 2: Real-time nearby search — proximity signal REQUIRED
   if (hasProximity) {
     if (/\btemple\b/.test(m))                                          return "nearby_temple";
     if (/\b(restaurant|dhaba|cafe|dining|eat|food)\b/.test(m))        return "nearby_food";
@@ -485,30 +501,23 @@ const detectIntent = (msg = "") => {
     return "nearby_general";
   }
 
-  // 4. TYPE 1: AI Travel Guide — content questions (NO proximity)
-  //    Food: any question about what to eat, best dishes, food recommendations
   if (/\b(local food|local dish|famous food|famous dish|what to eat|must eat|dish in|dish of|cuisine|street food|best food|food to taste|must.?try food|food in |food of |best to eat|food recommendation)\b/.test(m))
     return "guide_food";
   if (/\b(restaurant|where to eat|places to eat|best restaurants|dining)\b/.test(m))
     return "guide_food";
   if (/\bfood\b/.test(m)) return "guide_food";
 
-  //    Temple: content about a specific temple
   if (/\btemple\b/.test(m)) return "guide_temple";
 
-  //    Hotel: recommendations for where to stay
   if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay)\b/.test(m))
     return "guide_hotel";
 
-  //    City / places guide
   if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark|one day|itinerary)\b/.test(m))
     return "guide_city";
 
-  //    General knowledge
   if (/\b(who is|history of|significance|culture|festival|deity|architecture|best time|when to visit|how to reach|how to get to)\b/.test(m))
     return "guide_knowledge";
 
-  // 5. Multi-turn conversational fallback
   return "general";
 };
 
@@ -646,11 +655,12 @@ const ensureRoute = async (trip) => {
 };
 
 module.exports = {
-  ACTIVE, QUESTION, clean, normalizeQuery,
+  ACTIVE, QUESTION, clean, normalizeQuery, sanitizeGuideReply,
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI, askTravelGuide, fetchWeather,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
   extractRadius, extractPlaceKeyword,
+  PROXIMITY_RE, NEARBY_KEYWORD_MAP, PLACE_TYPE_FOR_INTENT,
   isTripActive, nextStep, ensureRoute,
   T, Train, Planner,
 };
