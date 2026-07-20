@@ -222,129 +222,120 @@ const getFoodFromAI = async (city) => {
 
 /* ═══════════════════════════════════════════════════════════════
    askTravelGuide — TYPE 1: AI Travel Guide responses
+
+   ARCHITECTURE CHANGE: the model now returns STRUCTURED JSON, not
+   markdown text with emoji headings. Layout decisions (cards vs.
+   list vs. key-facts vs. paragraph) are made HERE, on the backend,
+   and shipped as data. MessageFormatter.jsx only renders whatever
+   shape it's given — it no longer guesses "is this a food list"
+   from sentence structure.
+
+   Every "guide" response follows one shared schema:
+     {
+       title: string,
+       sections: [
+         { icon, heading, style: "cards"|"list"|"keyfacts"|"paragraph",
+           items?: [{title, desc}],   // style: cards | list
+           keyfacts?: [{label,value}], // style: keyfacts
+           text?: string }             // style: paragraph
+       ],
+       recommendation: string
+     }
+
+   "knowledge" questions (who/what/history/best-time) are NOT run
+   through this — they get a plain ChatGPT-style paragraph answer,
+   per the product spec ("Who is APJ Abdul Kalam?" → plain prose).
 ═══════════════════════════════════════════════════════════════ */
-const GUIDE_PROMPTS = {
 
-  food: (raw, city) =>
-`You are Sarathi, an expert Indian food and travel guide.
-User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
+const GUIDE_SECTION_SPEC = {
+  food: `Sections, in this exact order:
+1. icon "🍽" heading "Must-Try Foods" style "cards" — 4 items, each {"title": dish name, "desc": one sentence on what it is and why it's loved}.
+2. icon "🍴" heading "Best Places to Eat" style "list" — 3 items, each {"title": restaurant or area name, "desc": one-line note}.
+3. icon "🗓" heading "One Day Food Plan" style "keyfacts" — keyfacts: [{"label":"Breakfast","value":dish},{"label":"Lunch","value":dish},{"label":"Evening","value":dish},{"label":"Dinner","value":dish}].`,
 
-Reply in EXACTLY this format. Use real, well-known dishes. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
+  temple: `Sections, in this exact order:
+1. icon "🛕" heading "About the Temple" style "paragraph" — text: 2-3 sentences on history and significance.
+2. icon "📿" heading "Deity & Legend" style "paragraph" — text: 2 sentences on the presiding deity and any key legend.
+3. icon "🏛" heading "Architecture" style "paragraph" — text: 1-2 sentences.
+4. icon "🎉" heading "Major Festivals" style "list" — 2-3 items, each {"title": festival name, "desc": one-line description}.
+5. icon "🕒" heading "Darshan Timings" style "paragraph" — text: general timing guidance.
+6. icon "👔" heading "Dress Code" style "paragraph" — text: 1 sentence.`,
 
-🍽 Must-Try Foods
+  hotel: `Sections, in this exact order:
+1. icon "🏨" heading "Best Areas to Stay" style "paragraph" — text: 1-2 sentences on the best neighbourhoods.
+2. icon "💰" heading "Budget Options" style "paragraph" — text: 1-2 sentences with examples.
+3. icon "🛏" heading "Standard Options" style "paragraph" — text: 1-2 sentences with examples.
+4. icon "✨" heading "Luxury Options" style "paragraph" — text: 1-2 sentences with examples.`,
 
-1. [Dish Name]
-[One sentence: what it is and why it's loved]
+  city: `Sections, in this exact order:
+1. icon "🌅" heading "Morning" style "paragraph" — text: 1-2 sentences.
+2. icon "☀️" heading "Afternoon" style "paragraph" — text: 1-2 sentences.
+3. icon "🌇" heading "Evening" style "paragraph" — text: 1-2 sentences.
+4. icon "🍽" heading "Local Food to Try" style "paragraph" — text: 1 sentence naming 2-3 dishes.
+5. icon "🧳" heading "Travel Tips" style "list" — 3 items, each {"title": short tip, "desc": ""}.`,
+};
 
-2. [Dish Name]
-[One sentence]
+const buildGuideJsonPrompt = (topic, raw, city) => `You are Sarathi, an expert Indian travel guide. Respond with ONLY valid JSON — no prose, no markdown code fences, no text outside the JSON object. Match this exact schema:
 
-3. [Dish Name]
-[One sentence]
+{"title": string, "sections": [{"icon": string, "heading": string, "style": "cards"|"list"|"keyfacts"|"paragraph", "items": [{"title": string, "desc": string}] (only for cards/list styles), "keyfacts": [{"label": string, "value": string}] (only for keyfacts style), "text": string (only for paragraph style)}], "recommendation": string}
 
-4. [Dish Name]
-[One sentence]
+${GUIDE_SECTION_SPEC[topic]}
 
-🍴 Best Places to Eat
-- [Name or area] — [one-line note]
-- [Name or area] — [one-line note]
-- [Name or area] — [one-line note]
+The "recommendation" field is 1-2 warm, personal sentences on what to prioritize and why.
 
-🗓 One Day Food Plan
-Breakfast: [dish]
-Lunch: [dish]
-Evening: [dish]
-Dinner: [dish]
+Use real, accurate, well-known information. Never include anything about number of travellers, group size, or trip planning anywhere in the JSON — that is handled by a separate part of the app. Never mention Google Maps.
 
-💡 Sarathi Recommendation: [1-2 warm, personal sentences on what to prioritize and why]`,
+User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}`;
 
-  temple: (raw, city) =>
-`You are Sarathi, a knowledgeable Indian temple and culture guide.
-User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
-
-Reply in EXACTLY this format. Use real historical/cultural knowledge. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
-
-🛕 About the Temple
-[2-3 sentences: history and significance]
-
-📿 Deity & Legend
-[2 sentences on the presiding deity and any key legend]
-
-🏛 Architecture
-[1-2 sentences]
-
-🎉 Major Festivals
-- [Festival name]: [one-line description]
-- [Festival name]: [one-line description]
-
-🕒 Darshan Timings
-[General guidance on timings]
-
-👔 Dress Code
-[1 sentence]
-
-💡 Sarathi Recommendation: [1-2 warm, personal sentences]`,
-
-  hotel: (raw, city) =>
-`You are Sarathi, a travel accommodation expert.
-User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
-
-Reply in EXACTLY this format. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
-
-🏨 Best Areas to Stay
-[1-2 sentences on the best neighbourhoods]
-
-💰 Budget Options
-[1-2 sentences with examples]
-
-🛏 Standard Options
-[1-2 sentences with examples]
-
-✨ Luxury Options
-[1-2 sentences with examples]
-
-💡 Sarathi Recommendation: [1-2 warm, personal sentences]`,
-
-  city: (raw, city) =>
-`You are Sarathi, an expert local trip planner.
-User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
-
-Reply in EXACTLY this format. Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Stop after the Sarathi Recommendation line — do not add anything else.
-
-🌅 Morning
-[1-2 sentences: what to see/do]
-
-☀️ Afternoon
-[1-2 sentences]
-
-🌇 Evening
-[1-2 sentences]
-
-🍽 Local Food to Try
-[1 sentence naming 2-3 dishes]
-
-🧳 Travel Tips
-- [tip]
-- [tip]
-- [tip]
-
-💡 Sarathi Recommendation: [1-2 warm, personal sentences]`,
-
-  knowledge: (raw, city) =>
+const KNOWLEDGE_PROMPT = (raw, city) =>
 `You are Sarathi, a knowledgeable Indian travel and culture guide.
 Answer this question clearly in 3-6 short sentences: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
 
-Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Give only the final answer with relevant travel tips if applicable.`,
+Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Give only the final answer with relevant travel tips if applicable.`;
+
+// Recursively run sanitizeGuideReply over every string field in a
+// parsed guide object, so a leaked "how many travellers" line can't
+// hide inside items[].desc or keyfacts[].value either.
+const sanitizeGuideObject = (obj) => {
+  if (typeof obj === "string") return sanitizeGuideReply(obj);
+  if (Array.isArray(obj)) return obj.map(sanitizeGuideObject);
+  if (obj && typeof obj === "object") {
+    const out = {};
+    for (const k of Object.keys(obj)) out[k] = sanitizeGuideObject(obj[k]);
+    return out;
+  }
+  return obj;
 };
 
+const isValidGuideShape = (p) =>
+  p && typeof p === "object" && typeof p.title === "string" && Array.isArray(p.sections) && p.sections.length > 0;
+
+const FALLBACK_GUIDE_TEXT = "I couldn't put that together right now — please try rephrasing.";
+
 const askTravelGuide = async (topic, raw, city) => {
-  const buildPrompt = GUIDE_PROMPTS[topic] || GUIDE_PROMPTS.knowledge;
+  if (topic === "knowledge" || !GUIDE_SECTION_SPEC[topic]) {
+    try {
+      const text = await askGroq(KNOWLEDGE_PROMPT(raw, city), { maxTokens: 500, temperature: 0.5 });
+      return { type: "text", reply: sanitizeGuideReply(stripControlTokens(text)) || FALLBACK_GUIDE_TEXT };
+    } catch (e) {
+      console.log(`[askTravelGuide] knowledge failed:`, e.message);
+      return { type: "text", reply: FALLBACK_GUIDE_TEXT };
+    }
+  }
+
   try {
-    const text = await askGroq(buildPrompt(raw, city), { maxTokens: 700, temperature: 0.55 });
-    return sanitizeGuideReply(stripControlTokens(text)) || "I couldn't put that together right now — please try rephrasing.";
+    const raw_ = await askGroq(buildGuideJsonPrompt(topic, raw, city), {
+      maxTokens: 900,
+      temperature: 0.5,
+      jsonMode: true,
+    });
+    const parsed = extractJSONBlock(raw_);
+    if (!isValidGuideShape(parsed)) throw new Error("Malformed guide JSON");
+    const clean = sanitizeGuideObject(parsed);
+    return { type: "guide", topic, title: clean.title, sections: clean.sections, recommendation: clean.recommendation || "" };
   } catch (e) {
     console.log(`[askTravelGuide] topic=${topic} failed:`, e.message);
-    return "I couldn't put that together right now — please try rephrasing.";
+    return { type: "text", reply: FALLBACK_GUIDE_TEXT };
   }
 };
 

@@ -6,7 +6,44 @@ const ChatSession = require("../models/ChatSession");
 const C  = require("../services/ConversationService");
 const Ctx = require("../services/ContextService");
 
-/* ── Session helpers ── */
+const GPS_EXPLICIT_RE = /\b(near me|close to me|around me)\b/i;
+
+/**
+ * Resolve the anchor for a nearby search, per the priority order:
+ *   1. Explicit place/city named in THIS message
+ *   2. Active topic entity (a place we already have coordinates for)
+ *   3. Conversation city (what the discussion has been about)
+ *   4. Trip context (destination of an in-progress/just-finished plan)
+ *   5. GPS location — last resort only
+ *
+ * Exception: if the message says "near me" / "close to me" /
+ * "around me" — an unambiguous reference to the user's own body —
+ * that ALWAYS wins and searches near GPS, regardless of what the
+ * conversation has been about. This is deliberate: "restaurants
+ * near me" while discussing Hyderabad food must never search
+ * Hyderabad if the user is actually in Kerala.
+ */
+const resolveNearbyAnchor = (s, raw, gpsLat, gpsLng, gpsCity) => {
+  const normalized = C.normalizeQuery(raw);
+  const explicitCity = C.extractPlaceFromQuery(raw);
+  if (explicitCity) return { city: explicitCity, lat: null, lng: null, source: "explicit-query" };
+
+  if (GPS_EXPLICIT_RE.test(normalized)) {
+    return { city: gpsCity || s.currentLocationCity || null, lat: gpsLat, lng: gpsLng, source: "gps-explicit" };
+  }
+
+  if (s.activePlaceId) {
+    const known = (s.lastNearbyResults || []).find((r) => r.placeId === s.activePlaceId);
+    if (known?.lat != null && known?.lng != null) {
+      return { city: null, lat: known.lat, lng: known.lng, source: "active-place" };
+    }
+  }
+
+  if (s.conversationCity) return { city: s.conversationCity, lat: null, lng: null, source: "conversation-city" };
+  if (s.trip?.destination) return { city: s.trip.destination, lat: null, lng: null, source: "trip-context" };
+
+  return { city: gpsCity || s.currentLocationCity || null, lat: gpsLat, lng: gpsLng, source: "gps-fallback" };
+};
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
   if (!s) s = await ChatSession.create({ userId, step: null, trip: {}, history: [] });
@@ -116,12 +153,36 @@ router.post("/", async (req, res) => {
     }
 
     /* ── Flow & intent detection ── */
-    const inFlow = C.isTripActive(s);
+    let inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
     console.log("[INTENT]", raw, "=>", intent);
     console.log("[FLOW]", { step: s.step, inFlow, dest: s.trip?.destination });
     console.log("[ENTITY]", { activePlace: s.activePlace, activePlaceType: s.activePlaceType });
+
+    /* ── BUG (Problem 2) FIX — trip flow must EXIT, not just reprompt.
+       Previously, once s.trip had any real data and s.step sat on an
+       ACTIVE step, isTripActive() stayed true forever: every future
+       message — "temple near me", "who is APJ Abdul Kalam", "best
+       food in Hyderabad" — fell into the IN-FLOW dual-mode branch,
+       which answers the question and then unconditionally appends
+       C.QUESTION[s.step] ("How many travellers will be joining
+       you?"). That's the exact leak reported.
+
+       A message that clearly claims a DIFFERENT, self-contained flow
+       (nearby search / AI guide / weather) pauses the trip planner
+       instead of just answering-and-reprompting. Ambiguous short
+       questions (intent === "general") still get the old dual-mode
+       treatment, since those plausibly ARE about the trip. ── */
+    const FLOW_EXIT_INTENTS = new Set(["weather"]);
+    const isStrongAlternateIntent =
+      FLOW_EXIT_INTENTS.has(intent) || intent.startsWith("nearby_") || intent.startsWith("guide_") || intent === "trip";
+
+    if (inFlow && isStrongAlternateIntent) {
+      console.log(`[FLOW] strong alternate intent "${intent}" while in-flow → pausing trip planner`);
+      inFlow = false;
+      s.step = null; // pause, not discard — s.trip is left intact
+    }
 
     // Clear stale planning step
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
@@ -207,25 +268,20 @@ router.post("/", async (req, res) => {
          is "Hyderabad" must still search near the user.
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("nearby_")) {
-        const explicitPlaceCity = C.extractPlaceFromQuery(raw);
-        const placeCity    = explicitPlaceCity || city || s.currentLocationCity;
-        const radiusMetres = C.extractRadius(raw);
-        const keyword      = C.NEARBY_KEYWORD_MAP[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
+        const anchor        = resolveNearbyAnchor(s, raw, lat, lng, city);
+        const radiusMetres  = C.extractRadius(raw);
+        const keyword       = C.NEARBY_KEYWORD_MAP[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
         const placeType     = C.PLACE_TYPE_FOR_INTENT[intent] || null;
 
-        console.log(`[CHAT] nearby → intent=${intent} keyword="${keyword}" radius=${radiusMetres}m city="${placeCity}"`);
+        console.log(`[CHAT] nearby → intent=${intent} keyword="${keyword}" radius=${radiusMetres}m anchor=${JSON.stringify(anchor)}`);
 
-        const places = await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres);
+        const places = await C.fetchNearby(anchor.lat, anchor.lng, keyword, anchor.city, radiusMetres);
 
         // Store results + set the active entity (Bug 4 fix) so the
         // very next turn can chain "temple timings" / "temple story"
         // straight off this search without re-asking Google or the AI.
         Ctx.updateNearbySearchContext(s, { intent, results: places, radius: radiusMetres, placeType });
-
-        // An explicit place mention in a nearby query is a one-off
-        // lookup, not a lasting conversation pivot — don't let it
-        // overwrite conversationCity.
-        if (explicitPlaceCity) s.lastIntent = intent;
+        s.lastIntent = intent;
 
         await saveSession(s);
         return res.json({ type: "places", data: places });
@@ -249,7 +305,13 @@ router.post("/", async (req, res) => {
 
         console.log(`[CHAT] guide → topic=${topic} city="${placeCity}"`);
 
-        const reply = await C.askTravelGuide(topic, raw, placeCity);
+        const guideResult = await C.askTravelGuide(topic, raw, placeCity);
+        // A structured "guide" card and a plain-text "knowledge" answer
+        // are stored in history using their most user-visible text so
+        // later context resolution / topic extraction still works.
+        const historyText = guideResult.type === "guide"
+          ? [guideResult.title, ...guideResult.sections.map((s) => s.text || s.heading)].join(". ")
+          : guideResult.reply;
 
         // A guide answer is a fresh discovery topic, not tied to any
         // one specific place from a nearby search — clear the entity
@@ -263,13 +325,21 @@ router.post("/", async (req, res) => {
           travelTopic: topic,
         });
 
-        await Ctx.updateSessionContext(s, raw, reply, {
+        await Ctx.updateSessionContext(s, raw, historyText, {
           intent:       intent,
           city:         placeCity || null,
           extractTopic: true,
         });
         await saveSession(s);
-        return res.json({ reply });
+
+        if (guideResult.type === "text") return res.json({ reply: guideResult.reply });
+        return res.json({
+          type:           "guide",
+          topic:          guideResult.topic,
+          title:          guideResult.title,
+          sections:       guideResult.sections,
+          recommendation: guideResult.recommendation,
+        });
       }
 
       /* ─────────────────────────────────────────────────────────────

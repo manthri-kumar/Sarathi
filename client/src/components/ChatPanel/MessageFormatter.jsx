@@ -1,13 +1,33 @@
 import React from "react";
 
 /* ════════════════════════════════════════════════════════
-   MessageFormatter — premium scannable rendering of bot text.
-   XSS-safe (real React nodes). Detects headings, key-fact rows,
-   info-cards, bullets, food lists, tips/warnings, dividers,
-   tags, badges, **bold**, and breaks long paragraphs into
-   short sentences so nothing renders as a wall of text.
+   MessageFormatter — PURE RENDERER.
+
+   Architecture change: this component no longer decides WHAT a
+   message is about. It has two rendering modes:
+
+     1. Structured mode — `sections` (+ `title` / `recommendation`)
+        props, produced by the backend's AI Travel Guide JSON
+        contract (see ConversationService.askTravelGuide). The
+        backend already decided "food → cards", "temple → mostly
+        paragraphs", etc. This component just lays out whatever
+        shape it's given.
+
+     2. Legacy text mode — a single `text` string (used for plain
+        ChatGPT-style answers: general AI, entity follow-ups,
+        "knowledge" guide questions). Parsing here is intentionally
+        generic markdown only — bold, bullet lines, label/value
+        lines, blank-line paragraph breaks — never content-specific
+        detection like "this looks like a food list".
+
+   No component in this file inspects message content to guess a
+   domain (food/temple/hotel/etc). That decision now lives entirely
+   in the backend response contract.
 ════════════════════════════════════════════════════════ */
 
+// Generic value highlighting (price/rating/timing/etc). This is
+// pattern-matching on already-present tokens for visual emphasis —
+// it doesn't classify what the message is ABOUT, so it stays here.
 const VALUE_PATTERNS = [
   { type: "price", re: /₹\s?\d[\d,]*/g },
   { type: "distance", re: /\b\d[\d,]*(?:\.\d+)?\s?(?:km|kilometers?|kms)\b/gi },
@@ -53,7 +73,7 @@ const highlightValues = (str, keyPrefix) => {
 };
 
 const renderInline = (text, keyPrefix) => {
-  const boldSplit = text.split(/(\*\*[^*]+\*\*)/g);
+  const boldSplit = String(text).split(/(\*\*[^*]+\*\*)/g);
   const nodes = [];
   boldSplit.forEach((chunk, ci) => {
     if (!chunk) return;
@@ -67,42 +87,87 @@ const renderInline = (text, keyPrefix) => {
   return nodes;
 };
 
-const BULLET_RE = /^\s*(?:[-*•✅🌧🌤⭐🔥]|\d+\.)\s+(.*)$/;
+/* ════════════════════════════════════════════════════════
+   STRUCTURED MODE — renders the backend's { title, sections,
+   recommendation } guide contract. Each section carries its own
+   `style`, so this is a straight switch, not content inference.
+════════════════════════════════════════════════════════ */
+
+const GuideSection = ({ section, si }) => {
+  const { icon, heading, style, items, keyfacts, text } = section;
+
+  return (
+    <div className="message-section" key={`sec-${si}`}>
+      {heading && (
+        <h4 className="message-heading">
+          {icon && <span className="message-heading-icon">{icon}</span>} {heading}
+        </h4>
+      )}
+
+      {style === "cards" && Array.isArray(items) && (
+        <div className="message-card-grid">
+          {items.map((it, ii) => (
+            <div className="message-item-card" key={`card-${si}-${ii}`}>
+              <div className="message-item-title">{renderInline(it.title, `card-${si}-${ii}-t`)}</div>
+              {it.desc && <div className="message-item-desc">{renderInline(it.desc, `card-${si}-${ii}-d`)}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {style === "list" && Array.isArray(items) && (
+        <ul className="message-bullets">
+          {items.map((it, ii) => (
+            <li className="message-bullet" key={`li-${si}-${ii}`}>
+              {it.desc
+                ? <>{renderInline(it.title, `li-${si}-${ii}-t`)} — {renderInline(it.desc, `li-${si}-${ii}-d`)}</>
+                : renderInline(it.title, `li-${si}-${ii}-t`)}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {style === "keyfacts" && Array.isArray(keyfacts) && (
+        <div className="message-infocard">
+          {keyfacts.map((kf, ki) => (
+            <p className="message-line" key={`kf-${si}-${ki}`}>
+              <span className="message-label">{kf.label}:</span> {renderInline(kf.value, `kf-${si}-${ki}`)}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {style === "paragraph" && text && (
+        <p className="message-line">{renderInline(text, `para-${si}`)}</p>
+      )}
+    </div>
+  );
+};
+
+const GuideFormatter = ({ title, sections = [], recommendation }) => (
+  <div className="message-formatted message-guide">
+    {title && <p className="message-line message-summary">{renderInline(title, "title")}</p>}
+    {sections.map((section, si) => <GuideSection section={section} si={si} key={`gs-${si}`} />)}
+    {recommendation && (
+      <div className="message-tip">
+        <span>💡</span><span>{renderInline(recommendation, "reco")}</span>
+      </div>
+    )}
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
+   LEGACY TEXT MODE — generic markdown only. No content-specific
+   detection (no food-list extraction, no temple/travel heuristics).
+════════════════════════════════════════════════════════ */
+
+const BULLET_RE = /^\s*[-*•]\s+(.*)$/;
 const LABEL_RE = /^([A-Z][A-Za-z /&]{1,28}):\s+(.*)$/;
 const EMOJI_LEAD_RE = /^([\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u2728\u2b50]\uFE0F?)\s+(.+)$/u;
 const HEADING_COLON_RE = /^([A-Z][A-Za-z0-9 &'/-]{2,40}):$/;
 const DIVIDER_RE = /^[-_]{3,}$/;
-const HASH_TAGS_RE = /^#\w+(?:\s+#\w+)*$/;
-const BRACKET_TAGS_RE = /^(\[[^\]]+\])(?:\s*\[[^\]]+\])*$/;
-const TIP_RE = /^(💡\s*|tip:\s*|pro tip:\s*)/i;
-const WARNING_RE = /^(⚠️\s*|warning:\s*|caution:\s*)/i;
-const FOOD_TRIGGER_RE = /\b(recommend(?:ing)?|try|must-try|popular|famous|local specialit(?:y|ies)|best)\b/i;
-const FOOD_CUT_RE = /^.*?\b(recommend(?:ing)?|try|must-try|popular|famous|local specialit(?:y|ies)|best)\b\s*(trying)?\s*/i;
 
-const extractFoodList = (sentence) => {
-  if (!FOOD_TRIGGER_RE.test(sentence)) return null;
-  const commaCount = (sentence.match(/,/g) || []).length;
-  const hasAnd = /\band\b/i.test(sentence);
-  if (!(commaCount >= 2 || (commaCount >= 1 && hasAnd))) return null;
-
-  const cut = sentence.replace(FOOD_CUT_RE, "");
-  const rawItems = cut.split(/,\s*(?:and\s+)?|\s+and\s+/);
-  const items = rawItems
-    .map((s) => {
-      let out = s.trim();
-      while (/^(the|a|an|especially|also)\s+/i.test(out)) {
-        out = out.replace(/^(the|a|an|especially|also)\s+/i, "");
-      }
-      return out.replace(/[.!]+$/, "").trim();
-    })
-    .filter((s) => s.length > 2 && s.length < 50 && !/^(is|was|are|which|that|it)\b/i.test(s));
-
-  return items.length >= 2 ? items.slice(0, 6) : null;
-};
-
-const SENTENCE_SPLIT_RE = /[^.!?]+[.!?]*(\s+|$)/g;
-
-const MessageFormatter = ({ text = "" }) => {
+const TextFormatter = ({ text = "" }) => {
   if (!text) return null;
 
   const lines = text.split("\n");
@@ -146,43 +211,6 @@ const MessageFormatter = ({ text = "" }) => {
     labelBuffer = [];
   };
 
-  const pushParagraph = (rawText, li) => {
-    const words = rawText.trim().split(/\s+/).filter(Boolean);
-
-    if (words.length <= 26) {
-      const cls = !usedSummary ? "message-line message-summary" : "message-line";
-      usedSummary = true;
-      blocks.push(<p className={cls} key={`p-${li}`}>{renderInline(rawText, `p-${li}`)}</p>);
-      return;
-    }
-
-    const sentences = (rawText.match(SENTENCE_SPLIT_RE) || [rawText]).map((s) => s.trim()).filter(Boolean);
-
-    sentences.forEach((sentence, si) => {
-      const foodItems = extractFoodList(sentence);
-      if (foodItems) {
-        blocks.push(
-          <h4 className="message-heading" key={`fh-${li}-${si}`}>
-            <span className="message-heading-icon">🍽</span> Must Try
-          </h4>
-        );
-        blocks.push(
-          <ul className="message-bullets food-list" key={`fl-${li}-${si}`}>
-            {foodItems.map((it, ii) => (
-              <li className="message-bullet food-item" key={`fli-${li}-${si}-${ii}`}>
-                {renderInline(it.charAt(0).toUpperCase() + it.slice(1), `fli-${li}-${si}-${ii}`)}
-              </li>
-            ))}
-          </ul>
-        );
-        return;
-      }
-      const cls = !usedSummary ? "message-line message-summary" : "message-line";
-      usedSummary = true;
-      blocks.push(<p className={cls} key={`p-${li}-${si}`}>{renderInline(sentence, `p-${li}-${si}`)}</p>);
-    });
-  };
-
   lines.forEach((line, li) => {
     const bullet = line.match(BULLET_RE);
     if (bullet) { flushLabels(li); bulletBuffer.push(bullet[1]); return; }
@@ -194,27 +222,6 @@ const MessageFormatter = ({ text = "" }) => {
     if (DIVIDER_RE.test(trimmed)) {
       flushBullets(li); flushLabels(li);
       blocks.push(<hr className="message-divider" key={`hr-${li}`} />);
-      return;
-    }
-
-    if (HASH_TAGS_RE.test(trimmed)) {
-      flushBullets(li); flushLabels(li);
-      const tags = trimmed.split(/\s+/).map((t) => t.replace(/^#/, ""));
-      blocks.push(
-        <div className="message-tags" key={`tags-${li}`}>
-          {tags.map((t, ti) => <span className="message-tag" key={`tag-${li}-${ti}`}>{t}</span>)}
-        </div>
-      );
-      return;
-    }
-    if (BRACKET_TAGS_RE.test(trimmed)) {
-      flushBullets(li); flushLabels(li);
-      const tags = [...trimmed.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
-      blocks.push(
-        <div className="message-tags" key={`tags-${li}`}>
-          {tags.map((t, ti) => <span className="message-tag" key={`tag-${li}-${ti}`}>{t}</span>)}
-        </div>
-      );
       return;
     }
 
@@ -236,38 +243,31 @@ const MessageFormatter = ({ text = "" }) => {
       return;
     }
 
-    if (TIP_RE.test(trimmed)) {
-      flushBullets(li); flushLabels(li);
-      const content = trimmed.replace(TIP_RE, "");
-      blocks.push(
-        <div className="message-tip" key={`tip-${li}`}>
-          <span>💡</span><span>{renderInline(content, `tip-${li}`)}</span>
-        </div>
-      );
-      return;
-    }
-    if (WARNING_RE.test(trimmed)) {
-      flushBullets(li); flushLabels(li);
-      const content = trimmed.replace(WARNING_RE, "");
-      blocks.push(
-        <div className="message-warning" key={`warn-${li}`}>
-          <span>⚠️</span><span>{renderInline(content, `warn-${li}`)}</span>
-        </div>
-      );
-      return;
-    }
-
     const label = line.match(LABEL_RE);
     if (label) { flushBullets(li); labelBuffer.push([label[1], label[2], li]); return; }
 
     flushBullets(li); flushLabels(li);
-    pushParagraph(line, li);
+    const cls = !usedSummary ? "message-line message-summary" : "message-line";
+    usedSummary = true;
+    blocks.push(<p className={cls} key={`p-${li}`}>{renderInline(line, `p-${li}`)}</p>);
   });
 
   flushBullets("end");
   flushLabels("end");
 
   return <div className="message-formatted">{blocks}</div>;
+};
+
+/* ════════════════════════════════════════════════════════
+   ENTRY POINT — picks a mode based on which props are present.
+   `sections` (even an empty-but-defined array) means structured
+   mode; otherwise falls back to legacy text mode.
+════════════════════════════════════════════════════════ */
+const MessageFormatter = ({ text, sections, title, recommendation }) => {
+  if (Array.isArray(sections)) {
+    return <GuideFormatter title={title} sections={sections} recommendation={recommendation} />;
+  }
+  return <TextFormatter text={text} />;
 };
 
 export default MessageFormatter;
