@@ -1,551 +1,803 @@
-import React, { useState, useRef, useEffect } from "react";
-import "./Itinerary.css";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
-import { useNavigate } from "react-router-dom";
 import { createTripConfirmationNotification, createDraftSavedNotification } from "../services/notificationService";
+import "./Itinerary.css";
 
-const Itinerary = () => {
-  const [city, setCity] = useState("");
-  const [places, setPlaces] = useState([]);
-  const [plan, setPlan] = useState({});
-  const [expandedPlace, setExpandedPlace] = useState(null);
-  const [finalPlan, setFinalPlan] = useState([]);
-  const [showFinal, setShowFinal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const API_BASE = process.env.REACT_APP_API_URL || "https://sarathi-backend-7u0y.onrender.com";
+const GOOGLE_KEY = process.env.REACT_APP_GOOGLE_MAPS_KEY || "";
 
-  const touchStartX = useRef(0);
-  const navigate = useNavigate();
+/* ── helpers ── */
+const formatDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "";
+
+const CATEGORIES = [
+  { id: "beach",    label: "Beach",    icon: "🏖" },
+  { id: "mountains",label: "Mountains",icon: "⛰" },
+  { id: "heritage", label: "Heritage", icon: "🏛" },
+  { id: "adventure",label: "Adventure",icon: "🧗" },
+  { id: "family",   label: "Family",   icon: "👨‍👩‍👧" },
+  { id: "nature",   label: "Nature",   icon: "🌿" },
+  { id: "spiritual",label: "Spiritual",icon: "🛕" },
+];
+
+/* ════════════════════════════════════════════════════════════════
+   PLACE DETAILS MODAL
+════════════════════════════════════════════════════════════════ */
+function PlaceDetailsModal({ place, onClose, onAdd, alreadyAdded }) {
+  const [detail, setDetail]   = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [note, setNote]       = useState("");
+  const [photoIdx, setPhotoIdx] = useState(0);
 
   useEffect(() => {
-    const savedFinal = JSON.parse(localStorage.getItem("finalPlan")) || [];
-    if (savedFinal.length > 0) {
-      setFinalPlan(savedFinal);
-      setShowFinal(true);
-    }
-  }, []);
-
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e) => {
-    const diff = e.changedTouches[0].clientX - touchStartX.current;
-    if (diff > 80) setSidebarOpen(true);
-    if (diff < -80) setSidebarOpen(false);
-  };
-
-  const handleSearch = async () => {
-    if (!city.trim()) return;
+    let cancelled = false;
     setLoading(true);
-
-    try {
-      const res = await fetch(
-        `https://sarathi-backend-7u0y.onrender.com/api/places/search?city=${city}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setPlaces(data);
-      } else {
-        const mockData = [
-          {
-            id: "1",
-            name: "Hajan Valley",
-            address: "Pahalgam, Hajan, 192126",
-            image:
-              "https://images.unsplash.com/photo-1566133065134-d10db378e995?auto=format&fit=crop&w=400&q=80",
-          },
-          {
-            id: "2",
-            name: "Shah Kashmir Arts Emporium",
-            address:
-              "Main road Nishat next to mughal garden nishat, Srinagar, 191121",
-            image:
-              "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?auto=format&fit=crop&w=400&q=80",
-          },
-          {
-            id: "3",
-            name: "Yousmarg",
-            address: "Yousmarg, Forest Block, 191113",
-            image:
-              "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=400&q=80",
-          },
-          {
-            id: "4",
-            name: "Thajiwas Glacier",
-            address: "Sonamarg, 191202",
-            image:
-              "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80",
-          },
-          {
-            id: "5",
-            name: "Tulip Garden Srinagar",
-            address:
-              "Jammu and Kashmir, Cheshma Shahi Rd, Rainawari, Srinagar, 191121",
-            image:
-              "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=400&q=80",
-          },
-          {
-            id: "6",
-            name: "Drung Waterfall",
-            address: "Tangmarg, 193401",
-            image:
-              "https://images.unsplash.com/photo-1432406186174-23a7808a1d21?auto=format&fit=crop&w=400&q=80",
-          },
-        ];
-        const filtered = mockData.filter(
-          (item) =>
-            item.name.toLowerCase().includes(city.toLowerCase()) ||
-            item.address.toLowerCase().includes(city.toLowerCase())
-        );
-        setPlaces(filtered.length > 0 ? filtered : mockData);
-      }
-    } catch (error) {
-      console.error("Error connecting to backend API:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const togglePlaceInPlan = (place) => {
-    if (plan[place.id]) {
-      const updatedPlan = { ...plan };
-      delete updatedPlan[place.id];
-      setPlan(updatedPlan);
-    } else {
-      setPlan({
-        ...plan,
-        [place.id]: { ...place, date: "", time: "", budget: "", note: "" },
+    fetch(`${API_BASE}/api/places/details/${place.placeId || place.id}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) { setDetail(d); setLoading(false); } })
+      .catch(() => {
+        if (!cancelled) { setDetail(place); setLoading(false); }
       });
-      setExpandedPlace(place.id);
-    }
-  };
+    return () => { cancelled = true; };
+  }, [place]);
 
-  const updatePlanField = (id, field, value) => {
-    setPlan({ ...plan, [id]: { ...plan[id], [field]: value } });
-  };
+  const data     = detail || place;
+  const photos   = data.photos?.length ? data.photos : [data.image].filter(Boolean);
+  const mainPhoto = photos[photoIdx] || photos[0] || "";
 
-  const removePlaceById = (id) => {
-    const updatedPlan = { ...plan };
-    delete updatedPlan[id];
-    setPlan(updatedPlan);
-  };
-
-  const finalizeTrip = () => {
-    const planArray = Object.values(plan);
-    if (planArray.length === 0) return;
-    const sorted = planArray.sort((a, b) => {
-      if (!a.date || !b.date) return 0;
-      return (
-        new Date(`${a.date} ${a.time || "00:00"}`) -
-        new Date(`${b.date} ${b.time || "00:00"}`)
-      );
-    });
-    setFinalPlan(sorted);
-    setShowFinal(true);
-    localStorage.setItem("finalPlan", JSON.stringify(sorted));
-  };
-
-  const handleConfirmTrip = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      for (const trip of finalPlan) {
-        await fetch("https://sarathi-backend-7u0y.onrender.com/api/trips", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(trip),
-        });
-      }
-
-      // Create trip confirmation notification
-      createTripConfirmationNotification(finalPlan.length);
-
-      localStorage.removeItem("finalPlan");
-      navigate("/my-trips");
-    } catch (error) {
-      alert("Failed to confirm trip submission");
-    }
-  };
-
-  const handleSaveTrip = () => {
-    const oldSaved = JSON.parse(localStorage.getItem("savedTrips")) || [];
-    localStorage.setItem(
-      "savedTrips",
-      JSON.stringify([...oldSaved, ...finalPlan])
-    );
-
-    // Create draft saved notification
-    createDraftSavedNotification();
-
-    alert("Trip saved successfully to drafts!");
+  const handleAdd = () => {
+    onAdd({ ...data, note });
+    onClose();
   };
 
   return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="place-modal" onClick={(e) => e.stopPropagation()}>
+
+        {/* header */}
+        <div className="place-modal-header">
+          <div>
+            <h2>Add Place to Your Plan</h2>
+            <p>Search and add places to include in your itinerary</p>
+          </div>
+          <button className="modal-ai-btn">✨ Suggest with AI</button>
+        </div>
+
+        {loading ? (
+          <div className="modal-loading">
+            <div className="skeleton-img" />
+            <div className="skeleton-lines">
+              <div className="skeleton-line w60" />
+              <div className="skeleton-line w40" />
+              <div className="skeleton-line w80" />
+            </div>
+          </div>
+        ) : (
+          <div className="place-modal-body">
+            {/* left: hero + gallery */}
+            <div className="modal-left">
+              <div className="modal-hero-img">
+                <img src={mainPhoto} alt={data.name} />
+                <button className="modal-close-x" onClick={onClose}>✕</button>
+              </div>
+
+              {photos.length > 1 && (
+                <div className="modal-gallery">
+                  {photos.slice(0, 4).map((ph, i) => (
+                    <div
+                      key={i}
+                      className={`gallery-thumb ${photoIdx === i ? "active" : ""}`}
+                      onClick={() => setPhotoIdx(i)}
+                    >
+                      <img src={ph} alt="" />
+                      {i === 3 && photos.length > 4 && (
+                        <div className="gallery-more">+{photos.length - 4}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* categories */}
+              <div className="modal-section">
+                <h4>Categories</h4>
+                <p className="modal-section-sub">Select categories that best describe this place</p>
+                <div className="modal-tags-row">
+                  {(data.tags || ["Tourist Spot"]).map((tag, i) => (
+                    <span key={i} className="modal-tag active">{tag}</span>
+                  ))}
+                  {CATEGORIES.filter((c) => !(data.tags || []).includes(c.label)).slice(0, 4).map((c) => (
+                    <span key={c.id} className="modal-tag">{c.icon} {c.label}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* notes */}
+              <div className="modal-section">
+                <h4>Add Notes (Optional)</h4>
+                <textarea
+                  className="modal-notes"
+                  placeholder="Add your personal notes about this place..."
+                  value={note}
+                  maxLength={300}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+                <span className="modal-char-count">{note.length}/300</span>
+              </div>
+            </div>
+
+            {/* right: info */}
+            <div className="modal-right">
+              <h3 className="modal-place-name">{data.name}</h3>
+              <p className="modal-place-addr">📍 {data.address}</p>
+
+              <div className="modal-rating-row">
+                {data.rating && (
+                  <span className="modal-rating">⭐ {data.rating}
+                    {data.reviewCount && <span className="modal-reviews"> ({(data.reviewCount/1000).toFixed(1)}K reviews)</span>}
+                  </span>
+                )}
+                {(data.tags || []).slice(0, 1).map((t, i) => (
+                  <span key={i} className="modal-tag active sm">{t}</span>
+                ))}
+              </div>
+
+              {data.description && (
+                <p className="modal-description">{data.description}</p>
+              )}
+
+              {/* travel info pills */}
+              <div className="modal-info-pills">
+                <div className="info-pill">
+                  <span className="pill-label">Best Time to Visit</span>
+                  <span className="pill-value">{data.bestTime || "Oct - Mar"}</span>
+                </div>
+                <div className="info-pill">
+                  <span className="pill-label">Time Required</span>
+                  <span className="pill-value">{data.timeRequired || "2 - 3 hrs"}</span>
+                </div>
+                <div className="info-pill">
+                  <span className="pill-label">Entry Fee</span>
+                  <span className="pill-value">{data.entryFee || "Free"}</span>
+                </div>
+              </div>
+
+              {data.hours?.length > 0 && (
+                <div className="modal-hours">
+                  <h4>Opening Hours</h4>
+                  {data.hours.slice(0, 3).map((h, i) => (
+                    <p key={i} className="hour-line">{h}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* footer */}
+        <div className="place-modal-footer">
+          <button className="modal-cancel-btn" onClick={onClose}>Cancel</button>
+          <button
+            className="modal-add-btn"
+            onClick={handleAdd}
+            disabled={alreadyAdded}
+          >
+            {alreadyAdded ? "✓ Added" : "Add to Plan"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MINI MAP (Google Maps iframe embed — no JS API key needed)
+════════════════════════════════════════════════════════════════ */
+function MiniMap({ places, city }) {
+  if (!places.length && !city) return null;
+
+  // Build a static map URL with markers
+  const base   = "https://maps.googleapis.com/maps/api/staticmap";
+  const size   = "360x220";
+  const style  = [
+    "feature:all|element:geometry|color:0x1a1a2e",
+    "feature:water|element:geometry|color:0x0d1b2a",
+    "feature:road|element:geometry|color:0x2a2a4a",
+    "feature:poi|element:labels|visibility:off",
+  ].map((s) => `style=${encodeURIComponent(s)}`).join("&");
+
+  if (GOOGLE_KEY && places.length > 0) {
+    const markers = places
+      .map((p) => `markers=color:green%7C${p.lat},${p.lng}`)
+      .join("&");
+    const center = places[0] ? `${places[0].lat},${places[0].lng}` : city;
+    const src = `${base}?center=${encodeURIComponent(center)}&zoom=11&size=${size}&${markers}&key=${GOOGLE_KEY}`;
+    return (
+      <div className="mini-map-container">
+        <img src={src} alt="Map" className="mini-map-img" />
+        <div className="map-overlay-label">📍 {city || "Trip Map"}</div>
+      </div>
+    );
+  }
+
+  // Fallback: OpenStreetMap iframe (free, no key)
+  const q   = city || (places[0] ? `${places[0].lat},${places[0].lng}` : "India");
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=&query=${encodeURIComponent(q)}`;
+  return (
+    <div className="mini-map-container">
+      <iframe
+        title="map"
+        src={`https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed&z=12`}
+        className="mini-map-iframe"
+        loading="lazy"
+      />
+      <div className="map-overlay-label">📍 {q}</div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MAIN ITINERARY PAGE
+════════════════════════════════════════════════════════════════ */
+export default function Itinerary() {
+  const navigate     = useNavigate();
+
+  // search / filter state
+  const [city,        setCity]        = useState("");
+  const [startDate,   setStartDate]   = useState("");
+  const [endDate,     setEndDate]     = useState("");
+  const [travellers,  setTravellers]  = useState(2);
+  const [travellerOpen, setTravellerOpen] = useState(false);
+  const [activeFilter, setActiveFilter]  = useState("");
+
+  // data state
+  const [places,      setPlaces]      = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
+
+  // plan state
+  const [plan,        setPlan]        = useState({}); // { placeId: placeObj }
+  const [itinerary,   setItinerary]   = useState(null);
+  const [itinLoading, setItinLoading] = useState(false);
+
+  // modal state
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
+  // UI state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const touchStartX = useRef(0);
+
+  /* restore plan from localStorage on mount */
+  useEffect(() => {
+    const saved = localStorage.getItem("sarathiPlan");
+    if (saved) {
+      try { setPlan(JSON.parse(saved)); } catch {}
+    }
+  }, []);
+
+  /* persist plan to localStorage */
+  useEffect(() => {
+    localStorage.setItem("sarathiPlan", JSON.stringify(plan));
+  }, [plan]);
+
+  /* touch swipe for sidebar */
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd   = (e) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (diff >  80) setSidebarOpen(true);
+    if (diff < -80) setSidebarOpen(false);
+  };
+
+  /* ── search ── */
+  const handleSearch = useCallback(async () => {
+    if (!city.trim()) return;
+    setLoading(true);
+    setError("");
+    setPlaces([]);
+    setItinerary(null);
+
+    try {
+      const params = new URLSearchParams({ city: city.trim(), limit: "12" });
+      if (activeFilter) params.set("category", activeFilter);
+
+      const res  = await fetch(`${API_BASE}/api/places/search?${params}`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Failed to fetch places");
+      if (!Array.isArray(data) || !data.length) {
+        setError(`No places found for "${city}". Try a different destination.`);
+        return;
+      }
+      setPlaces(data);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [city, activeFilter]);
+
+  /* search on Enter */
+  const handleKeyDown = (e) => { if (e.key === "Enter") handleSearch(); };
+
+  /* ── plan management ── */
+  const addToPlan = useCallback((place) => {
+    setPlan((prev) => ({ ...prev, [place.id || place.placeId]: place }));
+  }, []);
+
+  const removeFromPlan = useCallback((id) => {
+    setPlan((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  }, []);
+
+  const clearPlan = () => {
+    setPlan({});
+    setItinerary(null);
+    localStorage.removeItem("sarathiPlan");
+  };
+
+  const planArray   = Object.values(plan);
+  const planCount   = planArray.length;
+
+  /* ── AI itinerary ── */
+  const generateItinerary = async () => {
+    if (!planCount) return;
+    setItinLoading(true);
+    try {
+      const res  = await fetch(`${API_BASE}/api/itinerary/optimize`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          places:    planArray,
+          travellers,
+          startDate: startDate || null,
+          endDate:   endDate   || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setItinerary(data);
+    } catch (err) {
+      alert("Could not generate itinerary: " + err.message);
+    } finally {
+      setItinLoading(false);
+    }
+  };
+
+  /* ── confirm & save ── */
+  const handleConfirmTrip = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = itinerary || { places: planArray, travellers, startDate, endDate };
+      await fetch(`${API_BASE}/api/trips`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      createTripConfirmationNotification(planCount);
+      clearPlan();
+      navigate("/my-trips");
+    } catch {
+      alert("Failed to save trip. Please try again.");
+    }
+  };
+
+  const handleSaveDraft = () => {
+    createDraftSavedNotification();
+    alert("Draft saved! ✅");
+  };
+
+  /* ── date display helper ── */
+  const dateLabel = startDate && endDate
+    ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+    : "Select Dates";
+
+  /* ── trip duration ── */
+  const tripDays = startDate && endDate
+    ? Math.max(1, Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1)
+    : null;
+
+  /* ════════════════════════════════════════════════════════════════ */
+  return (
     <div
-      className="dashboard-layout"
+      className="itin-layout"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && (
-        <div
-          className="backdrop-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="backdrop-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className="main-viewport">
+      <div className="itin-main">
         <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-        <div className="itinerary-container">
-          <div className="header-meta">
-            <h1 className="primary-title">
-              <span className="sparkle-icon">✦</span> Plan Your Trip
-            </h1>
-            <p className="sub-title">Build your perfect itinerary</p>
+        {/* ── HERO HEADER ── */}
+        <div className="itin-hero">
+          <h1 className="itin-title">✦ Plan Your Trip</h1>
+          <p className="itin-subtitle">Discover amazing destinations and build your perfect itinerary</p>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════
+            SEARCH BAR — premium Google Travel style
+        ══════════════════════════════════════════════════════ */}
+        <div className="search-bar-card">
+          {/* destination input */}
+          <div className="search-segment destination-seg">
+            <span className="seg-icon">📍</span>
+            <input
+              className="seg-input"
+              type="text"
+              placeholder="Where to?"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
           </div>
 
-          {/* SEARCH BAR */}
-          <div className="search-wrapper-card">
-            <div className="input-group-icon">
-              <span className="geo-icon">📍</span>
+          <div className="search-divider" />
+
+          {/* date picker */}
+          <div className="search-segment date-seg">
+            <span className="seg-icon">📅</span>
+            <div className="date-inputs">
               <input
-                type="text"
-                placeholder="Search city (e.g., kashmir)..."
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                type="date"
+                className="date-input"
+                value={startDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <span className="date-sep">→</span>
+              <input
+                type="date"
+                className="date-input"
+                value={endDate}
+                min={startDate || new Date().toISOString().split("T")[0]}
+                onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
-            <button className="premium-search-btn" onClick={handleSearch}>
-              {loading ? <div className="spinner"></div> : "Search"}
-            </button>
+            {(startDate || endDate) && (
+              <span className="date-label-display">{dateLabel}</span>
+            )}
           </div>
 
-          {!showFinal ? (
-            <div className="workspace-grid">
+          <div className="search-divider" />
 
-              {/* SUGGESTED PLACES */}
-              <div className="panel-card-container suggested-panel">
-                <div className="panel-header">
-                  <span className="panel-title-icon">🗺️</span>
+          {/* travellers */}
+          <div className="search-segment traveller-seg" onClick={() => setTravellerOpen((o) => !o)}>
+            <span className="seg-icon">👤</span>
+            <span className="traveller-label">{travellers} Traveller{travellers !== 1 ? "s" : ""}</span>
+            <span className="chevron">▾</span>
+
+            {travellerOpen && (
+              <div className="traveller-dropdown" onClick={(e) => e.stopPropagation()}>
+                <div className="traveller-row">
                   <div>
-                    <h2>Suggested Places</h2>
-                    <p>Top places recommended for you</p>
+                    <div className="tv-title">Adults</div>
+                    <div className="tv-sub">Ages 13+</div>
+                  </div>
+                  <div className="counter-group">
+                    <button onClick={() => setTravellers((t) => Math.max(1, t - 1))}>−</button>
+                    <span>{travellers}</span>
+                    <button onClick={() => setTravellers((t) => Math.min(20, t + 1))}>+</button>
                   </div>
                 </div>
-
-                <div className="places-scroll-area">
-                  {places.length === 0 ? (
-                    <div className="empty-state-view-fallback">
-                      <div className="empty-icon-cloud">🔍</div>
-                      <p>No locations showing yet</p>
-                      <span>
-                        Type a destination in the search box above to discover
-                        matching suggestions.
-                      </span>
-                    </div>
-                  ) : (
-                    places.map((place) => {
-                      const isAdded = !!plan[place.id];
-                      return (
-                        <div
-                          key={place.id}
-                          className={`premium-place-card ${isAdded ? "state-added" : ""}`}
-                        >
-                          <div className="card-main-row">
-                            <img
-                              src={place.image}
-                              alt={place.name}
-                              className="place-thumb"
-                            />
-                            <div className="place-details-box">
-                              <h3>{place.name}</h3>
-                              <p className="address-text">
-                                <span className="pin-symbol">📍</span>{" "}
-                                {place.address}
-                              </p>
-                            </div>
-                            <button
-                              className={`action-pill-btn ${isAdded ? "btn-added" : ""}`}
-                              onClick={() => togglePlaceInPlan(place)}
-                            >
-                              {isAdded ? "Added" : "+ Add"}
-                            </button>
-                            <div
-                              className={`mobile-chevron ${expandedPlace === place.id ? "rotated" : ""}`}
-                              onClick={() =>
-                                setExpandedPlace(
-                                  expandedPlace === place.id ? null : place.id
-                                )
-                              }
-                            >
-                              ▼
-                            </div>
-                          </div>
-
-                          {/* MOBILE ACCORDION FORM */}
-                          {isAdded && (
-                            <div
-                              className={`mobile-inline-form ${expandedPlace === place.id ? "is-expanded" : ""}`}
-                            >
-                              <div className="form-inner-wrapper">
-                                <div className="form-header-mobile">
-                                  <span className="green-dot">🟢</span>
-                                  <h4>Your Plan</h4>
-                                  <button
-                                    className="mobile-remove-txt"
-                                    onClick={() => removePlaceById(place.id)}
-                                  >
-                                    🗑️ Remove
-                                  </button>
-                                </div>
-                                <div className="inputs-row">
-                                  <div className="input-field">
-                                    <label>Date</label>
-                                    <input
-                                      type="date"
-                                      value={plan[place.id].date}
-                                      min={
-                                        new Date().toISOString().split("T")[0]
-                                      }
-                                      onChange={(e) =>
-                                        updatePlanField(
-                                          place.id,
-                                          "date",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                  <div className="input-field">
-                                    <label>Time</label>
-                                    <input
-                                      type="time"
-                                      value={plan[place.id].time}
-                                      onChange={(e) =>
-                                        updatePlanField(
-                                          place.id,
-                                          "time",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                  <div className="input-field">
-                                    <label>Budget (₹)</label>
-                                    <input
-                                      type="number"
-                                      placeholder="Budget"
-                                      value={plan[place.id].budget}
-                                      onChange={(e) =>
-                                        updatePlanField(
-                                          place.id,
-                                          "budget",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                                <div className="textarea-field">
-                                  <textarea
-                                    placeholder="Notes..."
-                                    maxLength={300}
-                                    value={plan[place.id].note}
-                                    onChange={(e) =>
-                                      updatePlanField(
-                                        place.id,
-                                        "note",
-                                        e.target.value
-                                      )
-                                    }
-                                  />
-                                  <span className="char-count">
-                                    {(plan[place.id].note || "").length}/300
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                <button
+                  className="traveller-done"
+                  onClick={() => setTravellerOpen(false)}
+                >
+                  Done
+                </button>
               </div>
+            )}
+          </div>
 
-              {/* DESKTOP PLANNER PANEL */}
-              <div className="panel-card-container planner-panel">
-                <div className="panel-header border-b">
-                  <span className="panel-title-icon green-icon">✅</span>
-                  <div>
-                    <h2>Your Plan</h2>
-                    <p>Add places and details to finalize your trip</p>
-                  </div>
-                  {Object.keys(plan).length > 0 && (
-                    <button
-                      className="clear-all-btn"
-                      onClick={() => setPlan({})}
-                    >
-                      ✖
-                    </button>
-                  )}
-                </div>
+          {/* search button */}
+          <button className="search-main-btn" onClick={handleSearch} disabled={loading}>
+            {loading ? <span className="btn-spinner" /> : "🔍 Search"}
+          </button>
+        </div>
 
-                <div className="planner-scroll-area">
-                  {Object.keys(plan).length === 0 ? (
-                    <div className="empty-state-view">
-                      <div className="empty-icon">🗺️</div>
-                      <p>Your itinerary workspace is empty.</p>
-                      <span>
-                        Click "+ Add" on recommended places to map out your
-                        details.
-                      </span>
-                    </div>
-                  ) : (
-                    Object.values(plan).map((item) => (
-                      <div key={item.id} className="desktop-plan-card">
-                        <div className="plan-card-top">
-                          <h3>{item.name}</h3>
-                          <button
-                            className="card-delete-icon"
-                            onClick={() => removePlaceById(item.id)}
-                          >
-                            ✖
-                          </button>
-                        </div>
+        {/* category filter chips */}
+        <div className="filter-chips-row">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.id}
+              className={`filter-chip ${activeFilter === c.id ? "active" : ""}`}
+              onClick={() => {
+                const next = activeFilter === c.id ? "" : c.id;
+                setActiveFilter(next);
+              }}
+            >
+              {c.icon} {c.label}
+            </button>
+          ))}
+          {activeFilter && (
+            <button className="filter-chip clear-filter" onClick={() => setActiveFilter("")}>
+              ✕ Clear
+            </button>
+          )}
+        </div>
 
-                        <div className="desktop-form-grid">
-                          <input
-                            type="date"
-                            min={new Date().toISOString().split("T")[0]}
-                            value={item.date}
-                            onChange={(e) =>
-                              updatePlanField(item.id, "date", e.target.value)
-                            }
-                          />
-                          <input
-                            type="time"
-                            value={item.time}
-                            onChange={(e) =>
-                              updatePlanField(item.id, "time", e.target.value)
-                            }
-                          />
-                          <div className="currency-input-wrapper">
-                            <input
-                              type="number"
-                              placeholder="Budget (₹)"
-                              value={item.budget}
-                              onChange={(e) =>
-                                updatePlanField(
-                                  item.id,
-                                  "budget",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
+        {/* ══════════════════════════════════════════════════════
+            MAIN GRID — places left, plan panel right
+        ══════════════════════════════════════════════════════ */}
+        <div className="itin-grid">
 
-                        <div className="textarea-wrapper">
-                          <textarea
-                            placeholder="Notes..."
-                            maxLength={300}
-                            value={item.note}
-                            onChange={(e) =>
-                              updatePlanField(item.id, "note", e.target.value)
-                            }
-                          />
-                          <span className="counter-tag">
-                            {(item.note || "").length}/300
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {Object.keys(plan).length > 0 && (
-                  <div className="action-footer-sticky">
-                    <button
-                      className="finalize-submit-btn"
-                      onClick={finalizeTrip}
-                    >
-                      Finalize Trip <span className="send-arrow">➔</span>
-                    </button>
-                    <p className="sticky-disclaimer">
-                      🛡️ You can always edit your plan later
-                    </p>
-                  </div>
-                )}
+          {/* ── SUGGESTED PLACES ── */}
+          <div className="places-panel">
+            <div className="panel-heading">
+              <span className="panel-icon">📖</span>
+              <div>
+                <h2>Suggested Places</h2>
+                <p>Handpicked top destinations for you</p>
               </div>
             </div>
-          ) : (
-            /* FINAL SUMMARY VIEW */
-            <div className="premium-final-view animate-fade-in">
-              <div className="final-view-header">
-                <h2>Your Ultimate Itinerary</h2>
-                <p>
-                  Perfectly curated sequence optimized by dates and timestamps.
-                </p>
-              </div>
 
-              <div className="summary-cards-stack">
-                {finalPlan.map((item, index) => (
-                  <div key={index} className="summary-row-card">
-                    <div className="timeline-badge">
-                      <span className="calendar-mini">📅</span>{" "}
-                      {item.date || "No Date Assigned"} |{" "}
-                      {item.time || "Anytime"}
-                    </div>
-                    <div className="summary-body">
-                      <h3>{item.name}</h3>
-                      {item.budget && (
-                        <span className="budget-tag">
-                          Estimated Cost: ₹{item.budget}
-                        </span>
-                      )}
-                      {item.note && (
-                        <p className="notes-block-view">
-                          <strong>Notes:</strong> {item.note}
-                        </p>
-                      )}
+            {/* error */}
+            {error && (
+              <div className="search-error">
+                <span>⚠️</span> {error}
+              </div>
+            )}
+
+            {/* empty state */}
+            {!loading && !error && !places.length && (
+              <div className="empty-places">
+                <div className="empty-places-icon">🗺️</div>
+                <p>No locations showing yet</p>
+                <span>Type a destination in the search box above to discover matching suggestions.</span>
+              </div>
+            )}
+
+            {/* skeleton loaders */}
+            {loading && (
+              <div className="places-list">
+                {[1,2,3,4].map((i) => (
+                  <div key={i} className="place-card skeleton">
+                    <div className="place-num skeleton-num" />
+                    <div className="place-img-wrap skeleton-img" />
+                    <div className="place-info">
+                      <div className="skeleton-line w60" />
+                      <div className="skeleton-line w40" />
+                      <div className="skeleton-line w80" />
                     </div>
                   </div>
                 ))}
               </div>
+            )}
 
-              <div className="final-actions-row">
+            {/* place list */}
+            {!loading && places.length > 0 && (
+              <div className="places-list">
+                {places.map((place, idx) => {
+                  const isAdded = !!plan[place.id];
+                  return (
+                    <div key={place.id} className={`place-card ${isAdded ? "is-added" : ""}`}>
+                      {/* number badge */}
+                      <div className="place-num">{idx + 1}</div>
+
+                      {/* image */}
+                      <div className="place-img-wrap">
+                        <img
+                          src={place.image}
+                          alt={place.name}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.src = `https://source.unsplash.com/featured/?${encodeURIComponent(place.name)},travel`;
+                          }}
+                        />
+                      </div>
+
+                      {/* info */}
+                      <div className="place-info">
+                        <h3 className="place-name">{place.name}</h3>
+                        <p className="place-addr">{place.address}</p>
+
+                        <div className="place-meta-row">
+                          {place.rating && (
+                            <span className="place-rating">
+                              ⭐ {place.rating}
+                              {place.reviewCount && (
+                                <span className="place-reviews"> ({(place.reviewCount / 1000).toFixed(1)}K reviews)</span>
+                              )}
+                            </span>
+                          )}
+                          <div className="place-tags">
+                            {(place.tags || []).slice(0, 2).map((t, i) => (
+                              <span key={i} className="place-tag">{t}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {place.description && (
+                          <p className="place-desc">{place.description}</p>
+                        )}
+                      </div>
+
+                      {/* actions */}
+                      <div className="place-actions">
+                        <button
+                          className={`add-btn ${isAdded ? "added" : ""}`}
+                          onClick={() => isAdded ? removeFromPlan(place.id) : setSelectedPlace(place)}
+                        >
+                          {isAdded ? "✓ Added" : "+ Add"}
+                        </button>
+                        <button
+                          className="details-btn"
+                          onClick={() => setSelectedPlace(place)}
+                        >
+                          View Details ›
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT PANEL: Your Plan + Map ── */}
+          <div className="plan-column">
+
+            {/* plan panel */}
+            <div className="plan-panel">
+              <div className="plan-panel-header">
+                <div className="plan-header-left">
+                  <span className="plan-icon">📋</span>
+                  <div>
+                    <h3>Your Plan</h3>
+                    {planCount > 0 && (
+                      <p className="plan-meta">
+                        {tripDays ? `${tripDays} Nights, ${tripDays + 1} Days · ` : ""}
+                        {planCount} Place{planCount !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {planCount > 0 && (
+                  <button className="clear-plan-btn" onClick={clearPlan}>
+                    🗑 Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* trip meta chips */}
+              {(tripDays || travellers > 1) && (
+                <div className="plan-meta-chips">
+                  {tripDays && (
+                    <div className="meta-chip">
+                      <span>⏱</span>
+                      <div>
+                        <div className="chip-label">Trip Duration</div>
+                        <div className="chip-val">{tripDays - 1} Nights, {tripDays} Days</div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="meta-chip">
+                    <span>👥</span>
+                    <div>
+                      <div className="chip-label">Travelers</div>
+                      <div className="chip-val">{travellers} Adult{travellers !== 1 ? "s" : ""}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* empty state */}
+              {!planCount && (
+                <div className="plan-empty">
+                  <div className="plan-empty-icon">🗺️</div>
+                  <p>Your itinerary is empty</p>
+                  <span>Add places from suggestions to build your perfect trip</span>
+                </div>
+              )}
+
+              {/* plan items */}
+              {planCount > 0 && !itinerary && (
+                <div className="plan-items">
+                  {planArray.map((p, i) => (
+                    <div key={p.id || p.placeId} className="plan-item">
+                      <span className="plan-item-num">{i + 1}</span>
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="plan-item-img"
+                        onError={(e) => { e.target.src = `https://source.unsplash.com/featured/?travel`; }}
+                      />
+                      <div className="plan-item-info">
+                        <div className="plan-item-name">{p.name}</div>
+                        <div className="plan-item-addr">{p.address?.split(",")[1]?.trim() || ""}</div>
+                        {p.note && <div className="plan-item-note">📝 {p.note}</div>}
+                      </div>
+                      <button
+                        className="plan-item-remove"
+                        onClick={() => removeFromPlan(p.id || p.placeId)}
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* AI itinerary view */}
+              {itinerary && (
+                <div className="itinerary-view">
+                  {itinerary.schedule.map((day) => (
+                    <div key={day.day} className="itin-day">
+                      <div className="itin-day-label">
+                        Day {day.day}{day.date ? ` · ${day.date}` : ""}
+                      </div>
+                      {day.slots.map((slot, si) => (
+                        <div key={si} className="itin-slot">
+                          <span className="slot-time">{slot.time}</span>
+                          <div className="slot-info">
+                            <div className="slot-name">{slot.place.name}</div>
+                            <div className="slot-duration">{slot.duration}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* action buttons */}
+              <div className="plan-actions">
                 <button
-                  className="btn-secondary-dark"
-                  onClick={() => setShowFinal(false)}
+                  className="ai-itin-btn"
+                  onClick={generateItinerary}
+                  disabled={!planCount || itinLoading}
                 >
-                  ⬅ Edit Itinerary
+                  {itinLoading ? <span className="btn-spinner" /> : "✨"} AI Generate Itinerary
                 </button>
-                <button
-                  className="btn-secondary-dark save-alt"
-                  onClick={handleSaveTrip}
-                >
-                  💾 Save Draft Locally
+
+                <button className="save-template-btn" onClick={handleSaveDraft} disabled={!planCount}>
+                  💾 Save as Template
                 </button>
-                <button
-                  className="btn-primary-action"
-                  onClick={handleConfirmTrip}
-                >
-                  ✅ Confirm & Sync Trip
-                </button>
+
+                {itinerary && (
+                  <button className="confirm-trip-btn" onClick={handleConfirmTrip}>
+                    ✅ Confirm &amp; Save Trip
+                  </button>
+                )}
               </div>
             </div>
-          )}
+
+            {/* mini map */}
+            <MiniMap places={planArray.filter((p) => p.lat && p.lng)} city={city} />
+
+            {/* help card */}
+            {!planCount && (
+              <div className="help-card">
+                <h4>Need Help Planning?</h4>
+                <p>Let our AI travel assistant help you</p>
+                <button className="chat-ai-btn" onClick={() => navigate("/temples")}>
+                  💬 Chat with AI
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* tip bar */}
+        <div className="tip-bar">
+          💡 Tip: Add more places and click on AI Generate Itinerary to get your personalized travel plan.
         </div>
       </div>
+
+      {/* Place Details Modal */}
+      {selectedPlace && (
+        <PlaceDetailsModal
+          place={selectedPlace}
+          onClose={() => setSelectedPlace(null)}
+          onAdd={addToPlan}
+          alreadyAdded={!!plan[selectedPlace.id || selectedPlace.placeId]}
+        />
+      )}
     </div>
   );
-};
-
-export default Itinerary;
+}
