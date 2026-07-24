@@ -12,6 +12,17 @@ const GOOGLE_KEY = process.env.REACT_APP_GOOGLE_MAPS_KEY || "";
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "";
 
+/**
+ * tripDuration — SINGLE source of truth for nights/days everywhere in this
+ * file. "25 May - 28 May" → { days: 4, nights: 3 }. Previously this math
+ * was duplicated in two places with different (and contradictory) formulas.
+ */
+const tripDuration = (startDate, endDate) => {
+  if (!startDate || !endDate) return null;
+  const days = Math.max(1, Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1);
+  return { days, nights: Math.max(0, days - 1) };
+};
+
 const CATEGORIES = [
   { id: "beach",    label: "Beach",    icon: "🏖" },
   { id: "mountains",label: "Mountains",icon: "⛰" },
@@ -193,38 +204,50 @@ function PlaceDetailsModal({ place, onClose, onAdd, alreadyAdded }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   MINI MAP (Google Maps iframe embed — no JS API key needed)
+   MINI MAP
+   ─────────────────────────────────────────────────────────────
+   Primary:  Google Static Maps API image, WITH the dark-theme
+             `style` params actually applied (previously built and
+             discarded — this was the ESLint-flagged bug).
+   Fallback: keyless Google Maps iframe embed. The OpenStreetMap
+             embed URL this replaced was dead code in a different
+             sense than `style` — its `query=` param has no
+             geocoding support in OSM's embed.html (only bbox/marker
+             coordinates work), so as originally written it could
+             never have rendered the right location. Rather than
+             keep two half-wired map providers, this keeps the one
+             that actually works without an API key.
 ════════════════════════════════════════════════════════════════ */
 function MiniMap({ places, city }) {
   if (!places.length && !city) return null;
 
-  // Build a static map URL with markers
-  const base   = "https://maps.googleapis.com/maps/api/staticmap";
-  const size   = "360x220";
-  const style  = [
+  const base = "https://maps.googleapis.com/maps/api/staticmap";
+  const size = "360x220";
+  const styleParams = [
     "feature:all|element:geometry|color:0x1a1a2e",
     "feature:water|element:geometry|color:0x0d1b2a",
     "feature:road|element:geometry|color:0x2a2a4a",
     "feature:poi|element:labels|visibility:off",
-  ].map((s) => `style=${encodeURIComponent(s)}`).join("&");
+  ]
+    .map((s) => `style=${encodeURIComponent(s)}`)
+    .join("&");
 
   if (GOOGLE_KEY && places.length > 0) {
-    const markers = places
-      .map((p) => `markers=color:green%7C${p.lat},${p.lng}`)
-      .join("&");
-    const center = places[0] ? `${places[0].lat},${places[0].lng}` : city;
-    const src = `${base}?center=${encodeURIComponent(center)}&zoom=11&size=${size}&${markers}&key=${GOOGLE_KEY}`;
+    const markers = places.map((p) => `markers=color:green%7C${p.lat},${p.lng}`).join("&");
+    const center = `${places[0].lat},${places[0].lng}`;
+    const mapSrc = `${base}?center=${encodeURIComponent(center)}&zoom=11&size=${size}&${styleParams}&${markers}&key=${GOOGLE_KEY}`;
+
     return (
       <div className="mini-map-container">
-        <img src={src} alt="Map" className="mini-map-img" />
+        <img src={mapSrc} alt="Map" className="mini-map-img" />
         <div className="map-overlay-label">📍 {city || "Trip Map"}</div>
       </div>
     );
   }
 
-  // Fallback: OpenStreetMap iframe (free, no key)
-  const q   = city || (places[0] ? `${places[0].lat},${places[0].lng}` : "India");
-  const src = `https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=&query=${encodeURIComponent(q)}`;
+  // Fallback: keyless Google Maps iframe embed — works without GOOGLE_KEY,
+  // accepts a free-text query (city name), unlike OSM's embed endpoint.
+  const q = city || (places[0] ? `${places[0].lat},${places[0].lng}` : "India");
   return (
     <div className="mini-map-container">
       <iframe
@@ -387,15 +410,12 @@ export default function Itinerary() {
     alert("Draft saved! ✅");
   };
 
-  /* ── date display helper ── */
+  /* ── date display + duration (single source of truth) ── */
   const dateLabel = startDate && endDate
     ? `${formatDate(startDate)} - ${formatDate(endDate)}`
     : "Select Dates";
 
-  /* ── trip duration ── */
-  const tripDays = startDate && endDate
-    ? Math.max(1, Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1)
-    : null;
+  const duration = tripDuration(startDate, endDate); // { days, nights } | null
 
   /* ════════════════════════════════════════════════════════════════ */
   return (
@@ -446,7 +466,10 @@ export default function Itinerary() {
                 className="date-input"
                 value={startDate}
                 min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  if (endDate && e.target.value > endDate) setEndDate("");
+                }}
               />
               <span className="date-sep">→</span>
               <input
@@ -650,7 +673,7 @@ export default function Itinerary() {
                     <h3>Your Plan</h3>
                     {planCount > 0 && (
                       <p className="plan-meta">
-                        {tripDays ? `${tripDays} Nights, ${tripDays + 1} Days · ` : ""}
+                        {duration ? `${duration.nights} Nights, ${duration.days} Days · ` : ""}
                         {planCount} Place{planCount !== 1 ? "s" : ""}
                       </p>
                     )}
@@ -664,14 +687,14 @@ export default function Itinerary() {
               </div>
 
               {/* trip meta chips */}
-              {(tripDays || travellers > 1) && (
+              {(duration || travellers > 1) && (
                 <div className="plan-meta-chips">
-                  {tripDays && (
+                  {duration && (
                     <div className="meta-chip">
                       <span>⏱</span>
                       <div>
                         <div className="chip-label">Trip Duration</div>
-                        <div className="chip-val">{tripDays - 1} Nights, {tripDays} Days</div>
+                        <div className="chip-val">{duration.nights} Nights, {duration.days} Days</div>
                       </div>
                     </div>
                   )}
