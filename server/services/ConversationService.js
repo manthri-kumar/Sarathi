@@ -51,36 +51,7 @@ const extractJSONBlock = (s) => {
   return null;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   sanitizeGuideReply — DEFENSE IN DEPTH (Bug 5 fix)
-
-   GUIDE_PROMPTS already instruct the model never to ask trip-
-   planning questions or use "Namaste" preambles. LLMs don't always
-   comply with negative instructions perfectly, especially at
-   higher temperature, so this is a deterministic safety net that
-   strips any trip-planner-flavoured lines that leak through, run
-   on every AI Travel Guide / entity follow-up / general-AI reply
-   before it reaches the user.
-═══════════════════════════════════════════════════════════════ */
-const LEAK_LINE_PATTERNS = [
-  /how many travellers.*joining you\??/i,
-  /how many people (are|will be) (joining|travel)/i,
-  /let'?s sort out the details/i,
-  /^namaste!?\s*$/i,
-  /i must correct you again/i,
-];
-
-const sanitizeGuideReply = (text = "") => {
-  if (!text) return text;
-  const cleanedLines = text
-    .split("\n")
-    .filter((line) => !LEAK_LINE_PATTERNS.some((re) => re.test(line.trim())));
-  return cleanedLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   normalizeQuery — spell correction + synonym normalization.
-═══════════════════════════════════════════════════════════════ */
+/* ================= normalizeQuery ================= */
 const SPELL_CORRECTIONS = [
   ["templs","temple"],["temples","temple"],["tempel","temple"],
   ["tempple","temple"],["tempal","temple"],["temle","temple"],
@@ -124,6 +95,7 @@ const SPELL_CORRECTIONS = [
   ["tirupthi","tirupati"],["tirupathi","tirupati"],
   ["mysor","mysore"],["mysuru","mysore"],
   ["kochy","kochi"],["cochin","kochi"],
+  ["aleppy","alappuzha"],["alleppey","alappuzha"],["allepey","alappuzha"],
   ["vishakhapatnam","visakhapatnam"],["vizag","visakhapatnam"],
   ["simhachallam","simhachalam"],["simhachalem","simhachalam"],
   ["bhadrachallam","bhadrachalam"],["srikalahasthi","srikalahasti"],
@@ -190,23 +162,114 @@ Message: "${msg}"`;
   }
 };
 
-/* ================= LEGACY SHORT Q&A (used in trip dual-mode only) ================= */
+/* ═══════════════════════════════════════════════════════════════
+   FORMATTING RULES — injected into every AI prompt.
+
+   These rules are the single source of truth for how every Sarathi
+   AI response should be formatted. They are appended to every
+   guide prompt and to the general/context prompts so that ALL
+   response paths produce consistent, clean Markdown output that
+   MessageFormatter.jsx can render beautifully.
+═══════════════════════════════════════════════════════════════ */
+const FORMATTING_RULES = `
+## RESPONSE FORMATTING RULES — follow these exactly, every time:
+
+**Structure:**
+- Begin with a short greeting or scene-setter of ONE or TWO sentences maximum.
+  Example: "Namaste! Here's what you need to know about houseboats in Alleppey."
+- Never write long paragraphs. Split every idea into its own bullet, numbered item, or section.
+- Organise information under ## Markdown headings whenever the response covers multiple topics.
+- Use bullet points ( - ) for lists of facts, options, features, or recommendations.
+- Use numbered lists ( 1. 2. 3. ) for sequences, steps, itineraries, rituals, or procedures.
+- Use **bold** for all prices, timings, names, dates, and key facts.
+- Use Markdown tables for comparisons (hotels, transport options, packages, destinations).
+- End every travel-related response with a travel tip formatted as:
+  💡 **Travel Tip:** [one concise, useful tip]
+
+**Content rules:**
+- Never repeat information.
+- Never use filler sentences ("That's a great question!", "As I mentioned earlier...", etc.).
+- Never write "Namaste!" more than once per response.
+- Never ask "How many travellers will be joining you?" unless the user is explicitly asking to plan a trip.
+- Never hallucinate restaurant names, hotel names, temple names, or weather data.
+- Never use HTML tags. Only valid Markdown.
+- Use emojis sparingly — only where they improve scannability (e.g. 💡 for tips, 🕒 for timings, 💰 for prices).
+
+**Section templates by query type:**
+
+For TEMPLE questions, use these sections (omit any that are not applicable):
+## Temple Overview
+## History
+## Timings
+## Rituals & Darshan
+## Dress Code
+## Major Festivals
+## Nearby Attractions
+## Travel Tips
+
+For PLACE / DESTINATION questions:
+## About
+## Highlights
+## Best Time to Visit
+## Entry Fee
+## Timings
+## Nearby Attractions
+## Food to Try
+## Travel Tips
+
+For FOOD / CUISINE questions:
+## Must-Try Dishes
+## Best Places to Eat
+## One-Day Food Plan
+## Travel Tips
+
+For HOTEL / STAY questions:
+## Best Areas to Stay
+## Budget Options
+## Standard Options
+## Luxury Options
+## Travel Tips
+
+For TRANSPORT / ROUTE questions:
+## How to Reach
+## Transport Options  [use a comparison table]
+## Estimated Cost
+## Travel Tips
+
+For GENERAL KNOWLEDGE questions (history, culture, festivals):
+## Overview
+## Key Facts
+## Cultural Significance
+## Travel Tips
+`;
+
+/* ═══════════════════════════════════════════════════════════════
+   askAI — used in trip flow dual-mode (off-topic questions while
+   the trip planner state machine is active).
+
+   Updated: injects FORMATTING_RULES so even mid-trip answers
+   are clean and structured.
+═══════════════════════════════════════════════════════════════ */
 const askAI = async (raw, contextCity) => {
   try {
-    const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant. Answer the user's question helpfully and concisely in 2-4 sentences.${
-      contextCity ? ` The user is near ${contextCity}.` : ""
-    } Give only the final answer, no internal reasoning. NEVER ask how many travellers unless the user is explicitly planning a trip.
+    const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant.${
+      contextCity ? ` The user is currently near ${contextCity}.` : ""
+    }
 
-User: "${raw}"`;
-    const text = await askGroq(prompt);
-    return sanitizeGuideReply(stripControlTokens(text)) || "I can help with travel questions — could you rephrase that?";
+${FORMATTING_RULES}
+
+User question: "${raw}"
+
+Respond in clean Markdown following the rules above. Keep the answer concise but complete.`;
+
+    const text = await askGroq(prompt, { maxTokens: 500, temperature: 0.4 });
+    return stripControlTokens(text) || "I can help with travel questions — could you rephrase that?";
   } catch (e) {
     console.log("askAI failed:", e.message);
     return "I can help with travel questions — could you rephrase that?";
   }
 };
 
-// Kept for backward compatibility — no longer primary food path
 const getFoodFromAI = async (city) => {
   try {
     const prompt = `Respond with ONLY a JSON object shaped as {"dishes":[{"name":"...","description":"..."}]} containing 6 famous local dishes from ${city}. No prose.`;
@@ -221,126 +284,192 @@ const getFoodFromAI = async (city) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   askTravelGuide — TYPE 1: AI Travel Guide responses
+   GUIDE_PROMPTS — TYPE 1 AI Travel Guide responses.
 
-   ARCHITECTURE CHANGE: the model now returns STRUCTURED JSON, not
-   markdown text with emoji headings. Layout decisions (cards vs.
-   list vs. key-facts vs. paragraph) are made HERE, on the backend,
-   and shipped as data. MessageFormatter.jsx only renders whatever
-   shape it's given — it no longer guesses "is this a food list"
-   from sentence structure.
+   Each prompt:
+   1. Gives Groq a specific role and context.
+   2. Injects FORMATTING_RULES verbatim.
+   3. Specifies the exact section structure for that query type.
+   4. Ends with "respond ONLY in valid Markdown" to prevent prose drift.
 
-   Every "guide" response follows one shared schema:
-     {
-       title: string,
-       sections: [
-         { icon, heading, style: "cards"|"list"|"keyfacts"|"paragraph",
-           items?: [{title, desc}],   // style: cards | list
-           keyfacts?: [{label,value}], // style: keyfacts
-           text?: string }             // style: paragraph
-       ],
-       recommendation: string
-     }
-
-   "knowledge" questions (who/what/history/best-time) are NOT run
-   through this — they get a plain ChatGPT-style paragraph answer,
-   per the product spec ("Who is APJ Abdul Kalam?" → plain prose).
+   The city parameter provides geographic grounding so Groq does not
+   assume or hallucinate a location.
 ═══════════════════════════════════════════════════════════════ */
+const GUIDE_PROMPTS = {
 
-const GUIDE_SECTION_SPEC = {
-  food: `Sections, in this exact order:
-1. icon "🍽" heading "Must-Try Foods" style "cards" — 4 items, each {"title": dish name, "desc": one sentence on what it is and why it's loved}.
-2. icon "🍴" heading "Best Places to Eat" style "list" — 3 items, each {"title": restaurant or area name, "desc": one-line note}.
-3. icon "🗓" heading "One Day Food Plan" style "keyfacts" — keyfacts: [{"label":"Breakfast","value":dish},{"label":"Lunch","value":dish},{"label":"Evening","value":dish},{"label":"Dinner","value":dish}].`,
+  /* ── FOOD ── */
+  food: (raw, city) =>
+`You are Sarathi, an expert Indian food and travel guide.
+${city ? `Location context: the user is asking about ${city}.` : ""}
 
-  temple: `Sections, in this exact order:
-1. icon "🛕" heading "About the Temple" style "paragraph" — text: 2-3 sentences on history and significance.
-2. icon "📿" heading "Deity & Legend" style "paragraph" — text: 2 sentences on the presiding deity and any key legend.
-3. icon "🏛" heading "Architecture" style "paragraph" — text: 1-2 sentences.
-4. icon "🎉" heading "Major Festivals" style "list" — 2-3 items, each {"title": festival name, "desc": one-line description}.
-5. icon "🕒" heading "Darshan Timings" style "paragraph" — text: general timing guidance.
-6. icon "👔" heading "Dress Code" style "paragraph" — text: 1 sentence.`,
+${FORMATTING_RULES}
 
-  hotel: `Sections, in this exact order:
-1. icon "🏨" heading "Best Areas to Stay" style "paragraph" — text: 1-2 sentences on the best neighbourhoods.
-2. icon "💰" heading "Budget Options" style "paragraph" — text: 1-2 sentences with examples.
-3. icon "🛏" heading "Standard Options" style "paragraph" — text: 1-2 sentences with examples.
-4. icon "✨" heading "Luxury Options" style "paragraph" — text: 1-2 sentences with examples.`,
+User asked: "${raw}"
 
-  city: `Sections, in this exact order:
-1. icon "🌅" heading "Morning" style "paragraph" — text: 1-2 sentences.
-2. icon "☀️" heading "Afternoon" style "paragraph" — text: 1-2 sentences.
-3. icon "🌇" heading "Evening" style "paragraph" — text: 1-2 sentences.
-4. icon "🍽" heading "Local Food to Try" style "paragraph" — text: 1 sentence naming 2-3 dishes.
-5. icon "🧳" heading "Travel Tips" style "list" — 3 items, each {"title": short tip, "desc": ""}.`,
-};
+Respond using this exact structure:
 
-const buildGuideJsonPrompt = (topic, raw, city) => `You are Sarathi, an expert Indian travel guide. Respond with ONLY valid JSON — no prose, no markdown code fences, no text outside the JSON object. Match this exact schema:
+## Must-Try Dishes
+List 4–6 dishes as bullet points. For each: **Dish Name** — one-sentence description.
 
-{"title": string, "sections": [{"icon": string, "heading": string, "style": "cards"|"list"|"keyfacts"|"paragraph", "items": [{"title": string, "desc": string}] (only for cards/list styles), "keyfacts": [{"label": string, "value": string}] (only for keyfacts style), "text": string (only for paragraph style)}], "recommendation": string}
+## Best Places to Eat
+3–4 bullet points with area names or well-known types of eateries (do NOT invent specific restaurant names).
 
-${GUIDE_SECTION_SPEC[topic]}
+## One-Day Food Plan
+Use a numbered list:
+1. **Breakfast:** [dish]
+2. **Lunch:** [dish]
+3. **Evening Snack:** [dish]
+4. **Dinner:** [dish]
 
-The "recommendation" field is 1-2 warm, personal sentences on what to prioritize and why.
+💡 **Travel Tip:** [one genuine, useful food tip for this destination]
 
-Use real, accurate, well-known information. Never include anything about number of travellers, group size, or trip planning anywhere in the JSON — that is handled by a separate part of the app. Never mention Google Maps.
+Respond ONLY in valid Markdown. Do not write paragraphs. Do not say "Namaste" more than once.`,
 
-User asked: "${raw}"${city ? `\nLocation context: ${city}.` : ""}`;
+  /* ── TEMPLE ── */
+  temple: (raw, city) =>
+`You are Sarathi, a knowledgeable Indian temple and pilgrimage guide.
+${city ? `Location context: the user is asking about a temple in or near ${city}.` : ""}
 
-const KNOWLEDGE_PROMPT = (raw, city) =>
+${FORMATTING_RULES}
+
+User asked: "${raw}"
+
+Respond using this exact structure (omit any section where information is unavailable):
+
+## Temple Overview
+Two sentences maximum on significance and presiding deity.
+
+## History
+3–5 bullet points covering founding, dynasty, renovations, and legends.
+
+## Timings
+🕒 Use a table if there are multiple darshan slots, otherwise bullet points.
+| Session | Timings |
+|---------|---------|
+
+## Rituals & Darshan
+Numbered list of key rituals or darshan steps.
+
+## Dress Code
+One or two bullet points.
+
+## Major Festivals
+3–4 bullet points: **Festival Name** — brief description and month.
+
+## Nearby Attractions
+3–4 bullet points with distances where known.
+
+💡 **Travel Tip:** [one practical tip for temple visitors]
+
+Respond ONLY in valid Markdown. No paragraphs. No HTML.`,
+
+  /* ── HOTEL / ACCOMMODATION ── */
+  hotel: (raw, city) =>
+`You are Sarathi, a travel accommodation expert.
+${city ? `Location context: the user is asking about stays in or near ${city}.` : ""}
+
+${FORMATTING_RULES}
+
+User asked: "${raw}"
+
+Respond using this exact structure:
+
+## Best Areas to Stay
+2–3 bullet points describing neighbourhoods or zones (do NOT invent specific hotel names).
+
+## Accommodation Options
+Use a comparison table:
+| Type | Price Range | Best For |
+|------|-------------|----------|
+| Budget | ₹X–₹Y / night | [traveller type] |
+| Standard | ₹X–₹Y / night | [traveller type] |
+| Luxury | ₹X–₹Y / night | [traveller type] |
+
+## What's Typically Included
+Bullet points covering common inclusions (breakfast, Wi-Fi, etc.).
+
+## Booking Tips
+3 bullet points with practical advice.
+
+💡 **Travel Tip:** [one genuine booking or timing tip]
+
+Respond ONLY in valid Markdown. Do not invent specific hotel names. No paragraphs.`,
+
+  /* ── CITY / DESTINATION GUIDE ── */
+  city: (raw, city) =>
+`You are Sarathi, an expert local trip planner for Indian destinations.
+${city ? `Location context: ${city}.` : ""}
+
+${FORMATTING_RULES}
+
+User asked: "${raw}"
+
+Respond using this exact structure:
+
+## About ${city || "the Destination"}
+Two sentences maximum.
+
+## Top Highlights
+5–7 bullet points: **Place Name** — one-sentence description.
+
+## Best Time to Visit
+Bullet points by season:
+- **Peak Season (Month–Month):** [reason]
+- **Off-Season (Month–Month):** [reason]
+
+## Getting There
+Brief bullet points covering nearest airport, railway station, and road access.
+
+## Local Food to Try
+4–5 dish names as bullet points with one-word descriptors.
+
+## One-Day Itinerary
+Numbered list:
+1. **Morning:** [activity]
+2. **Afternoon:** [activity]
+3. **Evening:** [activity]
+
+💡 **Travel Tip:** [one practical tip for first-time visitors]
+
+Respond ONLY in valid Markdown. No paragraphs. No HTML.`,
+
+  /* ── GENERAL KNOWLEDGE ── */
+  knowledge: (raw, city) =>
 `You are Sarathi, a knowledgeable Indian travel and culture guide.
-Answer this question clearly in 3-6 short sentences: "${raw}"${city ? `\nLocation context: ${city}.` : ""}
+${city ? `Location context: the user is near or asking about ${city}.` : ""}
 
-Do not include "Namaste", any preamble, any question about travellers, group size, or trip planning, and no mention of Google Maps. Give only the final answer with relevant travel tips if applicable.`;
+${FORMATTING_RULES}
 
-// Recursively run sanitizeGuideReply over every string field in a
-// parsed guide object, so a leaked "how many travellers" line can't
-// hide inside items[].desc or keyfacts[].value either.
-const sanitizeGuideObject = (obj) => {
-  if (typeof obj === "string") return sanitizeGuideReply(obj);
-  if (Array.isArray(obj)) return obj.map(sanitizeGuideObject);
-  if (obj && typeof obj === "object") {
-    const out = {};
-    for (const k of Object.keys(obj)) out[k] = sanitizeGuideObject(obj[k]);
-    return out;
-  }
-  return obj;
+User asked: "${raw}"
+
+Answer clearly and concisely using the most appropriate section structure from the FORMATTING_RULES above. Choose sections that fit the question. Always end with a 💡 Travel Tip if the topic is travel-related.
+
+Rules:
+- Never write paragraphs — use bullet points and sections.
+- Bold all key facts, prices, timings, and names.
+- Use numbered lists for any sequence or procedure.
+- Use a Markdown table if comparing options.
+- Maximum 6 bullet points per section.
+
+Respond ONLY in valid Markdown. No HTML. No filler sentences.`,
 };
 
-const isValidGuideShape = (p) =>
-  p && typeof p === "object" && typeof p.title === "string" && Array.isArray(p.sections) && p.sections.length > 0;
-
-const FALLBACK_GUIDE_TEXT = "I couldn't put that together right now — please try rephrasing.";
-
+/* ═══════════════════════════════════════════════════════════════
+   askTravelGuide — calls Groq with the appropriate guide prompt.
+═══════════════════════════════════════════════════════════════ */
 const askTravelGuide = async (topic, raw, city) => {
-  if (topic === "knowledge" || !GUIDE_SECTION_SPEC[topic]) {
-    try {
-      const text = await askGroq(KNOWLEDGE_PROMPT(raw, city), { maxTokens: 500, temperature: 0.5 });
-      return { type: "text", reply: sanitizeGuideReply(stripControlTokens(text)) || FALLBACK_GUIDE_TEXT };
-    } catch (e) {
-      console.log(`[askTravelGuide] knowledge failed:`, e.message);
-      return { type: "text", reply: FALLBACK_GUIDE_TEXT };
-    }
-  }
-
+  const buildPrompt = GUIDE_PROMPTS[topic] || GUIDE_PROMPTS.knowledge;
   try {
-    const raw_ = await askGroq(buildGuideJsonPrompt(topic, raw, city), {
-      maxTokens: 900,
-      temperature: 0.5,
-      jsonMode: true,
-    });
-    const parsed = extractJSONBlock(raw_);
-    if (!isValidGuideShape(parsed)) throw new Error("Malformed guide JSON");
-    const clean = sanitizeGuideObject(parsed);
-    return { type: "guide", topic, title: clean.title, sections: clean.sections, recommendation: clean.recommendation || "" };
+    const text = await askGroq(buildPrompt(raw, city), { maxTokens: 800, temperature: 0.45 });
+    return stripControlTokens(text) || "I couldn't put that together right now — please try rephrasing.";
   } catch (e) {
     console.log(`[askTravelGuide] topic=${topic} failed:`, e.message);
-    return { type: "text", reply: FALLBACK_GUIDE_TEXT };
+    return "I couldn't put that together right now — please try rephrasing.";
   }
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   fetchWeather — Open-Meteo (free, no API key required)
+   fetchWeather — Open-Meteo (free, no API key)
 ═══════════════════════════════════════════════════════════════ */
 const WMO = {
   0:"Clear sky ☀️",1:"Mainly clear 🌤",2:"Partly cloudy ⛅",3:"Overcast ☁️",
@@ -359,18 +488,17 @@ const fetchWeather = async (lat, lng, cityName) => {
     const { data } = await axios.get(url, { timeout: 8000 });
     const c = data.current;
     const d = data.daily;
-    const cond     = WMO[c.weather_code] || "Unknown conditions";
-    const tempC    = Math.round(c.temperature_2m);
-    const feelsC   = Math.round(c.apparent_temperature);
-    const humidity = c.relative_humidity_2m;
-    const rain     = c.precipitation_probability;
-    const wind     = Math.round(c.wind_speed_10m);
-    const uv       = c.uv_index != null ? Math.round(c.uv_index) : null;
-    const maxT     = d?.temperature_2m_max?.[0] != null ? Math.round(d.temperature_2m_max[0]) : null;
-    const minT     = d?.temperature_2m_min?.[0] != null ? Math.round(d.temperature_2m_min[0]) : null;
-    const rainMax  = d?.precipitation_probability_max?.[0] ?? rain;
-    const sunrise  = d?.sunrise?.[0]  ? new Date(d.sunrise[0]).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : null;
-    const sunset   = d?.sunset?.[0]   ? new Date(d.sunset[0]).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : null;
+    const cond    = WMO[c.weather_code] || "Unknown conditions";
+    const tempC   = Math.round(c.temperature_2m);
+    const feelsC  = Math.round(c.apparent_temperature);
+    const humidity= c.relative_humidity_2m;
+    const rainMax = d?.precipitation_probability_max?.[0] ?? c.precipitation_probability;
+    const wind    = Math.round(c.wind_speed_10m);
+    const uv      = c.uv_index != null ? Math.round(c.uv_index) : null;
+    const maxT    = d?.temperature_2m_max?.[0] != null ? Math.round(d.temperature_2m_max[0]) : null;
+    const minT    = d?.temperature_2m_min?.[0] != null ? Math.round(d.temperature_2m_min[0]) : null;
+    const sunrise = d?.sunrise?.[0] ? new Date(d.sunrise[0]).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : null;
+    const sunset  = d?.sunset?.[0]  ? new Date(d.sunset[0]).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : null;
     const tips = [];
     if (rainMax > 50) tips.push("🌂 Carry an umbrella");
     if (tempC > 32) tips.push("💧 Stay hydrated — carry water");
@@ -380,32 +508,35 @@ const fetchWeather = async (lat, lng, cityName) => {
     if (tempC < 15) tips.push("🧥 Carry warm clothing");
     if (!tips.length) tips.push("✅ Great weather for exploring!");
     const loc = cityName || "your location";
+
+    // Return structured Markdown weather response
     const lines = [
-      `🌤 Weather in ${loc}`,
+      `## 🌤 Weather in ${loc}`,
       "",
-      `Condition: ${cond}`,
-      `Temperature: ${tempC}°C (feels like ${feelsC}°C)`,
-      maxT != null && minT != null ? `High / Low: ${maxT}°C / ${minT}°C` : null,
-      `Humidity: ${humidity}%`,
-      `Rain Chance: ${rainMax}%`,
-      `Wind: ${wind} km/h`,
-      uv != null ? `UV Index: ${uv}` : null,
-      sunrise ? `Sunrise: ${sunrise}` : null,
-      sunset  ? `Sunset: ${sunset}`  : null,
+      `| | |`,
+      `|---|---|`,
+      `| **Condition** | ${cond} |`,
+      `| **Temperature** | **${tempC}°C** (feels like ${feelsC}°C) |`,
+      maxT != null && minT != null ? `| **High / Low** | ${maxT}°C / ${minT}°C |` : null,
+      `| **Humidity** | ${humidity}% |`,
+      `| **Rain Chance** | ${rainMax}% |`,
+      `| **Wind** | ${wind} km/h |`,
+      uv != null ? `| **UV Index** | ${uv} |` : null,
+      sunrise ? `| **Sunrise** | ${sunrise} |` : null,
+      sunset  ? `| **Sunset** | ${sunset} |`  : null,
       "",
-      "🧳 Travel Tips",
-      ...tips,
+      "## 🧳 Travel Tips",
+      ...tips.map((t) => `- ${t}`),
     ].filter(Boolean);
+
     return { reply: lines.join("\n") };
   } catch (err) {
     console.error("[fetchWeather] failed:", err.message);
-    return { reply: `⚠️ Couldn't fetch live weather right now for ${cityName || "your location"}. Please check a weather app.` };
+    return { reply: `⚠️ Couldn't fetch live weather right now for **${cityName || "your location"}**. Please check a weather app.` };
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   extractRadius
-═══════════════════════════════════════════════════════════════ */
+/* ================= extractRadius ================= */
 const extractRadius = (msg = "") => {
   const m = normalizeQuery(msg);
   const match = m.match(
@@ -421,9 +552,7 @@ const extractRadius = (msg = "") => {
   return Math.min(Math.max(metres, 500), 50000);
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   extractPlaceKeyword
-═══════════════════════════════════════════════════════════════ */
+/* ================= extractPlaceKeyword ================= */
 const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
   const m = normalizeQuery(msg);
   if (/\b(temple|shrine|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m)) return "hindu temple";
@@ -437,34 +566,7 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
   return defaultKeyword;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   Shared intent → place-type maps (single source of truth, used
-   by both chat.js for the Google Places keyword and ContextService
-   for tagging session.activePlaceType).
-═══════════════════════════════════════════════════════════════ */
-const NEARBY_KEYWORD_MAP = {
-  nearby_temple:   "hindu temple",
-  nearby_food:     "restaurant",
-  nearby_hotel:    "hotel",
-  nearby_hospital: "hospital",
-  nearby_bank:     "bank",
-  nearby_fuel:     "gas station",
-  nearby_general:  "tourist attraction",
-};
-
-const PLACE_TYPE_FOR_INTENT = {
-  nearby_temple: "temple",   guide_temple: "temple",
-  nearby_food:   "restaurant", guide_food:   "restaurant",
-  nearby_hotel:  "hotel",    guide_hotel:  "hotel",
-  nearby_hospital: "hospital",
-  nearby_bank:   "bank",
-  nearby_fuel:   "fuel",
-  nearby_general: "attraction", guide_city: "attraction",
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   detectIntent — THE SINGLE DECISION POINT
-═══════════════════════════════════════════════════════════════ */
+/* ================= detectIntent ================= */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
 const detectIntent = (msg = "") => {
@@ -500,19 +602,19 @@ const detectIntent = (msg = "") => {
 
   if (/\btemple\b/.test(m)) return "guide_temple";
 
-  if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay)\b/.test(m))
+  if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay|houseboat|homestay)\b/.test(m))
     return "guide_hotel";
 
   if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark|one day|itinerary)\b/.test(m))
     return "guide_city";
 
-  if (/\b(who is|history of|significance|culture|festival|deity|architecture|best time|when to visit|how to reach|how to get to)\b/.test(m))
+  if (/\b(who is|history of|significance|culture|festival|deity|architecture|best time|when to visit|how to reach|how to get to|cost of|price of|how much)\b/.test(m))
     return "guide_knowledge";
 
   return "general";
 };
 
-/* ================= DUAL-MODE STEP CLASSIFIER ================= */
+/* ================= looksLikeStepAnswer ================= */
 const looksLikeStepAnswer = (step, raw) => {
   const lower = raw.toLowerCase().trim();
   if (lower.endsWith("?")) return false;
@@ -530,7 +632,7 @@ const looksLikeStepAnswer = (step, raw) => {
   }
 };
 
-/* ================= TRIP-ACTIVE VALIDATION ================= */
+/* ================= isTripActive ================= */
 const isTripActive = (s) => {
   if (!s || !s.trip) return false;
   if (!ACTIVE.has(s.step)) return false;
@@ -543,13 +645,14 @@ const isTripActive = (s) => {
   return hasRealData;
 };
 
-/* ================= PLACE FROM QUERY ================= */
+/* ================= extractPlaceFromQuery ================= */
 const NOT_A_CITY = new Set([
   "taste","visit","eat","see","try","go","travel","find","get","know","do",
   "explore","check","book","plan","reach","stay","watch","enjoy","experience",
   "discover","look","search","ask","tell","show","help","use","buy","take",
   "make","give","keep","come","leave","start","stop","spend",
   "me","temple","food","hotel","restaurant","beach","park","weather","forecast",
+  "cost","price","per","one","two","three",
 ]);
 
 const extractPlaceFromQuery = (msg = "") => {
@@ -593,15 +696,13 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  console.log(`[extractPlace] No city found in: "${m}"`);
   return null;
 };
 
-/* ================= FETCH NEARBY (Google Places) ================= */
+/* ================= fetchNearby ================= */
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
   try {
     if (city && city.trim()) {
-      console.log(`[fetchNearby] Text search: "${keyword} in ${city}"`);
       const res = await axios.get(
         "https://maps.googleapis.com/maps/api/place/textsearch/json",
         { params: { query: `${keyword} in ${city}`, key: process.env.GOOGLE_API_KEY } }
@@ -609,7 +710,6 @@ const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
       return res.data.results.slice(0, 6).map(Planner.formatPlace);
     }
     if (lat && lng) {
-      console.log(`[fetchNearby] Coord search: ${lat},${lng} keyword="${keyword}" radius=${radiusMetres}m`);
       const res = await axios.get(
         "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
         { params: { location: `${lat},${lng}`, radius: radiusMetres, keyword, region: "in", key: process.env.GOOGLE_API_KEY } }
@@ -646,12 +746,11 @@ const ensureRoute = async (trip) => {
 };
 
 module.exports = {
-  ACTIVE, QUESTION, clean, normalizeQuery, sanitizeGuideReply,
+  ACTIVE, QUESTION, clean, normalizeQuery, FORMATTING_RULES,
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI, askTravelGuide, fetchWeather,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
   extractRadius, extractPlaceKeyword,
-  PROXIMITY_RE, NEARBY_KEYWORD_MAP, PLACE_TYPE_FOR_INTENT,
   isTripActive, nextStep, ensureRoute,
   T, Train, Planner,
 };
