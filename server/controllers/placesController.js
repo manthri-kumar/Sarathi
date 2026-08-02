@@ -139,6 +139,8 @@ exports.getNearbyPlaces = async (req, res) => {
           },
         }
       ),
+
+      
     ]);
 
     res.json({
