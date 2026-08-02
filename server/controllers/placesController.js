@@ -85,6 +85,78 @@ function mapPlace(p, origin = null) {
   };
 }
 
+
+exports.getNearbyPlaces = async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        error: "Latitude and Longitude required",
+      });
+    }
+
+    const radius = 30000;
+
+    const [
+      placesRes,
+      restaurantsRes,
+      hotelsRes,
+    ] = await Promise.all([
+
+      axios.get(
+        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+        {
+          params: {
+            location: `${lat},${lng}`,
+            radius,
+            type: "tourist_attraction",
+            key: GOOGLE_KEY,
+          },
+        }
+      ),
+
+      axios.get(
+        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+        {
+          params: {
+            location: `${lat},${lng}`,
+            radius,
+            type: "restaurant",
+            key: GOOGLE_KEY,
+          },
+        }
+      ),
+
+      axios.get(
+        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+        {
+          params: {
+            location: `${lat},${lng}`,
+            radius,
+            type: "lodging",
+            key: GOOGLE_KEY,
+          },
+        }
+      ),
+    ]);
+
+    res.json({
+      places: (placesRes.data.results || []).map(mapPlace),
+      restaurants: (restaurantsRes.data.results || []).map(mapPlace),
+      hotels: (hotelsRes.data.results || []).map(mapPlace),
+    });
+
+  } catch (err) {
+    console.error("[getNearbyPlaces]", err.response?.data || err.message);
+
+    res.status(500).json({
+      error: "Failed to fetch nearby places",
+    });
+  }
+};
+
+
 /* ────────────────────────────────────────────────────────────────── */
 
 /**

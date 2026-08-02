@@ -1,13 +1,17 @@
 "use strict";
 
-const express    = require("express");
-const router     = express.Router();
+const express = require("express");
+const router = express.Router();
+
 const controller = require("../controllers/placesController");
 
-// GET /api/places/search?city=vizag
+// Explore page
+router.get("/", controller.getNearbyPlaces);
+
+// Search page
 router.get("/search", controller.searchPlaces);
 
-// GET /api/places/details/:placeId  — for the place details modal
+// Place Details
 router.get("/details/:placeId", controller.getPlaceDetails);
 
 module.exports = router;
