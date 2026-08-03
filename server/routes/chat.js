@@ -17,15 +17,6 @@ const NEARBY_KEYWORD = {
   nearby_general:  "tourist attraction",
 };
 
-/*
-  Steps that have their own dedicated menus (returned as AI text)
-  but are NOT in the QUESTION object.
-  When the dual-mode fallback fires for these steps, we re-send the
-  appropriate menu instead of looking up QUESTION[step] (which would
-  return undefined and render as the string "undefined" in the UI).
-*/
-const MENU_STEPS = new Set(["train_class", "bus_type", "flight_class"]);
-
 /* ── Session helpers ── */
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
@@ -51,9 +42,7 @@ const advance = async (s, res, prefix = "") => {
     return res.json(C.Planner.buildSummary(s.trip));
   }
   await saveSession(s);
-  // Guard: only look up QUESTION for known keys to prevent "undefined" in UI
-  const question = C.QUESTION[s.step] || "Please continue with your trip details.";
-  return res.json({ reply: prefix + question });
+  return res.json({ reply: prefix + C.QUESTION[s.step] });
 };
 
 const finalizeTransport = async (s, res, details) => {
@@ -64,41 +53,7 @@ const finalizeTransport = async (s, res, details) => {
     return res.json(C.Planner.buildSummary(s.trip));
   }
   await saveSession(s);
-  // Guard: only look up QUESTION for known keys
-  const question = C.QUESTION[s.step] || "Please continue with your trip details.";
-  return res.json({ reply: question });
-};
-
-/*
-  getStepReprompt — safe helper that returns the correct re-prompt
-  string for any step, including menu steps that aren't in QUESTION.
-  Used by the dual-mode fallback to avoid returning "undefined".
-*/
-const getStepReprompt = (s) => {
-  if (s.step === "summary") {
-    return "\n\nWhenever you're ready — tap **Confirm** to generate your itinerary, or an Edit button to change a detail.";
-  }
-
-  // Steps with dedicated menus that aren't in QUESTION
-  if (s.step === "train_class") {
-    const km = s.trip?.distanceKm || 0;
-    return `\n\n${C.Train.trainClassMenu(km)}`;
-  }
-  if (s.step === "bus_type") {
-    const km = s.trip?.distanceKm || 0;
-    return `\n\n${C.T.busMenu(km)}`;
-  }
-  if (s.step === "flight_class") {
-    const km = s.trip?.distanceKm || 0;
-    return `\n\n${C.T.flightMenu(km)}`;
-  }
-
-  // Standard question steps
-  const question = C.QUESTION[s.step];
-  if (question) return `\n\n${question}`;
-
-  // Final safety net — should never be reached
-  return "";
+  return res.json({ reply: C.QUESTION[s.step] });
 };
 
 /* ════════════════════════════════════════════════════════════════
@@ -107,8 +62,8 @@ const getStepReprompt = (s) => {
 router.post("/", async (req, res) => {
   try {
     const { message, userId = "user1", lat, lng, city } = req.body;
-    const raw   = (message || "").trim();
-    const lower = raw.toLowerCase();
+    const raw   = message?.trim();
+    const lower = raw?.toLowerCase() ?? "";
     const s     = await loadSession(userId);
 
     if (!raw) {
@@ -178,8 +133,7 @@ router.post("/", async (req, res) => {
         s.trip[key] = blank;
         s.step = field === "hotel" ? "hotel" : field;
         await saveSession(s);
-        const q = C.QUESTION[s.step] || "Please continue with your trip details.";
-        return res.json({ reply: q });
+        return res.json({ reply: C.QUESTION[s.step] });
       }
     }
 
@@ -195,7 +149,7 @@ router.post("/", async (req, res) => {
       source: s.trip?.source,
     });
 
-    // Clear stale planning step when not in a real flow
+    // Clear stale planning step
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
       await saveSession(s);
@@ -243,11 +197,17 @@ router.post("/", async (req, res) => {
         return res.json({ reply: result.reply });
       }
 
-      /* ── TYPE 2: Real-time nearby search → Google Places cards ── */
+      /* ─────────────────────────────────────────────────────────────
+         TYPE 2: REAL-TIME NEARBY SEARCH → Google Places → cards
+         Only reached when detectIntent found an explicit proximity
+         signal ("near me" / "nearby" / "within Xkm").
+      ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("nearby_")) {
         const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
-        const keyword      = NEARBY_KEYWORD[intent]
+        // Safe lookup with fallback — prevents undefined crash if intent
+        // somehow doesn't match any key in NEARBY_KEYWORD
+        const keyword = NEARBY_KEYWORD[intent]
           || C.extractPlaceKeyword(raw, "tourist attraction");
 
         console.log(
@@ -256,15 +216,28 @@ router.post("/", async (req, res) => {
         );
 
         const places = await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres);
-        if (placeCity && placeCity !== city) s.activeCity = placeCity;
+        if (placeCity && placeCity !== city) {
+          s.activeCity = placeCity;
+        }
         await saveSession(s);
         return res.json({ type: "places", data: places });
       }
 
-      /* ── TYPE 1: AI Travel Guide → rich structured Markdown ── */
+      /* ─────────────────────────────────────────────────────────────
+         TYPE 1: AI TRAVEL GUIDE → rich structured Markdown text.
+
+         FIX: intent is "guide_food", "guide_temple", etc.
+         We strip "guide_" to get the topic key ("food", "temple", …)
+         that matches the keys in GUIDE_PROMPTS inside ConversationService.
+         The previous crash was caused by passing the FULL intent string
+         ("guide_knowledge") as the topic, which didn't exist as a key.
+      ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("guide_")) {
-        // Strip "guide_" prefix to get the GUIDE_PROMPTS key
-        const topic     = intent.replace("guide_", "");
+        // ── THE FIX: strip prefix to get the GUIDE_PROMPTS key ──────
+        const topic = intent.replace("guide_", "");
+        // topic is now: "food" | "temple" | "hotel" | "city" | "knowledge"
+        // All five exist as keys in GUIDE_PROMPTS. Safe to call.
+
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
 
         console.log(`[CHAT] guide → topic=${topic} city="${placeCity}"`);
@@ -281,7 +254,9 @@ router.post("/", async (req, res) => {
         return res.json({ reply });
       }
 
-      /* ── General: multi-turn context-aware conversational fallback ── */
+      /* ─────────────────────────────────────────────────────────────
+         GENERAL — multi-turn context-aware conversational fallback.
+      ───────────────────────────────────────────────────────────── */
       let messageForAI = raw;
       const isFollowUp = Ctx.isContextualFollowUp(raw);
 
@@ -292,7 +267,9 @@ router.post("/", async (req, res) => {
       }
 
       const reply = await Ctx.askAIWithContext(
-        s, messageForAI, city || s.activeCity
+        s,
+        messageForAI,
+        city || s.activeCity
       );
 
       await Ctx.updateSessionContext(s, raw, reply, {
@@ -305,23 +282,20 @@ router.post("/", async (req, res) => {
     }
 
     /* ══════════════════════════════════════════════════════════════
-       IN FLOW — dual-mode: off-topic question while trip planning.
-
-       FIX: replaced inline `\n\n${C.QUESTION[s.step]}` with
-       `getStepReprompt(s)` which handles train_class, bus_type,
-       and flight_class steps that are NOT in the QUESTION object.
-       Previously these returned "undefined" as literal text.
+       IN FLOW — dual-mode: off-topic question while trip planning
     ══════════════════════════════════════════════════════════════ */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
-      const answer    = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
-      const reprompt  = getStepReprompt(s);
+      const answer   = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
+      const reprompt = s.step === "summary"
+        ? "\n\nWhenever you're ready — tap **Confirm** to generate your itinerary, or an Edit button to change a detail."
+        : `\n\n${C.QUESTION[s.step]}`;
       await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
       await saveSession(s);
       return res.json({ reply: `${answer}${reprompt}` });
     }
 
     /* ══════════════════════════════════════════════════════════════
-       IN FLOW — step handlers (all trip planning steps)
+       IN FLOW — step handlers
     ══════════════════════════════════════════════════════════════ */
     if (s.step === "source") {
       s.trip.source =
@@ -340,19 +314,9 @@ router.post("/", async (req, res) => {
     }
 
     if (s.step === "days") {
-      // Accept "1 week", "2 weeks", "a week", plain numbers
-      let d = null;
-      const weekMatch = lower.match(/(\d+)\s*week/);
-      const dayMatch  = lower.match(/(\d+)\s*day/);
-      const numOnly   = parseInt(raw.replace(/[^\d]/g, ""));
-
-      if (weekMatch)       d = parseInt(weekMatch[1]) * 7;
-      else if (dayMatch)   d = parseInt(dayMatch[1]);
-      else if (/\ba\s+week\b/.test(lower)) d = 7;
-      else if (numOnly)    d = numOnly;
-
+      const d = parseInt(raw);
       if (!d || d < 1)
-        return res.json({ reply: "Please enter a valid number of days (e.g. 3 days, 1 week)." });
+        return res.json({ reply: "Please enter a valid number of days." });
       s.trip.days = d;
       return advance(s, res);
     }
@@ -410,7 +374,7 @@ router.post("/", async (req, res) => {
     }
 
     if (s.step === "train_class") {
-      const idx   = parseInt(raw.trim()) - 1;
+      const idx   = parseInt(raw) - 1;
       const klass =
         C.Train.TRAIN_CLASSES[idx] ||
         C.Train.TRAIN_CLASSES.find((c) => lower.includes(c.toLowerCase()));
@@ -418,36 +382,34 @@ router.post("/", async (req, res) => {
         return res.json({
           reply: "❌ Reply 1 (General) · 2 (Sleeper) · 3 (3AC) · 4 (2AC) · 5 (1AC)",
         });
-      const fare = C.Train.trainFareEstimate(klass, s.trip.distanceKm);
       return finalizeTransport(s, res, {
         type:      "train",
         option:    "Train",
         klass,
-        fare,
+        fare:      C.Train.trainFareEstimate(klass, s.trip.distanceKm),
         source:    "Estimated",
         breakdown: null,
       });
     }
 
     if (s.step === "bus_type") {
-      const idx  = parseInt(raw.trim()) - 1;
+      const idx  = parseInt(raw) - 1;
       const type =
         C.T.BUS_TYPES[idx] ||
         C.T.BUS_TYPES.find((b) => lower.includes(b.toLowerCase()));
       if (!type) return res.json({ reply: "❌ Reply 1–5 to choose a bus type." });
-      const fare = C.T.busFare(type, s.trip.distanceKm);
       return finalizeTransport(s, res, {
         type:      "bus",
         option:    type,
         klass:     null,
-        fare,
+        fare:      C.T.busFare(type, s.trip.distanceKm),
         source:    "Estimated",
         breakdown: null,
       });
     }
 
     if (s.step === "flight_class") {
-      const idx   = parseInt(raw.trim()) - 1;
+      const idx   = parseInt(raw) - 1;
       const klass =
         C.T.FLIGHT_CLASSES[idx] ||
         C.T.FLIGHT_CLASSES.find((f) => lower.includes(f.toLowerCase()));
@@ -455,12 +417,11 @@ router.post("/", async (req, res) => {
         return res.json({
           reply: "❌ Reply 1 (Economy) · 2 (Premium Economy) · 3 (Business)",
         });
-      const fare = C.T.flightFare(klass, s.trip.distanceKm);
       return finalizeTransport(s, res, {
         type:      "flight",
         option:    klass,
         klass:     null,
-        fare,
+        fare:      C.T.flightFare(klass, s.trip.distanceKm),
         source:    "Estimated",
         breakdown: null,
       });
@@ -511,7 +472,7 @@ router.post("/", async (req, res) => {
       if (["no", "skip", "no hotel", "none"].includes(lower)) {
         h = "none";
       } else {
-        h = { "1": "budget", "2": "standard", "3": "luxury" }[raw.trim()];
+        h = { "1": "budget", "2": "standard", "3": "luxury" }[raw];
       }
       if (!h)
         return res.json({
@@ -534,6 +495,7 @@ router.post("/", async (req, res) => {
 
   } catch (err) {
     console.error("CHAT ERROR:", err);
+    // Return a clean error that the frontend can display
     return res.status(500).json({
       reply: "Something went wrong on our end. Please try again in a moment.",
     });
