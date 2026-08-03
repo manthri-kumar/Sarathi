@@ -85,6 +85,7 @@ const SPELL_CORRECTIONS = [
   // Weather
   ["wheather","weather"],["wether","weather"],["weater","weather"],
   ["weathr","weather"],["forcast","forecast"],
+  ["aleart","alert"],["allert","alert"],["alart","alert"],
   // Trip
   ["journy","journey"],["vacaction","vacation"],
   ["holliday","holiday"],["holyday","holiday"],
@@ -93,7 +94,7 @@ const SPELL_CORRECTIONS = [
   ["foods","food"],["dishs","dish"],
   ["cuisines","cuisine"],["cuisne","cuisine"],
   ["recomendation","recommendation"],["reccomendation","recommendation"],
-  // Indian cities — sorted longest-first to prevent partial matches
+  // Indian cities
   ["vishakhapatnam","visakhapatnam"],["vizag","visakhapatnam"],
   ["hydrabad","hyderabad"],["hyderbad","hyderabad"],
   ["hderabad","hyderabad"],["huderbad","hyderabad"],
@@ -105,15 +106,9 @@ const SPELL_CORRECTIONS = [
   ["tirupthi","tirupati"],["tirupathi","tirupati"],
   ["mysor","mysore"],["mysuru","mysore"],
   ["kochy","kochi"],["cochin","kochi"],
-  // ── NEW: Alappuzha / Alleppey variants ────────────────────────
-  ["alppuzha","alappuzha"],    // typo in the screenshot
-  ["alleppy","alappuzha"],
-  ["alleppey","alappuzha"],
-  ["aleppey","alappuzha"],
-  ["aleppy","alappuzha"],
-  ["allapuzha","alappuzha"],
-  ["alapuzha","alappuzha"],
-  // ─────────────────────────────────────────────────────────────
+  ["alppuzha","alappuzha"],["alleppy","alappuzha"],
+  ["alleppey","alappuzha"],["aleppey","alappuzha"],
+  ["aleppy","alappuzha"],["allapuzha","alappuzha"],["alapuzha","alappuzha"],
   ["simhachallam","simhachalam"],["simhachalem","simhachalam"],
   ["bhadrachallam","bhadrachalam"],["srikalahasthi","srikalahasti"],
 ];
@@ -142,8 +137,8 @@ const regexExtract = (msg = "") => {
   if (to) out.destination = clean(to[1]);
   const from = m.match(/\bfrom\s+([a-z\s]+?)(?:\s+(?:to|under|for|with|in|on)\b|$)/);
   if (from) out.source = clean(from[1]);
-  const days = m.match(/(\d+)\s*day/);
-  if (days) out.days = parseInt(days[1]);
+  const days = m.match(/(\d+)\s*(?:day|week)/);
+  if (days) out.days = parseInt(days[1]) * (m.includes("week") ? 7 : 1);
   if (m.includes("weekend")) out.days = out.days || 2;
   const budget = m.match(/(?:under|budget|₹|rs\.?|inr)\s*₹?\s*(\d+)\s*(k)?/);
   if (budget) out.budget = parseInt(budget[1]) * (budget[2] ? 1000 : 1);
@@ -182,17 +177,14 @@ Message: "${msg}"`;
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   FORMATTING_RULES — single source of truth for all AI responses.
-   Injected into every prompt so ALL response paths produce clean,
-   structured Markdown that MessageFormatter.jsx can render.
-═══════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   FORMATTING_RULES — single source of truth injected into every prompt.
+════════════════════════════════════════════════════════════════ */
 const FORMATTING_RULES = `
 ## RESPONSE FORMATTING RULES — follow these exactly, every time:
 
 **Structure:**
 - Begin with a short greeting or scene-setter of ONE or TWO sentences maximum.
-  Example: "Namaste! Here's what you need to know about houseboats in Alappuzha."
 - Never write long paragraphs. Split every idea into its own bullet, numbered item, or section.
 - Organise information under ## Markdown headings whenever the response covers multiple topics.
 - Use bullet points ( - ) for lists of facts, options, features, or recommendations.
@@ -204,67 +196,38 @@ const FORMATTING_RULES = `
 
 **Content rules:**
 - Never repeat information.
-- Never use filler sentences ("That's a great question!", "As I mentioned earlier...", etc.).
+- Never use filler sentences.
 - Never write "Namaste!" more than once per response.
 - Never ask "How many travellers will be joining you?" unless the user is explicitly asking to plan a trip.
 - Never hallucinate restaurant names, hotel names, temple names, or weather data.
 - Never use HTML tags. Only valid Markdown.
-- Use emojis sparingly — only where they improve scannability (e.g. 💡 for tips, 🕒 for timings, 💰 for prices).
+- Use emojis sparingly — only where they improve scannability.
 
 **Section templates by query type:**
 
-For TEMPLE questions, use these sections (omit any that are not applicable):
-## Temple Overview
-## History
-## Timings
-## Rituals & Darshan
-## Dress Code
-## Major Festivals
-## Nearby Attractions
-## Travel Tips
+For TEMPLE questions:
+## Temple Overview | ## History | ## Timings | ## Rituals & Darshan | ## Dress Code | ## Major Festivals | ## Nearby Attractions | ## Travel Tips
 
 For PLACE / DESTINATION questions:
-## About
-## Highlights
-## Best Time to Visit
-## Entry Fee
-## Timings
-## Nearby Attractions
-## Food to Try
-## Travel Tips
+## About | ## Highlights | ## Best Time to Visit | ## Entry Fee | ## Timings | ## Nearby Attractions | ## Food to Try | ## Travel Tips
 
 For FOOD / CUISINE questions:
-## Must-Try Dishes
-## Best Places to Eat
-## One-Day Food Plan
-## Travel Tips
+## Must-Try Dishes | ## Best Places to Eat | ## One-Day Food Plan | ## Travel Tips
 
 For HOTEL / STAY / HOUSEBOAT questions:
-## Overview
-## Pricing
-## What's Included
-## Best Time to Book
-## Booking Tips
-## Travel Tips
+## Overview | ## Pricing | ## What's Included | ## Best Time to Book | ## Booking Tips | ## Travel Tips
+
+For WEATHER ALERT / DISASTER / EMERGENCY questions:
+## What This Alert Means | ## Safety Guidelines | ## What to Do | ## When to Expect Improvement | ## Emergency Contacts
 
 For TRANSPORT / ROUTE questions:
-## How to Reach
-## Transport Options  [use a comparison table]
-## Estimated Cost
-## Travel Tips
+## How to Reach | ## Transport Options [table] | ## Estimated Cost | ## Travel Tips
 
-For GENERAL KNOWLEDGE questions (history, culture, festivals, costs, procedures):
-## Overview
-## Key Facts
-## [Other relevant sections]
-## Travel Tips
+For GENERAL KNOWLEDGE questions:
+## Overview | ## Key Facts | ## [Other relevant sections] | ## Travel Tips
 `;
 
-/* ═══════════════════════════════════════════════════════════════
-   askAI — used in trip flow dual-mode.
-   Injects FORMATTING_RULES so even mid-trip off-topic answers
-   are clean and structured.
-═══════════════════════════════════════════════════════════════ */
+/* ── askAI (trip dual-mode) ── */
 const askAI = async (raw, contextCity) => {
   try {
     const prompt = `You are Sarathi, a warm, knowledgeable Indian travel assistant.${
@@ -298,12 +261,9 @@ const getFoodFromAI = async (city) => {
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   GUIDE_PROMPTS — TYPE 1 AI Travel Guide.
-   Keys: "food" | "temple" | "hotel" | "city" | "knowledge"
-   Called as: askTravelGuide(topic, raw, city)
-   where topic = intent.replace("guide_", "")
-═══════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   GUIDE_PROMPTS
+════════════════════════════════════════════════════════════════ */
 const GUIDE_PROMPTS = {
 
   food: (raw, city) =>
@@ -313,8 +273,6 @@ ${city ? `Location context: the user is asking about ${city}.` : ""}
 ${FORMATTING_RULES}
 
 User asked: "${raw}"
-
-Respond using this exact structure:
 
 ## Must-Try Dishes
 List 4–6 dishes as bullet points. For each: **Dish Name** — one-sentence description.
@@ -331,7 +289,7 @@ Numbered list:
 
 💡 **Travel Tip:** [one genuine, useful food tip for this destination]
 
-Respond ONLY in valid Markdown. No paragraphs. No filler. No "Namaste" more than once.`,
+Respond ONLY in valid Markdown. No paragraphs. No filler.`,
 
   temple: (raw, city) =>
 `You are Sarathi, a knowledgeable Indian temple and pilgrimage guide.
@@ -341,16 +299,16 @@ ${FORMATTING_RULES}
 
 User asked: "${raw}"
 
-Respond using this exact structure (omit sections where information is unavailable):
+Use these sections (omit sections where information is unavailable):
 
 ## Temple Overview
-Two sentences maximum on significance and presiding deity.
+Two sentences maximum.
 
 ## History
-3–5 bullet points covering founding, dynasty, renovations, and legends.
+3–5 bullet points.
 
 ## Timings
-🕒 Use a table if there are multiple darshan slots:
+🕒 Table format:
 | Session | Timings |
 |---------|---------|
 
@@ -366,7 +324,7 @@ One or two bullet points.
 ## Nearby Attractions
 3–4 bullet points with distances where known.
 
-💡 **Travel Tip:** [one practical tip for temple visitors]
+💡 **Travel Tip:** [one practical tip]
 
 Respond ONLY in valid Markdown. No paragraphs. No HTML.`,
 
@@ -378,13 +336,10 @@ ${FORMATTING_RULES}
 
 User asked: "${raw}"
 
-Respond using this exact structure:
-
 ## Overview
-One or two sentences about the accommodation type mentioned.
+One or two sentences.
 
 ## Pricing
-Use a comparison table:
 | Type | Price Range (per night) | Best For |
 |------|------------------------|----------|
 | Budget | ₹X–₹Y | [traveller type] |
@@ -392,15 +347,15 @@ Use a comparison table:
 | Luxury / Premium | ₹X–₹Y | [traveller type] |
 
 ## What's Typically Included
-Bullet points covering common inclusions (meals, crew, amenities, etc.).
+Bullet points.
 
 ## Best Time to Book
-Bullet points: peak season, off-season, booking lead times.
+Bullet points.
 
 ## Booking Tips
-3 bullet points with practical booking advice.
+3 bullet points.
 
-💡 **Travel Tip:** [one genuine booking or timing tip]
+💡 **Travel Tip:** [one genuine tip]
 
 Respond ONLY in valid Markdown. Do not invent specific hotel or houseboat names. No paragraphs.`,
 
@@ -411,8 +366,6 @@ ${city ? `Location context: ${city}.` : ""}
 ${FORMATTING_RULES}
 
 User asked: "${raw}"
-
-Respond using this exact structure:
 
 ## About ${city || "the Destination"}
 Two sentences maximum.
@@ -425,13 +378,12 @@ Two sentences maximum.
 - **Off-Season (Month–Month):** [reason]
 
 ## Getting There
-Bullet points covering nearest airport, railway station, and road access.
+Bullet points: nearest airport, railway, road.
 
 ## Local Food to Try
-4–5 dish names as bullet points with one-word descriptors.
+4–5 dish names as bullet points.
 
 ## One-Day Itinerary
-Numbered list:
 1. **Morning:** [activity]
 2. **Afternoon:** [activity]
 3. **Evening:** [activity]
@@ -439,6 +391,38 @@ Numbered list:
 💡 **Travel Tip:** [one practical tip for first-time visitors]
 
 Respond ONLY in valid Markdown. No paragraphs. No HTML.`,
+
+  /* ── NEW: weather_alert topic ── */
+  weather_alert: (raw, city) =>
+`You are Sarathi, a knowledgeable Indian safety and travel guide.
+${city ? `Location context: the user is asking about alerts or warnings near ${city}.` : ""}
+
+${FORMATTING_RULES}
+
+User asked: "${raw}"
+
+Explain IMD (India Meteorological Department) colour-coded weather alerts and what they mean for travellers.
+
+## What This Alert Means
+Explain the specific alert colour (green/yellow/orange/red) and its severity level.
+
+## Safety Guidelines
+Bullet points of what to do and avoid.
+
+## What to Do During This Alert
+Numbered list of practical actions.
+
+## When to Expect Improvement
+One or two sentences based on general knowledge.
+
+## Emergency Contacts
+- **National Disaster Response Force (NDRF):** 011-24363260
+- **State Disaster Management:** Check your state government website
+- **Police:** 100 | **Ambulance:** 108 | **Fire:** 101
+
+💡 **Travel Tip:** [one practical safety tip relevant to the alert type]
+
+Respond ONLY in valid Markdown. No paragraphs. Do not fabricate specific forecast data.`,
 
   knowledge: (raw, city) =>
 `You are Sarathi, a knowledgeable Indian travel and culture guide.
@@ -449,32 +433,24 @@ ${FORMATTING_RULES}
 User asked: "${raw}"
 
 Answer using the most appropriate section structure from FORMATTING_RULES above.
-Choose sections that fit the question — for pricing/cost questions use ## Pricing with a table;
-for procedural questions use a numbered list; for factual overviews use ## Overview + ## Key Facts.
+For pricing/cost questions use ## Pricing with a table.
+For procedural questions use a numbered list.
+For factual overviews use ## Overview + ## Key Facts.
 Always end with 💡 **Travel Tip:** if the topic is travel-related.
 
 Rules:
-- Never write paragraphs — use bullet points and sections.
+- Never write paragraphs.
 - Bold all key facts, prices, timings, and names.
-- Use numbered lists for any sequence or procedure.
-- Use a Markdown table if comparing options.
 - Maximum 6 bullet points per section.
 - Do not invent specific business names.
 
-Respond ONLY in valid Markdown. No HTML. No filler sentences.`,
+Respond ONLY in valid Markdown. No HTML. No filler.`,
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   askTravelGuide — calls Groq with the appropriate guide prompt.
-   topic = "food" | "temple" | "hotel" | "city" | "knowledge"
-   (The "guide_" prefix has already been stripped by chat.js before
-    this function is called.)
-═══════════════════════════════════════════════════════════════ */
 const askTravelGuide = async (topic, raw, city) => {
-  // Safe fallback: if topic key doesn't exist, use knowledge prompt
   const buildPrompt = GUIDE_PROMPTS[topic] || GUIDE_PROMPTS.knowledge;
-  console.log(`[askTravelGuide] topic="${topic}" city="${city}" prompt_key="${
-    GUIDE_PROMPTS[topic] ? topic : "knowledge (fallback)"
+  console.log(`[askTravelGuide] topic="${topic}" city="${city}" key="${
+    GUIDE_PROMPTS[topic] ? topic : "knowledge(fallback)"
   }"`);
   try {
     const text = await askGroq(
@@ -518,21 +494,20 @@ const fetchWeather = async (lat, lng, cityName) => {
     const { data } = await axios.get(url, { timeout: 8000 });
     const c = data.current;
     const d = data.daily;
-
-    const cond     = WMO[c.weather_code] || "Unknown conditions";
-    const tempC    = Math.round(c.temperature_2m);
-    const feelsC   = Math.round(c.apparent_temperature);
-    const humidity = c.relative_humidity_2m;
-    const rainMax  = d?.precipitation_probability_max?.[0] ?? c.precipitation_probability;
-    const wind     = Math.round(c.wind_speed_10m);
-    const uv       = c.uv_index != null ? Math.round(c.uv_index) : null;
-    const maxT     = d?.temperature_2m_max?.[0] != null ? Math.round(d.temperature_2m_max[0]) : null;
-    const minT     = d?.temperature_2m_min?.[0] != null ? Math.round(d.temperature_2m_min[0]) : null;
-    const sunrise  = d?.sunrise?.[0]
-      ? new Date(d.sunrise[0]).toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true })
+    const cond    = WMO[c.weather_code] || "Unknown conditions";
+    const tempC   = Math.round(c.temperature_2m);
+    const feelsC  = Math.round(c.apparent_temperature);
+    const humidity= c.relative_humidity_2m;
+    const rainMax = d?.precipitation_probability_max?.[0] ?? c.precipitation_probability;
+    const wind    = Math.round(c.wind_speed_10m);
+    const uv      = c.uv_index != null ? Math.round(c.uv_index) : null;
+    const maxT    = d?.temperature_2m_max?.[0] != null ? Math.round(d.temperature_2m_max[0]) : null;
+    const minT    = d?.temperature_2m_min?.[0] != null ? Math.round(d.temperature_2m_min[0]) : null;
+    const sunrise = d?.sunrise?.[0]
+      ? new Date(d.sunrise[0]).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})
       : null;
-    const sunset   = d?.sunset?.[0]
-      ? new Date(d.sunset[0]).toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true })
+    const sunset  = d?.sunset?.[0]
+      ? new Date(d.sunset[0]).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})
       : null;
 
     const tips = [];
@@ -552,15 +527,13 @@ const fetchWeather = async (lat, lng, cityName) => {
       `|---|---|`,
       `| **Condition** | ${cond} |`,
       `| **Temperature** | **${tempC}°C** (feels like ${feelsC}°C) |`,
-      maxT != null && minT != null
-        ? `| **High / Low** | ${maxT}°C / ${minT}°C |`
-        : null,
+      maxT != null && minT != null ? `| **High / Low** | ${maxT}°C / ${minT}°C |` : null,
       `| **Humidity** | ${humidity}% |`,
       `| **Rain Chance** | ${rainMax}% |`,
       `| **Wind** | ${wind} km/h |`,
       uv != null ? `| **UV Index** | ${uv} |` : null,
-      sunrise     ? `| **Sunrise** | ${sunrise} |` : null,
-      sunset      ? `| **Sunset** | ${sunset} |`  : null,
+      sunrise ? `| **Sunrise** | ${sunrise} |` : null,
+      sunset  ? `| **Sunset** | ${sunset} |`  : null,
       "",
       "## 🧳 Travel Tips",
       ...tips.map((t) => `- ${t}`),
@@ -585,9 +558,9 @@ const extractRadius = (msg = "") => {
   const value = parseFloat(match[1]);
   const unit  = match[2];
   let metres;
-  if (unit === "mile" || unit === "miles")              metres = Math.round(value * 1609.34);
-  else if (unit === "m" || unit === "meter" || unit === "metres") metres = Math.round(value);
-  else                                                   metres = Math.round(value * 1000);
+  if (unit === "mile" || unit === "miles")                              metres = Math.round(value * 1609.34);
+  else if (unit === "m" || unit === "meter" || unit === "metres")      metres = Math.round(value);
+  else                                                                  metres = Math.round(value * 1000);
   return Math.min(Math.max(metres, 500), 50000);
 };
 
@@ -595,37 +568,60 @@ const extractRadius = (msg = "") => {
 const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
   const m = normalizeQuery(msg);
   if (/\b(temple|shrine|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m)) return "hindu temple";
-  if (/\bmuseum\b/.test(m))                                                            return "museum";
-  if (/\bbeach\b/.test(m))                                                             return "beach";
+  if (/\bmuseum\b/.test(m))  return "museum";
+  if (/\bbeach\b/.test(m))   return "beach";
   if (/\b(park|garden|nature|wildlife|forest|waterfall|lake|hill|mountain)\b/.test(m)) return "park";
-  if (/\b(mall|shopping|market|bazaar|bazar)\b/.test(m))                               return "shopping mall";
-  if (/\b(hospital|clinic|medical|doctor|pharmacy)\b/.test(m))                         return "hospital";
-  if (/\b(atm|bank)\b/.test(m))                                                        return "bank";
-  if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m))                              return "gas station";
+  if (/\b(mall|shopping|market|bazaar|bazar)\b/.test(m))  return "shopping mall";
+  if (/\b(hospital|clinic|medical|doctor|pharmacy)\b/.test(m)) return "hospital";
+  if (/\b(atm|bank)\b/.test(m)) return "bank";
+  if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m)) return "gas station";
   return defaultKeyword;
 };
 
-/* ================= detectIntent ================= */
+/* ═══════════════════════════════════════════════════════════════
+   detectIntent — UPDATED
+
+   Key changes:
+   1. Alert / emergency / disaster queries now route to
+      "guide_weather_alert" BEFORE the generic weather check.
+      This prevents "is my area got orange alert due to rain"
+      from being answered with a raw Open-Meteo data table,
+      which doesn't explain what an orange alert means or
+      what actions the user should take.
+
+   2. "1 week" / "a week" day inputs no longer accidentally trigger
+      the "days" step failure — handled in the step handler itself.
+═══════════════════════════════════════════════════════════════ */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
 const detectIntent = (msg = "") => {
   const m = normalizeQuery(msg);
   console.log(`[detectIntent] normalized: "${m}"`);
 
-  // 1. Trip planning
+  // 1. Trip planning — highest priority
   if (
     /\b(plan|planning)\b.*\b(trip|tour|holiday|vacation|getaway|journey)\b/.test(m) ||
     /\b(trip|tour|holiday|vacation|getaway|journey)\b.*\b(to|from)\b/.test(m) ||
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // 2. Weather — before general to prevent hallucination
-  if (/\b(weather|temperature|forecast|rain|humidity|climate today|how hot|how cold|uv index|sunrise|sunset)\b/.test(m))
+  // 2. Weather ALERTS / Disaster warnings — BEFORE generic weather.
+  //    These questions need explanation + safety guidance, NOT raw met data.
+  //    "orange alert", "red alert", "cyclone warning", "flood warning",
+  //    "IMD warning", "heavy rain alert", "disaster", "emergency" etc.
+  if (/\b(orange alert|red alert|yellow alert|green alert|imd alert|imd warning|cyclone warning|flood warning|flood alert|heavy rain alert|disaster|landslide warning|tsunami warning|storm warning|emergency alert)\b/.test(m))
+    return "guide_weather_alert";
+
+  // 3. Generic current weather conditions — Open-Meteo live data
+  if (/\b(weather|temperature|forecast|humidity|climate today|how hot|how cold|uv index|sunrise|sunset)\b/.test(m))
+    return "weather";
+  // Only route "rain" to weather if it's a direct weather question, not an alert
+  if (/\brain\b/.test(m) && /\b(is it|will it|chance of|probability|raining)\b/.test(m))
     return "weather";
 
   const hasProximity = PROXIMITY_RE.test(m);
 
-  // 3. Nearby (real-time Google Places) — only with explicit proximity signal
+  // 4. Real-time nearby search — ONLY with explicit proximity signal
   if (hasProximity) {
     if (/\btemple\b/.test(m))                                   return "nearby_temple";
     if (/\b(restaurant|dhaba|cafe|dining|eat|food)\b/.test(m)) return "nearby_food";
@@ -636,7 +632,7 @@ const detectIntent = (msg = "") => {
     return "nearby_general";
   }
 
-  // 4. AI Travel Guide — content questions (no proximity)
+  // 5. AI Travel Guide — content questions (no proximity)
   if (/\b(local food|local dish|famous food|famous dish|what to eat|must eat|dish in|dish of|cuisine|street food|best food|food to taste|must.?try food|food in|food of|best to eat|food recommendation)\b/.test(m))
     return "guide_food";
   if (/\b(restaurant|where to eat|places to eat|best restaurants|dining)\b/.test(m))
@@ -657,21 +653,42 @@ const detectIntent = (msg = "") => {
   return "general";
 };
 
-/* ================= looksLikeStepAnswer ================= */
+/* ═══════════════════════════════════════════════════════════════
+   looksLikeStepAnswer — FIXED: trim raw before regex matching.
+   Mobile keyboards often append a trailing space, causing
+   "^[1-5]$" to fail on " 2" or "2 ".
+═══════════════════════════════════════════════════════════════ */
 const looksLikeStepAnswer = (step, raw) => {
+  // Trim FIRST — prevents mobile keyboard spaces from breaking number matching
   const lower = raw.toLowerCase().trim();
+
   if (lower.endsWith("?")) return false;
   if (/^(what|why|how|when|where|which|who|tell me|explain|is |are |can |should |best )/.test(lower)) return false;
+
   switch (step) {
-    case "travellers": case "days": case "car_mileage": return /\d/.test(lower);
-    case "budget":       return lower === "skip" || /\d/.test(lower);
-    case "transport":    return /^[1-4]$/.test(lower) || /train|car|bus|flight/.test(lower);
-    case "car_fuel":     return /^[1-4]$/.test(lower) || /petrol|diesel|cng|ev/.test(lower);
-    case "bus_type":     return /^[1-5]$/.test(lower) || /ordinary|express|luxury|sleeper|ac/.test(lower);
-    case "flight_class": return /^[1-3]$/.test(lower) || /economy|business|premium/.test(lower);
-    case "hotel":        return /^[1-3]$/.test(lower) || /budget|standard|luxury|no|skip|none/.test(lower);
-    case "source": case "destination": return lower.split(" ").length <= 4;
-    default: return false;
+    case "travellers":
+    case "days":
+    case "car_mileage":
+      return /\d/.test(lower);
+    case "budget":
+      return lower === "skip" || /\d/.test(lower);
+    case "transport":
+      return /^[1-4]$/.test(lower) || /train|car|bus|flight/.test(lower);
+    case "train_class":
+      return /^[1-5]$/.test(lower) || /general|sleeper|3ac|2ac|1ac/.test(lower);
+    case "bus_type":
+      return /^[1-5]$/.test(lower) || /ordinary|express|luxury|sleeper|ac/.test(lower);
+    case "flight_class":
+      return /^[1-3]$/.test(lower) || /economy|business|premium/.test(lower);
+    case "car_fuel":
+      return /^[1-4]$/.test(lower) || /petrol|diesel|cng|ev/.test(lower);
+    case "hotel":
+      return /^[1-3]$/.test(lower) || /budget|standard|luxury|no|skip|none/.test(lower);
+    case "source":
+    case "destination":
+      return lower.split(" ").length <= 4;
+    default:
+      return false;
   }
 };
 
@@ -689,55 +706,38 @@ const isTripActive = (s) => {
 };
 
 /* ================= extractPlaceFromQuery ================= */
-/*
-  NOT_A_CITY — words that appear after spatial prepositions but are
-  NOT city names. Prevents "in alappuzha per one person" from being
-  extracted as city = "Alappuzha Per One".
-
-  Added: per, one, person, people, night, day, days, hour, hours,
-         head, adult, adults, member, members, couple, group,
-         booking, package, boat, house, cost, price, rate, charge.
-*/
 const NOT_A_CITY = new Set([
-  // verbs
   "taste","visit","eat","see","try","go","travel","find","get","know","do",
   "explore","check","book","plan","reach","stay","watch","enjoy","experience",
   "discover","look","search","ask","tell","show","help","use","buy","take",
   "make","give","keep","come","leave","start","stop","spend",
-  // pronouns / determiners
   "me","my","our","your","their","this","that","these","those","a","an","the",
-  // place-type words (not city names)
   "temple","food","hotel","restaurant","beach","park","weather","forecast",
   "houseboat","boathouse","boat","house","accommodation","resort","lodge",
-  // quantity / unit words  ← THE FIX for "per one person" extraction
   "per","one","two","three","four","five","six","seven","eight","nine","ten",
   "person","people","persons","head","adult","adults","member","members",
   "couple","group","family","traveller","travellers","traveler","travelers",
   "night","nights","day","days","hour","hours","week","weeks","month","months",
-  // price / booking words
   "cost","price","rate","charge","fee","amount","budget","booking","package",
   "deal","offer","plan","scheme","tariff",
+  "alert","warning","rain","flood","cyclone","disaster","emergency",
 ]);
 
 const extractPlaceFromQuery = (msg = "") => {
   if (!msg) return null;
   const m = normalizeQuery(msg);
 
-  // Priority 1: "in <city>" — take LAST occurrence, validate against NOT_A_CITY
   const inMatches = [...m.matchAll(/\bin\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})/g)];
-  // Note: reduced from {0,2} to {0,1} — city names are at most 2 words
   if (inMatches.length > 0) {
     const candidate = inMatches[inMatches.length - 1][1].trim();
     const words     = candidate.split(/\s+/);
-    // Every word in the candidate must not be a non-city word
-    const isValid = words.every((w) => !NOT_A_CITY.has(w.toLowerCase()));
+    const isValid   = words.every((w) => !NOT_A_CITY.has(w.toLowerCase()));
     if (isValid && candidate.length > 2) {
       console.log(`[extractPlace] "in" → "${candidate}"`);
       return clean(candidate);
     }
   }
 
-  // Priority 2: "at <city>"
   const atMatch = m.match(/\bat\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})/);
   if (atMatch) {
     const candidate = atMatch[1].trim();
@@ -748,7 +748,6 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // Priority 3: "near/around <city>" — but NOT "near me"
   const nearMatch = m.match(/\b(?:near|around)\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})/);
   if (nearMatch) {
     const candidate = nearMatch[1].trim();
@@ -759,7 +758,6 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // Priority 4: "to <city>"
   const toMatch = m.match(/\bto\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})(?:\s*[?!.,]|$)/);
   if (toMatch) {
     const candidate = toMatch[1].trim();
@@ -808,14 +806,14 @@ const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
 
 /* ================= FLOW HELPERS ================= */
 const nextStep = (trip) => {
-  if (!trip.source)                  return "source";
-  if (!trip.travellers)              return "travellers";
-  if (!trip.days)                    return "days";
-  if (trip.budget === undefined)     return "budget";
-  if (!trip.destination)             return "destination";
-  if (!trip.transport)               return "transport";
-  if (!trip.transportDetails?.fare)  return "transport";
-  if (!trip.hotelType)               return "hotel";
+  if (!trip.source)                 return "source";
+  if (!trip.travellers)             return "travellers";
+  if (!trip.days)                   return "days";
+  if (trip.budget === undefined)    return "budget";
+  if (!trip.destination)            return "destination";
+  if (!trip.transport)              return "transport";
+  if (!trip.transportDetails?.fare) return "transport";
+  if (!trip.hotelType)              return "hotel";
   return "summary";
 };
 
