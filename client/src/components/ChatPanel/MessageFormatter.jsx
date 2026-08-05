@@ -1,262 +1,273 @@
-import React, { useMemo } from "react";
-import "./MessageFormatter.css";
+import React from "react";
 
-/* ═══════════════════════════════════════════════════════════════
-   parseMarkdown — converts Groq's Markdown output to React nodes.
+/* ════════════════════════════════════════════════════════
+   MessageFormatter — PURE RENDERER.
 
-   Handles:
-   - ## and ### headings
-   - **bold** and *italic* inline
-   - Bullet lists (-, *, •)
-   - Numbered lists (1. 2. 3.)
-   - Tables (| col | col |)
-   - 💡 **Travel Tip:** callout lines
-   - Horizontal rules (--- or ***)
-   - Plain paragraphs
-   - `code` inline
-   - Blank lines as paragraph separators
-═══════════════════════════════════════════════════════════════ */
+   Architecture change: this component no longer decides WHAT a
+   message is about. It has two rendering modes:
 
-function parseInline(text) {
-  // Parse **bold**, *italic*, `code` inline
-  const parts = [];
-  // Split on **bold**, *italic*, or `code`
-  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
-  let last = 0;
-  let match;
+     1. Structured mode — `sections` (+ `title` / `recommendation`)
+        props, produced by the backend's AI Travel Guide JSON
+        contract (see ConversationService.askTravelGuide). The
+        backend already decided "food → cards", "temple → mostly
+        paragraphs", etc. This component just lays out whatever
+        shape it's given.
 
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > last) {
-      parts.push(text.slice(last, match.index));
+     2. Legacy text mode — a single `text` string (used for plain
+        ChatGPT-style answers: general AI, entity follow-ups,
+        "knowledge" guide questions). Parsing here is intentionally
+        generic markdown only — bold, bullet lines, label/value
+        lines, blank-line paragraph breaks — never content-specific
+        detection like "this looks like a food list".
+
+   No component in this file inspects message content to guess a
+   domain (food/temple/hotel/etc). That decision now lives entirely
+   in the backend response contract.
+════════════════════════════════════════════════════════ */
+
+// Generic value highlighting (price/rating/timing/etc). This is
+// pattern-matching on already-present tokens for visual emphasis —
+// it doesn't classify what the message is ABOUT, so it stays here.
+const VALUE_PATTERNS = [
+  { type: "price", re: /₹\s?\d[\d,]*/g },
+  { type: "distance", re: /\b\d[\d,]*(?:\.\d+)?\s?(?:km|kilometers?|kms)\b/gi },
+  { type: "timing", re: /\b\d{1,2}(?::\d{2})?\s?(?:AM|PM|am|pm)\b(?:\s?[–-]\s?\d{1,2}(?::\d{2})?\s?(?:AM|PM|am|pm))?/g },
+  { type: "duration", re: /\b\d+(?:\.\d+)?\s?[–-]\s?\d+(?:\.\d+)?\s?(?:hours?|hrs?)\b/gi },
+  { type: "duration", re: /\b\d+(?:\.\d+)?\s?(?:hours?|hrs?|minutes?|mins?)\b/gi },
+  { type: "weather", re: /\b\d+\s?[–-]\s?\d+\s?°?\s?[CF]\b/g },
+  { type: "weather", re: /\b\d+\s?°\s?[CF]\b/g },
+  { type: "percent", re: /\b\d+(?:\.\d+)?%/g },
+  { type: "rating", re: /\b\d(?:\.\d)?\s?(?:stars?|-star)\b/gi },
+  { type: "rating", re: /⭐\s?\d(?:\.\d)?/g },
+];
+
+const highlightValues = (str, keyPrefix) => {
+  const matches = [];
+  VALUE_PATTERNS.forEach(({ type, re }) => {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      matches.push({ start: m.index, end: m.index + m[0].length, text: m[0], type });
     }
-    if (match[0].startsWith("**")) {
-      parts.push(<strong key={match.index}>{match[2]}</strong>);
-    } else if (match[0].startsWith("*")) {
-      parts.push(<em key={match.index}>{match[3]}</em>);
-    } else if (match[0].startsWith("`")) {
-      parts.push(<code key={match.index} className="mf-inline-code">{match[4]}</code>);
+  });
+  if (!matches.length) return [str];
+  matches.sort((a, b) => a.start - b.start || b.end - a.end);
+  const merged = [];
+  let lastEnd = -1;
+  for (const mt of matches) {
+    if (mt.start >= lastEnd) { merged.push(mt); lastEnd = mt.end; }
+  }
+  const nodes = [];
+  let cursor = 0;
+  merged.forEach((mt, i) => {
+    if (mt.start > cursor) nodes.push(str.slice(cursor, mt.start));
+    nodes.push(
+      <span key={`${keyPrefix}-v${i}`} className={`message-badge badge-${mt.type}`}>
+        {mt.text}
+      </span>
+    );
+    cursor = mt.end;
+  });
+  if (cursor < str.length) nodes.push(str.slice(cursor));
+  return nodes;
+};
+
+const renderInline = (text, keyPrefix) => {
+  const boldSplit = String(text).split(/(\*\*[^*]+\*\*)/g);
+  const nodes = [];
+  boldSplit.forEach((chunk, ci) => {
+    if (!chunk) return;
+    const boldMatch = chunk.match(/^\*\*([^*]+)\*\*$/);
+    if (boldMatch) {
+      nodes.push(<strong key={`${keyPrefix}-b${ci}`} className="message-highlight">{boldMatch[1]}</strong>);
+      return;
     }
-    last = match.index + match[0].length;
-  }
+    nodes.push(...highlightValues(chunk, `${keyPrefix}-c${ci}`));
+  });
+  return nodes;
+};
 
-  if (last < text.length) {
-    parts.push(text.slice(last));
-  }
+/* ════════════════════════════════════════════════════════
+   STRUCTURED MODE — renders the backend's { title, sections,
+   recommendation } guide contract. Each section carries its own
+   `style`, so this is a straight switch, not content inference.
+════════════════════════════════════════════════════════ */
 
-  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : parts;
-}
-
-function parseTable(rows) {
-  // rows: array of raw table lines including separator
-  // e.g. ["| Type | Price |", "|------|-------|", "| Budget | ₹800 |"]
-  const dataRows = rows.filter(
-    (r) => !/^\|[-:\s|]+\|$/.test(r.trim())
-  );
-
-  const parseCells = (row) =>
-    row
-      .trim()
-      .replace(/^\||\|$/g, "")
-      .split("|")
-      .map((cell) => cell.trim());
-
-  if (dataRows.length === 0) return null;
-
-  const header = parseCells(dataRows[0]);
-  const body   = dataRows.slice(1);
+const GuideSection = ({ section, si }) => {
+  const { icon, heading, style, items, keyfacts, text } = section;
 
   return (
-    <div className="mf-table-wrap" key={`table-${rows[0]}`}>
-      <table className="mf-table">
-        <thead>
-          <tr>
-            {header.map((h, i) => (
-              <th key={i}>{parseInline(h)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {body.map((row, ri) => (
-            <tr key={ri}>
-              {parseCells(row).map((cell, ci) => (
-                <td key={ci}>{parseInline(cell)}</td>
-              ))}
-            </tr>
+    <div className="message-section" key={`sec-${si}`}>
+      {heading && (
+        <h4 className="message-heading">
+          {icon && <span className="message-heading-icon">{icon}</span>} {heading}
+        </h4>
+      )}
+
+      {style === "cards" && Array.isArray(items) && (
+        <div className="message-card-grid">
+          {items.map((it, ii) => (
+            <div className="message-item-card" key={`card-${si}-${ii}`}>
+              <div className="message-item-title">{renderInline(it.title, `card-${si}-${ii}-t`)}</div>
+              {it.desc && <div className="message-item-desc">{renderInline(it.desc, `card-${si}-${ii}-d`)}</div>}
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
+
+      {style === "list" && Array.isArray(items) && (
+        <ul className="message-bullets">
+          {items.map((it, ii) => (
+            <li className="message-bullet" key={`li-${si}-${ii}`}>
+              {it.desc
+                ? <>{renderInline(it.title, `li-${si}-${ii}-t`)} — {renderInline(it.desc, `li-${si}-${ii}-d`)}</>
+                : renderInline(it.title, `li-${si}-${ii}-t`)}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {style === "keyfacts" && Array.isArray(keyfacts) && (
+        <div className="message-infocard">
+          {keyfacts.map((kf, ki) => (
+            <p className="message-line" key={`kf-${si}-${ki}`}>
+              <span className="message-label">{kf.label}:</span> {renderInline(kf.value, `kf-${si}-${ki}`)}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {style === "paragraph" && text && (
+        <p className="message-line">{renderInline(text, `para-${si}`)}</p>
+      )}
     </div>
   );
-}
+};
 
-function parseMarkdown(text) {
-  if (!text || typeof text !== "string") return null;
+const GuideFormatter = ({ title, sections = [], recommendation }) => (
+  <div className="message-formatted message-guide">
+    {title && <p className="message-line message-summary">{renderInline(title, "title")}</p>}
+    {sections.map((section, si) => <GuideSection section={section} si={si} key={`gs-${si}`} />)}
+    {recommendation && (
+      <div className="message-tip">
+        <span>💡</span><span>{renderInline(recommendation, "reco")}</span>
+      </div>
+    )}
+  </div>
+);
 
-  const lines  = text.split("\n");
-  const nodes  = [];
-  let i        = 0;
-  let listType = null;   // "ul" | "ol" | null
-  let listItems= [];
-  let tableRows= [];
+/* ════════════════════════════════════════════════════════
+   LEGACY TEXT MODE — generic markdown only. No content-specific
+   detection (no food-list extraction, no temple/travel heuristics).
+════════════════════════════════════════════════════════ */
 
-  const flushList = () => {
-    if (!listItems.length) return;
-    const Tag = listType === "ol" ? "ol" : "ul";
-    nodes.push(
-      <Tag key={`list-${nodes.length}`} className={`mf-${listType}`}>
-        {listItems.map((item, idx) => (
-          <li key={idx}>{parseInline(item)}</li>
+const BULLET_RE = /^\s*[-*•]\s+(.*)$/;
+const LABEL_RE = /^([A-Z][A-Za-z /&]{1,28}):\s+(.*)$/;
+const EMOJI_LEAD_RE = /^([\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u2728\u2b50]\uFE0F?)\s+(.+)$/u;
+const HEADING_COLON_RE = /^([A-Z][A-Za-z0-9 &'/-]{2,40}):$/;
+const DIVIDER_RE = /^[-_]{3,}$/;
+
+const TextFormatter = ({ text = "" }) => {
+  if (!text) return null;
+
+  const lines = text.split("\n");
+  const blocks = [];
+  let bulletBuffer = [];
+  let labelBuffer = [];
+  let usedSummary = false;
+
+  const flushBullets = (key) => {
+    if (!bulletBuffer.length) return;
+    blocks.push(
+      <ul className="message-bullets" key={`ul-${key}`}>
+        {bulletBuffer.map((b, bi) => (
+          <li className="message-bullet" key={`li-${key}-${bi}`}>{renderInline(b, `li-${key}-${bi}`)}</li>
         ))}
-      </Tag>
+      </ul>
     );
-    listItems = [];
-    listType  = null;
+    bulletBuffer = [];
   };
 
-  const flushTable = () => {
-    if (!tableRows.length) return;
-    const tableNode = parseTable(tableRows);
-    if (tableNode) nodes.push(tableNode);
-    tableRows = [];
-  };
-
-  while (i < lines.length) {
-    const raw  = lines[i];
-    const line = raw.trimEnd();
-    const trimmed = line.trim();
-
-    // ── Blank line ──────────────────────────────────────────────
-    if (trimmed === "") {
-      flushList();
-      flushTable();
-      i++;
-      continue;
-    }
-
-    // ── Table row ───────────────────────────────────────────────
-    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-      flushList();
-      tableRows.push(trimmed);
-      i++;
-      continue;
+  const flushLabels = (key) => {
+    if (!labelBuffer.length) return;
+    if (labelBuffer.length === 1) {
+      const [label, value, li] = labelBuffer[0];
+      blocks.push(
+        <p className="message-line" key={`p-${li}`}>
+          <span className="message-label">{label}:</span> {renderInline(value, `p-${li}`)}
+        </p>
+      );
     } else {
-      flushTable();
-    }
-
-    // ── Horizontal rule ─────────────────────────────────────────
-    if (/^[-*]{3,}$/.test(trimmed)) {
-      flushList();
-      nodes.push(<hr key={`hr-${i}`} className="mf-hr" />);
-      i++;
-      continue;
-    }
-
-    // ── ## Heading 2 ────────────────────────────────────────────
-    if (trimmed.startsWith("## ")) {
-      flushList();
-      const headText = trimmed.slice(3).trim();
-      nodes.push(
-        <h2 key={`h2-${i}`} className="mf-h2">
-          {parseInline(headText)}
-        </h2>
-      );
-      i++;
-      continue;
-    }
-
-    // ── ### Heading 3 ───────────────────────────────────────────
-    if (trimmed.startsWith("### ")) {
-      flushList();
-      const headText = trimmed.slice(4).trim();
-      nodes.push(
-        <h3 key={`h3-${i}`} className="mf-h3">
-          {parseInline(headText)}
-        </h3>
-      );
-      i++;
-      continue;
-    }
-
-    // ── # Heading 1 ─────────────────────────────────────────────
-    if (trimmed.startsWith("# ") && !trimmed.startsWith("## ")) {
-      flushList();
-      const headText = trimmed.slice(2).trim();
-      nodes.push(
-        <h1 key={`h1-${i}`} className="mf-h1">
-          {parseInline(headText)}
-        </h1>
-      );
-      i++;
-      continue;
-    }
-
-    // ── 💡 Travel Tip callout ────────────────────────────────────
-    if (trimmed.startsWith("💡")) {
-      flushList();
-      nodes.push(
-        <div key={`tip-${i}`} className="mf-tip">
-          {parseInline(trimmed)}
+      blocks.push(
+        <div className="message-infocard" key={`ic-${key}`}>
+          {labelBuffer.map(([label, value, li], bi) => (
+            <p className="message-line" key={`p-${li}-${bi}`}>
+              <span className="message-label">{label}:</span> {renderInline(value, `p-${li}-${bi}`)}
+            </p>
+          ))}
         </div>
       );
-      i++;
-      continue;
+    }
+    labelBuffer = [];
+  };
+
+  lines.forEach((line, li) => {
+    const bullet = line.match(BULLET_RE);
+    if (bullet) { flushLabels(li); bulletBuffer.push(bullet[1]); return; }
+
+    const trimmed = line.trim();
+
+    if (trimmed === "") { flushBullets(li); flushLabels(li); blocks.push(<div className="message-gap" key={`gap-${li}`} />); return; }
+
+    if (DIVIDER_RE.test(trimmed)) {
+      flushBullets(li); flushLabels(li);
+      blocks.push(<hr className="message-divider" key={`hr-${li}`} />);
+      return;
     }
 
-    // ── Unordered list item (-, *, •) ────────────────────────────
-    if (/^[-*•]\s+/.test(trimmed)) {
-      if (listType && listType !== "ul") flushList();
-      listType = "ul";
-      listItems.push(trimmed.replace(/^[-*•]\s+/, ""));
-      i++;
-      continue;
+    const colonHead = trimmed.match(HEADING_COLON_RE);
+    if (colonHead) {
+      flushBullets(li); flushLabels(li);
+      blocks.push(<h4 className="message-heading" key={`h-${li}`}>{colonHead[1]}</h4>);
+      return;
     }
 
-    // ── Ordered list item (1. 2. etc.) ──────────────────────────
-    if (/^\d+\.\s+/.test(trimmed)) {
-      if (listType && listType !== "ol") flushList();
-      listType = "ol";
-      listItems.push(trimmed.replace(/^\d+\.\s+/, ""));
-      i++;
-      continue;
+    const emojiHead = trimmed.match(EMOJI_LEAD_RE);
+    if (emojiHead && emojiHead[2].length <= 42) {
+      flushBullets(li); flushLabels(li);
+      blocks.push(
+        <h4 className="message-heading" key={`h-${li}`}>
+          <span className="message-heading-icon">{emojiHead[1]}</span> {renderInline(emojiHead[2], `h-${li}`)}
+        </h4>
+      );
+      return;
     }
 
-    // ── Plain paragraph ─────────────────────────────────────────
-    flushList();
-    nodes.push(
-      <p key={`p-${i}`} className="mf-p">
-        {parseInline(trimmed)}
-      </p>
-    );
-    i++;
+    const label = line.match(LABEL_RE);
+    if (label) { flushBullets(li); labelBuffer.push([label[1], label[2], li]); return; }
+
+    flushBullets(li); flushLabels(li);
+    const cls = !usedSummary ? "message-line message-summary" : "message-line";
+    usedSummary = true;
+    blocks.push(<p className={cls} key={`p-${li}`}>{renderInline(line, `p-${li}`)}</p>);
+  });
+
+  flushBullets("end");
+  flushLabels("end");
+
+  return <div className="message-formatted">{blocks}</div>;
+};
+
+/* ════════════════════════════════════════════════════════
+   ENTRY POINT — picks a mode based on which props are present.
+   `sections` (even an empty-but-defined array) means structured
+   mode; otherwise falls back to legacy text mode.
+════════════════════════════════════════════════════════ */
+const MessageFormatter = ({ text, sections, title, recommendation }) => {
+  if (Array.isArray(sections)) {
+    return <GuideFormatter title={title} sections={sections} recommendation={recommendation} />;
   }
+  return <TextFormatter text={text} />;
+};
 
-  // Flush anything remaining
-  flushList();
-  flushTable();
-
-  return nodes;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   MessageFormatter — main export.
-   Renders AI text responses as structured HTML.
-   For non-text types (places, tripSummary, etc.) the parent
-   ChatPanel handles rendering directly and never calls this.
-═══════════════════════════════════════════════════════════════ */
-export default function MessageFormatter({ content, isUser = false }) {
-  const nodes = useMemo(() => {
-    if (!content) return null;
-    // User messages: plain text only
-    if (isUser) return content;
-    // AI messages: full Markdown parsing
-    return parseMarkdown(content);
-  }, [content, isUser]);
-
-  if (!nodes) return null;
-
-  if (isUser) {
-    return <span className="mf-user-text">{nodes}</span>;
-  }
-
-  return <div className="mf-root">{nodes}</div>;
-}
+export default MessageFormatter;
