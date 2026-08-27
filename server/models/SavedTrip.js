@@ -1,49 +1,48 @@
-// models/SavedTrip.js
+"use strict";
 
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-const savedTripSchema = new mongoose.Schema(
+/* ═══════════════════════════════════════════════════════════════
+   SavedTrip — reused for BOTH "Save as Template" from Plan My Trip
+   and anything else in the app that already writes here (Saved.jsx
+   / TemplateExplorer.jsx). If a SavedTrip model already exists in
+   your repo, DO NOT create this file — instead diff this schema
+   against the real one and only add missing fields.
+═══════════════════════════════════════════════════════════════ */
+
+const PlaceSchema = new Schema(
+  {
+    name:    String,
+    lat:     Number,
+    lng:     Number,
+    address: String,
+    image:   String,
+  },
+  { _id: false }
+);
+
+const SavedTripSchema = new Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
+      index: true,
     },
 
-    name: {
-      type: String,
-      required: true
-    },
+    templateName: { type: String, default: "Untitled Trip" },
+    destination:  { type: String, default: null },
+    places:       { type: [PlaceSchema], default: [] },
+    travellers:   { type: Number, default: null },
+    startDate:    { type: String, default: null },
+    endDate:      { type: String, default: null },
+    itinerary:    { type: Schema.Types.Mixed, default: null },
+    notes:        { type: String, default: "" },
 
-    date: {
-      type: String,
-      default: ""
-    },
-
-    time: {
-      type: String,
-      default: ""
-    },
-
-    budget: {
-      type: String,
-      default: ""
-    },
-
-    note: {
-      type: String,
-      default: ""
-    },
-
-    image: {
-      type: String,
-      default: ""
-    }
+    source: { type: String, enum: ["planner", "chat"], default: "planner" },
   },
-  { timestamps: true }
+  { timestamps: true } // createdAt / updatedAt
 );
 
-module.exports = mongoose.model(
-  "SavedTrip",
-  savedTripSchema
-);
+module.exports = mongoose.model("SavedTrip", SavedTripSchema);
