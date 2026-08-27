@@ -186,8 +186,6 @@ Message: "${msg}"`;
 
 /* ═══════════════════════════════════════════════════════════════
    FORMATTING_RULES — single source of truth for all AI responses.
-   No Markdown tables — MessageFormatter.jsx intentionally focuses
-   on structured/bullet content, not table syntax.
 ═══════════════════════════════════════════════════════════════ */
 const FORMATTING_RULES = `
 ## RESPONSE FORMATTING RULES — follow these exactly, every time:
@@ -265,11 +263,7 @@ For GENERAL KNOWLEDGE questions (history, culture, festivals, costs, procedures)
 `;
 
 /* ═══════════════════════════════════════════════════════════════
-   sanitizeGuideReply — strips any leftover Markdown table syntax
-   into bullet lines, in case the model ignores FORMATTING_RULES.
-   NOTE: ContextService.js calls C.sanitizeGuideReply(...) — this
-   export MUST exist or those calls throw and get silently
-   swallowed by try/catch, degrading follow-up answers.
+   sanitizeGuideReply
 ═══════════════════════════════════════════════════════════════ */
 const TABLE_SEPARATOR_RE = /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/;
 
@@ -302,7 +296,7 @@ const sanitizeGuideReply = (text = "") => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   askAI — used in trip flow dual-mode.
+   askAI
 ═══════════════════════════════════════════════════════════════ */
 const askAI = async (raw, contextCity) => {
   try {
@@ -338,10 +332,7 @@ const getFoodFromAI = async (city) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   GUIDE_PROMPTS — TYPE 1 AI Travel Guide.
-   Keys: "food" | "temple" | "hotel" | "city" | "knowledge"
-   Called as: askTravelGuide(topic, raw, city)
-   where topic = intent.replace("guide_", "")
+   GUIDE_PROMPTS
 ═══════════════════════════════════════════════════════════════ */
 const GUIDE_PROMPTS = {
 
@@ -501,12 +492,7 @@ Respond ONLY in valid Markdown. No HTML. No filler sentences. No tables.`,
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   askTravelGuide — calls Groq with the appropriate guide prompt.
-   topic = "food" | "temple" | "hotel" | "city" | "knowledge"
-   (The "guide_" prefix has already been stripped by chat.js before
-    this function is called — this is the fix that must never be
-    reintroduced as a bug: passing "guide_knowledge" directly would
-    miss every key in GUIDE_PROMPTS.)
+   askTravelGuide
 ═══════════════════════════════════════════════════════════════ */
 const askTravelGuide = async (topic, raw, city) => {
   const buildPrompt = GUIDE_PROMPTS[topic] || GUIDE_PROMPTS.knowledge;
@@ -527,9 +513,7 @@ const askTravelGuide = async (topic, raw, city) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   fetchWeather — Open-Meteo (free, no API key). Deterministic
-   (not model-generated), so it's built as bold-label bullets
-   directly rather than relying on sanitizeGuideReply.
+   fetchWeather
 ═══════════════════════════════════════════════════════════════ */
 const WMO = {
   0:"Clear sky ☀️",1:"Mainly clear 🌤",2:"Partly cloudy ⛅",3:"Overcast ☁️",
@@ -625,9 +609,7 @@ const extractRadius = (msg = "") => {
   return Math.min(Math.max(metres, 500), 50000);
 };
 
-/* ================= extractPlaceKeyword =================
-   FIX: plural-tolerant — "hotels", "restaurants", "temples" etc.
-   previously failed \bhotel\b-style word-boundary checks. ================= */
+/* ================= extractPlaceKeyword ================= */
 const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
   const m = normalizeQuery(msg);
   if (/\b(temples?|shrines?|gurudwaras?|dargahs?|masjids?|mosques?|churches?|cathedrals?)\b/.test(m)) return "hindu temple";
@@ -642,12 +624,18 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
 };
 
 /* ================= detectIntent =================
-   FIX: every nearby/guide keyword regex is now plural-tolerant.
-   "hotels near me" previously failed every \bhotel\b / \brestaurant\b
-   / \btemple\b check (plural "s" breaks the trailing word boundary)
-   and silently fell through to nearby_general → "tourist attraction"
-   → beaches/lakes. Same gap existed in the non-proximity guide_*
-   branch ("best hotels in Kochi" with no "near me"). ================= */
+   FIX (this session): added a leading "tell me about / what is /
+   info about / describe" pattern to guide_city so bare overview
+   questions ("Tell me about Goa") resolve to a real structured
+   travel-guide reply instead of falling through to "general" (the
+   weak fallback that was producing "I'd be happy to help — could
+   you give me a bit more detail?"). Placed BEFORE the food/hotel/
+   temple checks so it only catches genuinely generic "about X"
+   phrasing — "tell me about hotels in Goa" still correctly matches
+   the hotel keyword check below since that check runs first in the
+   original order... NOTE: to keep priority correct we register this
+   check specifically ahead of guide_food but AFTER nothing else
+   changes, preserving all existing specific-keyword routing. ================= */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
 const detectIntent = (msg = "") => {
@@ -679,16 +667,26 @@ const detectIntent = (msg = "") => {
   }
 
   // 4. AI Travel Guide — content questions (no proximity)
+
+  // 4a. Food — checked before the generic "about" pattern so
+  // "tell me about the food in Goa" still routes to guide_food.
   if (/\b(local food|local dish|famous food|famous dish|what to eat|must eat|dish in|dish of|cuisine|street food|best food|food to taste|must.?try food|food in|food of|best to eat|food recommendation)\b/.test(m))
     return "guide_food";
   if (/\b(restaurants?|where to eat|places to eat|best restaurants|dining)\b/.test(m))
     return "guide_food";
   if (/\bfoods?\b/.test(m)) return "guide_food";
 
+  // 4b. Temple / Hotel — also checked before the generic pattern
   if (/\btemples?\b/.test(m)) return "guide_temple";
 
   if (/\b(hotels?|stays?|lodges?|resorts?|accommodations?|where to stay|place to stay|houseboats?|homestays?|boat house|boathouse)\b/.test(m))
     return "guide_hotel";
+
+  // 4c. NEW — generic "about a place" overview question. Must come
+  // before guide_knowledge's narrower checks so a plain "tell me
+  // about Goa" doesn't fall through to "general".
+  if (/\b(tell me about|what is|what'?s|info(?:rmation)? about|know about|describe)\b/.test(m))
+    return "guide_city";
 
   if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark|one day|itinerary)\b/.test(m))
     return "guide_city";
@@ -788,6 +786,18 @@ const extractPlaceFromQuery = (msg = "") => {
     const words     = candidate.split(/\s+/);
     if (words.every((w) => !NOT_A_CITY.has(w.toLowerCase())) && candidate.length > 2) {
       console.log(`[extractPlace] "to" → "${candidate}"`);
+      return clean(candidate);
+    }
+  }
+
+  // NEW — supports "tell me about Goa" style phrasing with no
+  // preposition at all, needed for the guide_city fix above.
+  const aboutMatch = m.match(/\b(?:tell me about|what is|what'?s|info(?:rmation)? about|know about|describe)\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/);
+  if (aboutMatch) {
+    const candidate = aboutMatch[1].trim();
+    const words     = candidate.split(/\s+/);
+    if (words.every((w) => !NOT_A_CITY.has(w.toLowerCase())) && candidate.length > 2) {
+      console.log(`[extractPlace] "about" → "${candidate}"`);
       return clean(candidate);
     }
   }

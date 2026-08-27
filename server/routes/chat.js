@@ -56,12 +56,7 @@ const finalizeTransport = async (s, res, details) => {
   return res.json({ reply: C.QUESTION[s.step] });
 };
 
-/* ── Safe reprompt builder — NEVER inject `undefined` into a reply.
-   train_class/bus_type/flight_class have no QUESTION entry (their
-   menus are generated dynamically at transport-selection time), so
-   `C.QUESTION[step]` for those is undefined. Previously this was
-   interpolated directly (`\n\n${C.QUESTION[s.step]}`), which could
-   literally print the string "undefined" into the chat. ── */
+/* ── Safe reprompt builder — NEVER inject `undefined` into a reply. ── */
 const repromptFor = (step) => {
   if (step === "summary") {
     return "\n\nWhenever you're ready — tap **Confirm** to generate your itinerary, or an Edit button to change a detail.";
@@ -69,6 +64,40 @@ const repromptFor = (step) => {
   if (C.QUESTION[step]) return `\n\n${C.QUESTION[step]}`;
   return "\n\nWhenever you're ready, let's continue with your trip — just pick from the options above.";
 };
+
+/* ════════════════════════════════════════════════════════════════
+   GET /api/chat/session/:userId — READ-ONLY session peek.
+   NEW: added to fix the "reload hides an active trip" bug.
+   Never mutates the session — purely lets the frontend decide
+   whether to rehydrate real history/trip-in-progress state instead
+   of always rendering a misleading blank "Hi 👋" greeting after a
+   page refresh, while MongoDB still has step="travellers" etc.
+════════════════════════════════════════════════════════════════ */
+router.get("/session/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ error: "userId is required." });
+
+    const s = await ChatSession.findOne({ userId });
+    if (!s) {
+      return res.json({ step: null, trip: {}, history: [], hasActiveTrip: false });
+    }
+
+    return res.json({
+      step: s.step || null,
+      trip: s.trip || {},
+      history: (s.history || []).map((h) => ({
+        role: h.role,
+        content: h.content,
+        at: h.at,
+      })),
+      hasActiveTrip: C.isTripActive(s),
+    });
+  } catch (err) {
+    console.error("[chat session peek] error:", err.message);
+    return res.status(500).json({ error: "Couldn't load session." });
+  }
+});
 
 /* ════════════════════════════════════════════════════════════════
    MAIN HANDLER
@@ -233,10 +262,6 @@ router.post("/", async (req, res) => {
 
       /* ─────────────────────────────────────────────────────────────
          TYPE 1: AI TRAVEL GUIDE → rich structured Markdown text.
-         intent is "guide_food", "guide_temple", etc. — strip
-         "guide_" to get the GUIDE_PROMPTS key. This fix must never
-         be reverted: passing the full "guide_knowledge" string in
-         would miss every key in GUIDE_PROMPTS.
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("guide_")) {
         const topic = intent.replace("guide_", "");
@@ -285,20 +310,11 @@ router.post("/", async (req, res) => {
 
     /* ══════════════════════════════════════════════════════════════
        IN FLOW — dual-mode: off-topic question while trip planning
-
-       FIX (root cause of the "Nearby hotels" repeated-question bug):
-       previously ANY non-step-answer message here went straight to
-       the generic LLM + reprompt, which is why quick actions like
-       "Nearby hotels" sent mid-trip never actually searched anything
-       — they got a generic "could you give more detail?" answer with
-       the current step's question appended after it. Now detectIntent
-       is checked first, exactly like the not-in-flow branch does, and
-       only genuinely general questions fall through to the LLM.
     ══════════════════════════════════════════════════════════════ */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
       const offTopicIntent = C.detectIntent(raw);
 
-      /* Weather mid-flow — must use the real weather service. */
+      /* Weather mid-flow */
       if (offTopicIntent === "weather") {
         const result = await C.fetchWeather(lat, lng, city || s.activeCity);
         await Ctx.updateSessionContext(s, raw, result.reply, {
@@ -308,9 +324,7 @@ router.post("/", async (req, res) => {
         return res.json({ reply: `${result.reply}${repromptFor(s.step)}` });
       }
 
-      /* Nearby search mid-flow — e.g. "Nearby hotels" quick action
-         clicked while a trip is being planned. Must actually search
-         Google Places, not fall into the generic LLM answer. */
+      /* Nearby search mid-flow */
       if (offTopicIntent.startsWith("nearby_")) {
         const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
@@ -333,12 +347,11 @@ router.post("/", async (req, res) => {
           type: "places",
           data: places,
           placeType,
-          reprompt: repromptFor(s.step), // optional field — safe to ignore for old clients
+          reprompt: repromptFor(s.step),
         });
       }
 
-      /* AI Travel Guide content question mid-flow — e.g. "tell me
-         about Goa beaches" while planning a Goa trip. */
+      /* AI Travel Guide content question mid-flow */
       if (offTopicIntent.startsWith("guide_")) {
         const topic = offTopicIntent.replace("guide_", "");
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
@@ -350,8 +363,7 @@ router.post("/", async (req, res) => {
         return res.json({ reply: `${reply}${repromptFor(s.step)}` });
       }
 
-      /* Genuinely general/off-topic question — only case that should
-         reach the generic context-aware LLM fallback. */
+      /* Genuinely general/off-topic question */
       const answer   = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
       await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
       await saveSession(s);
@@ -567,21 +579,12 @@ router.post("/", async (req, res) => {
 
 /* ════════════════════════════════════════════════════════════════
    POST /api/chat/reset — "New Chat"
-   FIX: previously the frontend's resetChat() only touched React
-   state (setMessages/setInput). MongoDB still had step="travellers"
-   and trip.destination="Goa" etc. after clicking New Chat, so the
-   very next message silently continued the old trip. This endpoint
-   actually clears backend trip/conversation state while explicitly
-   preserving user identity and physical-location fields.
 ════════════════════════════════════════════════════════════════ */
 router.post("/reset", async (req, res) => {
   try {
     const { userId = "user1" } = req.body;
     const s = await loadSession(userId);
 
-    // Reuses ContextService's existing clearHistory (history,
-    // activeTopic, lastIntent, activePlace*, activeTravelTopic)
-    // rather than duplicating that logic here.
     Ctx.clearHistory(s);
 
     s.step = null;
@@ -590,8 +593,7 @@ router.post("/reset", async (req, res) => {
     s.lastNearbyIntent = null;
     s.lastSearchRadius = null;
     s.lastGuideTopic = null;
-    // currentLocationCity / conversationCity / activeCity intentionally
-    // preserved — physical location isn't conversation state to reset.
+    // currentLocationCity / conversationCity / activeCity intentionally preserved.
 
     await saveSession(s);
     return res.json({ success: true });
