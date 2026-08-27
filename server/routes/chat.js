@@ -56,6 +56,20 @@ const finalizeTransport = async (s, res, details) => {
   return res.json({ reply: C.QUESTION[s.step] });
 };
 
+/* ── Safe reprompt builder — NEVER inject `undefined` into a reply.
+   train_class/bus_type/flight_class have no QUESTION entry (their
+   menus are generated dynamically at transport-selection time), so
+   `C.QUESTION[step]` for those is undefined. Previously this was
+   interpolated directly (`\n\n${C.QUESTION[s.step]}`), which could
+   literally print the string "undefined" into the chat. ── */
+const repromptFor = (step) => {
+  if (step === "summary") {
+    return "\n\nWhenever you're ready — tap **Confirm** to generate your itinerary, or an Edit button to change a detail.";
+  }
+  if (C.QUESTION[step]) return `\n\n${C.QUESTION[step]}`;
+  return "\n\nWhenever you're ready, let's continue with your trip — just pick from the options above.";
+};
+
 /* ════════════════════════════════════════════════════════════════
    MAIN HANDLER
 ════════════════════════════════════════════════════════════════ */
@@ -141,13 +155,7 @@ router.post("/", async (req, res) => {
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
-    console.log("[INTENT]", raw, "=>", intent);
-    console.log("[FLOW]", {
-      step:   s.step,
-      inFlow,
-      dest:   s.trip?.destination,
-      source: s.trip?.source,
-    });
+    console.log("[CHAT]", { userId, message: raw, previousStep: s.step, intent, inFlow });
 
     // Clear stale planning step
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
@@ -199,16 +207,13 @@ router.post("/", async (req, res) => {
 
       /* ─────────────────────────────────────────────────────────────
          TYPE 2: REAL-TIME NEARBY SEARCH → Google Places → cards
-         Only reached when detectIntent found an explicit proximity
-         signal ("near me" / "nearby" / "within Xkm").
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("nearby_")) {
         const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
         const radiusMetres = C.extractRadius(raw);
-        // Safe lookup with fallback — prevents undefined crash if intent
-        // somehow doesn't match any key in NEARBY_KEYWORD
         const keyword = NEARBY_KEYWORD[intent]
           || C.extractPlaceKeyword(raw, "tourist attraction");
+        const placeType = intent.replace("nearby_", "");
 
         console.log(
           `[CHAT] nearby → intent=${intent} keyword="${keyword}" ` +
@@ -219,25 +224,22 @@ router.post("/", async (req, res) => {
         if (placeCity && placeCity !== city) {
           s.activeCity = placeCity;
         }
+        Ctx.updateNearbySearchContext(s, {
+          intent, results: places, radius: radiusMetres, placeType,
+        });
         await saveSession(s);
-        return res.json({ type: "places", data: places });
+        return res.json({ type: "places", data: places, placeType });
       }
 
       /* ─────────────────────────────────────────────────────────────
          TYPE 1: AI TRAVEL GUIDE → rich structured Markdown text.
-
-         FIX: intent is "guide_food", "guide_temple", etc.
-         We strip "guide_" to get the topic key ("food", "temple", …)
-         that matches the keys in GUIDE_PROMPTS inside ConversationService.
-         The previous crash was caused by passing the FULL intent string
-         ("guide_knowledge") as the topic, which didn't exist as a key.
+         intent is "guide_food", "guide_temple", etc. — strip
+         "guide_" to get the GUIDE_PROMPTS key. This fix must never
+         be reverted: passing the full "guide_knowledge" string in
+         would miss every key in GUIDE_PROMPTS.
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("guide_")) {
-        // ── THE FIX: strip prefix to get the GUIDE_PROMPTS key ──────
         const topic = intent.replace("guide_", "");
-        // topic is now: "food" | "temple" | "hotel" | "city" | "knowledge"
-        // All five exist as keys in GUIDE_PROMPTS. Safe to call.
-
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
 
         console.log(`[CHAT] guide → topic=${topic} city="${placeCity}"`);
@@ -283,15 +285,77 @@ router.post("/", async (req, res) => {
 
     /* ══════════════════════════════════════════════════════════════
        IN FLOW — dual-mode: off-topic question while trip planning
+
+       FIX (root cause of the "Nearby hotels" repeated-question bug):
+       previously ANY non-step-answer message here went straight to
+       the generic LLM + reprompt, which is why quick actions like
+       "Nearby hotels" sent mid-trip never actually searched anything
+       — they got a generic "could you give more detail?" answer with
+       the current step's question appended after it. Now detectIntent
+       is checked first, exactly like the not-in-flow branch does, and
+       only genuinely general questions fall through to the LLM.
     ══════════════════════════════════════════════════════════════ */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
+      const offTopicIntent = C.detectIntent(raw);
+
+      /* Weather mid-flow — must use the real weather service. */
+      if (offTopicIntent === "weather") {
+        const result = await C.fetchWeather(lat, lng, city || s.activeCity);
+        await Ctx.updateSessionContext(s, raw, result.reply, {
+          intent: "weather", city: city || null, extractTopic: false,
+        });
+        await saveSession(s);
+        return res.json({ reply: `${result.reply}${repromptFor(s.step)}` });
+      }
+
+      /* Nearby search mid-flow — e.g. "Nearby hotels" quick action
+         clicked while a trip is being planned. Must actually search
+         Google Places, not fall into the generic LLM answer. */
+      if (offTopicIntent.startsWith("nearby_")) {
+        const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const radiusMetres = C.extractRadius(raw);
+        const keyword = NEARBY_KEYWORD[offTopicIntent]
+          || C.extractPlaceKeyword(raw, "tourist attraction");
+        const placeType = offTopicIntent.replace("nearby_", "");
+
+        console.log(
+          `[CHAT] nearby(in-flow) → intent=${offTopicIntent} keyword="${keyword}" ` +
+          `radius=${radiusMetres}m city="${placeCity}"`
+        );
+
+        const places = await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres);
+        if (placeCity && placeCity !== city) s.activeCity = placeCity;
+        Ctx.updateNearbySearchContext(s, {
+          intent: offTopicIntent, results: places, radius: radiusMetres, placeType,
+        });
+        await saveSession(s);
+        return res.json({
+          type: "places",
+          data: places,
+          placeType,
+          reprompt: repromptFor(s.step), // optional field — safe to ignore for old clients
+        });
+      }
+
+      /* AI Travel Guide content question mid-flow — e.g. "tell me
+         about Goa beaches" while planning a Goa trip. */
+      if (offTopicIntent.startsWith("guide_")) {
+        const topic = offTopicIntent.replace("guide_", "");
+        const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
+        const reply = await C.askTravelGuide(topic, raw, placeCity);
+        await Ctx.updateSessionContext(s, raw, reply, {
+          intent: offTopicIntent, city: placeCity || null, extractTopic: true,
+        });
+        await saveSession(s);
+        return res.json({ reply: `${reply}${repromptFor(s.step)}` });
+      }
+
+      /* Genuinely general/off-topic question — only case that should
+         reach the generic context-aware LLM fallback. */
       const answer   = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
-      const reprompt = s.step === "summary"
-        ? "\n\nWhenever you're ready — tap **Confirm** to generate your itinerary, or an Edit button to change a detail."
-        : `\n\n${C.QUESTION[s.step]}`;
       await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
       await saveSession(s);
-      return res.json({ reply: `${answer}${reprompt}` });
+      return res.json({ reply: `${answer}${repromptFor(s.step)}` });
     }
 
     /* ══════════════════════════════════════════════════════════════
@@ -495,10 +559,45 @@ router.post("/", async (req, res) => {
 
   } catch (err) {
     console.error("CHAT ERROR:", err);
-    // Return a clean error that the frontend can display
     return res.status(500).json({
       reply: "Something went wrong on our end. Please try again in a moment.",
     });
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════
+   POST /api/chat/reset — "New Chat"
+   FIX: previously the frontend's resetChat() only touched React
+   state (setMessages/setInput). MongoDB still had step="travellers"
+   and trip.destination="Goa" etc. after clicking New Chat, so the
+   very next message silently continued the old trip. This endpoint
+   actually clears backend trip/conversation state while explicitly
+   preserving user identity and physical-location fields.
+════════════════════════════════════════════════════════════════ */
+router.post("/reset", async (req, res) => {
+  try {
+    const { userId = "user1" } = req.body;
+    const s = await loadSession(userId);
+
+    // Reuses ContextService's existing clearHistory (history,
+    // activeTopic, lastIntent, activePlace*, activeTravelTopic)
+    // rather than duplicating that logic here.
+    Ctx.clearHistory(s);
+
+    s.step = null;
+    s.trip = {};
+    s.lastNearbyResults = [];
+    s.lastNearbyIntent = null;
+    s.lastSearchRadius = null;
+    s.lastGuideTopic = null;
+    // currentLocationCity / conversationCity / activeCity intentionally
+    // preserved — physical location isn't conversation state to reset.
+
+    await saveSession(s);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[chat reset] error:", err.message);
+    return res.status(500).json({ error: "Couldn't start a new chat. Please try again." });
   }
 });
 

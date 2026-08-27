@@ -72,7 +72,7 @@ const SPELL_CORRECTIONS = [
   ["dhabas","dhaba"],["cafes","cafe"],["cafeteria","cafe"],
   // Hotel / stay
   ["hottel","hotel"],["hotell","hotel"],["hottell","hotel"],
-  ["hotl","hotel"],["hotles","hotel"],
+  ["hotl","hotel"],["hotles","hotel"],["hotels","hotel"],
   ["resorts","resort"],["lodges","lodge"],["lodging","lodge"],
   ["accomodation","accommodation"],["accomadation","accommodation"],
   ["accommodations","accommodation"],
@@ -93,6 +93,10 @@ const SPELL_CORRECTIONS = [
   ["foods","food"],["dishs","dish"],
   ["cuisines","cuisine"],["cuisne","cuisine"],
   ["recomendation","recommendation"],["reccomendation","recommendation"],
+  // Health / other place types
+  ["hospitals","hospital"],["clinics","clinic"],["pharmacies","pharmacy"],
+  ["banks","bank"],["atms","atm"],
+  ["restaurants","restaurant"],
   // Indian cities — sorted longest-first to prevent partial matches
   ["vishakhapatnam","visakhapatnam"],["vizag","visakhapatnam"],
   ["hydrabad","hyderabad"],["hyderbad","hyderabad"],
@@ -105,15 +109,13 @@ const SPELL_CORRECTIONS = [
   ["tirupthi","tirupati"],["tirupathi","tirupati"],
   ["mysor","mysore"],["mysuru","mysore"],
   ["kochy","kochi"],["cochin","kochi"],
-  // ── NEW: Alappuzha / Alleppey variants ────────────────────────
-  ["alppuzha","alappuzha"],    // typo in the screenshot
+  ["alppuzha","alappuzha"],
   ["alleppy","alappuzha"],
   ["alleppey","alappuzha"],
   ["aleppey","alappuzha"],
   ["aleppy","alappuzha"],
   ["allapuzha","alappuzha"],
   ["alapuzha","alappuzha"],
-  // ─────────────────────────────────────────────────────────────
   ["simhachallam","simhachalam"],["simhachalem","simhachalam"],
   ["bhadrachallam","bhadrachalam"],["srikalahasthi","srikalahasti"],
 ];
@@ -184,8 +186,8 @@ Message: "${msg}"`;
 
 /* ═══════════════════════════════════════════════════════════════
    FORMATTING_RULES — single source of truth for all AI responses.
-   Injected into every prompt so ALL response paths produce clean,
-   structured Markdown that MessageFormatter.jsx can render.
+   No Markdown tables — MessageFormatter.jsx intentionally focuses
+   on structured/bullet content, not table syntax.
 ═══════════════════════════════════════════════════════════════ */
 const FORMATTING_RULES = `
 ## RESPONSE FORMATTING RULES — follow these exactly, every time:
@@ -198,7 +200,9 @@ const FORMATTING_RULES = `
 - Use bullet points ( - ) for lists of facts, options, features, or recommendations.
 - Use numbered lists ( 1. 2. 3. ) for sequences, steps, itineraries, rituals, or procedures.
 - Use **bold** for all prices, timings, names, dates, and key facts.
-- Use Markdown tables for comparisons (hotels, transport options, packages, destinations).
+- For comparisons (hotels, transport options, packages, destinations), use bullet points with
+  a bold label per line, e.g. "- **Budget:** ₹800–₹1,200 — solo travelers and backpackers".
+  NEVER use a Markdown table (no "|" pipe characters, no "|---|" separator rows).
 - End every travel-related response with a travel tip formatted as:
   💡 **Travel Tip:** [one concise, useful tip]
 
@@ -208,7 +212,7 @@ const FORMATTING_RULES = `
 - Never write "Namaste!" more than once per response.
 - Never ask "How many travellers will be joining you?" unless the user is explicitly asking to plan a trip.
 - Never hallucinate restaurant names, hotel names, temple names, or weather data.
-- Never use HTML tags. Only valid Markdown.
+- Never use HTML tags or Markdown tables. Only headings, bullets, bold, and numbered lists.
 - Use emojis sparingly — only where they improve scannability (e.g. 💡 for tips, 🕒 for timings, 💰 for prices).
 
 **Section templates by query type:**
@@ -249,7 +253,7 @@ For HOTEL / STAY / HOUSEBOAT questions:
 
 For TRANSPORT / ROUTE questions:
 ## How to Reach
-## Transport Options  [use a comparison table]
+## Transport Options  [bullet list with bold labels, NOT a table]
 ## Estimated Cost
 ## Travel Tips
 
@@ -261,9 +265,44 @@ For GENERAL KNOWLEDGE questions (history, culture, festivals, costs, procedures)
 `;
 
 /* ═══════════════════════════════════════════════════════════════
+   sanitizeGuideReply — strips any leftover Markdown table syntax
+   into bullet lines, in case the model ignores FORMATTING_RULES.
+   NOTE: ContextService.js calls C.sanitizeGuideReply(...) — this
+   export MUST exist or those calls throw and get silently
+   swallowed by try/catch, degrading follow-up answers.
+═══════════════════════════════════════════════════════════════ */
+const TABLE_SEPARATOR_RE = /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/;
+
+const sanitizeGuideReply = (text = "") => {
+  if (!text) return text;
+  const cleaned = stripControlTokens(text);
+  const lines = cleaned.split("\n");
+  const out = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.includes("|")) { out.push(line); continue; }
+    if (TABLE_SEPARATOR_RE.test(trimmed)) continue;
+
+    const cells = trimmed
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    if (cells.length >= 2) {
+      const [label, ...rest] = cells;
+      out.push(`- **${label}:** ${rest.join(" — ")}`);
+    } else if (cells.length === 1) {
+      out.push(`- ${cells[0]}`);
+    }
+  }
+  return out.join("\n").trim();
+};
+
+/* ═══════════════════════════════════════════════════════════════
    askAI — used in trip flow dual-mode.
-   Injects FORMATTING_RULES so even mid-trip off-topic answers
-   are clean and structured.
 ═══════════════════════════════════════════════════════════════ */
 const askAI = async (raw, contextCity) => {
   try {
@@ -278,7 +317,7 @@ User question: "${raw}"
 Respond in clean Markdown following the rules above. Keep the answer concise but complete.`;
 
     const text = await askGroq(prompt, { maxTokens: 500, temperature: 0.4 });
-    return stripControlTokens(text) || "I can help with travel questions — could you rephrase that?";
+    return sanitizeGuideReply(text) || "I can help with travel questions — could you rephrase that?";
   } catch (e) {
     console.log("askAI failed:", e.message);
     return "I can help with travel questions — could you rephrase that?";
@@ -331,7 +370,7 @@ Numbered list:
 
 💡 **Travel Tip:** [one genuine, useful food tip for this destination]
 
-Respond ONLY in valid Markdown. No paragraphs. No filler. No "Namaste" more than once.`,
+Respond ONLY in valid Markdown. No paragraphs. No filler. No tables. No "Namaste" more than once.`,
 
   temple: (raw, city) =>
 `You are Sarathi, a knowledgeable Indian temple and pilgrimage guide.
@@ -350,9 +389,7 @@ Two sentences maximum on significance and presiding deity.
 3–5 bullet points covering founding, dynasty, renovations, and legends.
 
 ## Timings
-🕒 Use a table if there are multiple darshan slots:
-| Session | Timings |
-|---------|---------|
+🕒 Bold-label bullets for each darshan slot, e.g. "- **Morning:** 6:00 AM – 12:00 PM". No table.
 
 ## Rituals & Darshan
 Numbered list of key steps.
@@ -368,7 +405,7 @@ One or two bullet points.
 
 💡 **Travel Tip:** [one practical tip for temple visitors]
 
-Respond ONLY in valid Markdown. No paragraphs. No HTML.`,
+Respond ONLY in valid Markdown. No paragraphs. No HTML. No tables.`,
 
   hotel: (raw, city) =>
 `You are Sarathi, a travel accommodation expert.
@@ -384,12 +421,10 @@ Respond using this exact structure:
 One or two sentences about the accommodation type mentioned.
 
 ## Pricing
-Use a comparison table:
-| Type | Price Range (per night) | Best For |
-|------|------------------------|----------|
-| Budget | ₹X–₹Y | [traveller type] |
-| Standard | ₹X–₹Y | [traveller type] |
-| Luxury / Premium | ₹X–₹Y | [traveller type] |
+Bold-label bullets, one per tier — NOT a table:
+- **Budget:** ₹X–₹Y per night — [traveller type]
+- **Standard:** ₹X–₹Y per night — [traveller type]
+- **Luxury / Premium:** ₹X–₹Y per night — [traveller type]
 
 ## What's Typically Included
 Bullet points covering common inclusions (meals, crew, amenities, etc.).
@@ -402,7 +437,7 @@ Bullet points: peak season, off-season, booking lead times.
 
 💡 **Travel Tip:** [one genuine booking or timing tip]
 
-Respond ONLY in valid Markdown. Do not invent specific hotel or houseboat names. No paragraphs.`,
+Respond ONLY in valid Markdown. Do not invent specific hotel or houseboat names. No paragraphs. No tables.`,
 
   city: (raw, city) =>
 `You are Sarathi, an expert local trip planner for Indian destinations.
@@ -438,7 +473,7 @@ Numbered list:
 
 💡 **Travel Tip:** [one practical tip for first-time visitors]
 
-Respond ONLY in valid Markdown. No paragraphs. No HTML.`,
+Respond ONLY in valid Markdown. No paragraphs. No HTML. No tables.`,
 
   knowledge: (raw, city) =>
 `You are Sarathi, a knowledgeable Indian travel and culture guide.
@@ -449,29 +484,31 @@ ${FORMATTING_RULES}
 User asked: "${raw}"
 
 Answer using the most appropriate section structure from FORMATTING_RULES above.
-Choose sections that fit the question — for pricing/cost questions use ## Pricing with a table;
-for procedural questions use a numbered list; for factual overviews use ## Overview + ## Key Facts.
+Choose sections that fit the question — for pricing/cost questions use ## Pricing with bold-label
+bullets (never a table); for procedural questions use a numbered list; for factual overviews use
+## Overview + ## Key Facts.
 Always end with 💡 **Travel Tip:** if the topic is travel-related.
 
 Rules:
 - Never write paragraphs — use bullet points and sections.
 - Bold all key facts, prices, timings, and names.
 - Use numbered lists for any sequence or procedure.
-- Use a Markdown table if comparing options.
+- Never use a Markdown table, ever.
 - Maximum 6 bullet points per section.
 - Do not invent specific business names.
 
-Respond ONLY in valid Markdown. No HTML. No filler sentences.`,
+Respond ONLY in valid Markdown. No HTML. No filler sentences. No tables.`,
 };
 
 /* ═══════════════════════════════════════════════════════════════
    askTravelGuide — calls Groq with the appropriate guide prompt.
    topic = "food" | "temple" | "hotel" | "city" | "knowledge"
    (The "guide_" prefix has already been stripped by chat.js before
-    this function is called.)
+    this function is called — this is the fix that must never be
+    reintroduced as a bug: passing "guide_knowledge" directly would
+    miss every key in GUIDE_PROMPTS.)
 ═══════════════════════════════════════════════════════════════ */
 const askTravelGuide = async (topic, raw, city) => {
-  // Safe fallback: if topic key doesn't exist, use knowledge prompt
   const buildPrompt = GUIDE_PROMPTS[topic] || GUIDE_PROMPTS.knowledge;
   console.log(`[askTravelGuide] topic="${topic}" city="${city}" prompt_key="${
     GUIDE_PROMPTS[topic] ? topic : "knowledge (fallback)"
@@ -481,7 +518,7 @@ const askTravelGuide = async (topic, raw, city) => {
       buildPrompt(raw, city),
       { maxTokens: 800, temperature: 0.45 }
     );
-    return stripControlTokens(text)
+    return sanitizeGuideReply(text)
       || "I couldn't put that together right now — please try rephrasing.";
   } catch (e) {
     console.log(`[askTravelGuide] topic=${topic} failed:`, e.message);
@@ -490,7 +527,9 @@ const askTravelGuide = async (topic, raw, city) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   fetchWeather — Open-Meteo (free, no API key)
+   fetchWeather — Open-Meteo (free, no API key). Deterministic
+   (not model-generated), so it's built as bold-label bullets
+   directly rather than relying on sanitizeGuideReply.
 ═══════════════════════════════════════════════════════════════ */
 const WMO = {
   0:"Clear sky ☀️",1:"Mainly clear 🌤",2:"Partly cloudy ⛅",3:"Overcast ☁️",
@@ -547,20 +586,15 @@ const fetchWeather = async (lat, lng, cityName) => {
     const loc = cityName || "your location";
     const lines = [
       `## 🌤 Weather in ${loc}`,
-      "",
-      `| | |`,
-      `|---|---|`,
-      `| **Condition** | ${cond} |`,
-      `| **Temperature** | **${tempC}°C** (feels like ${feelsC}°C) |`,
-      maxT != null && minT != null
-        ? `| **High / Low** | ${maxT}°C / ${minT}°C |`
-        : null,
-      `| **Humidity** | ${humidity}% |`,
-      `| **Rain Chance** | ${rainMax}% |`,
-      `| **Wind** | ${wind} km/h |`,
-      uv != null ? `| **UV Index** | ${uv} |` : null,
-      sunrise     ? `| **Sunrise** | ${sunrise} |` : null,
-      sunset      ? `| **Sunset** | ${sunset} |`  : null,
+      `- **Condition:** ${cond}`,
+      `- **Temperature:** **${tempC}°C** (feels like ${feelsC}°C)`,
+      maxT != null && minT != null ? `- **High / Low:** ${maxT}°C / ${minT}°C` : null,
+      `- **Humidity:** ${humidity}%`,
+      `- **Rain Chance:** ${rainMax}%`,
+      `- **Wind:** ${wind} km/h`,
+      uv != null ? `- **UV Index:** ${uv}` : null,
+      sunrise     ? `- **Sunrise:** ${sunrise}` : null,
+      sunset      ? `- **Sunset:** ${sunset}`  : null,
       "",
       "## 🧳 Travel Tips",
       ...tips.map((t) => `- ${t}`),
@@ -591,21 +625,29 @@ const extractRadius = (msg = "") => {
   return Math.min(Math.max(metres, 500), 50000);
 };
 
-/* ================= extractPlaceKeyword ================= */
+/* ================= extractPlaceKeyword =================
+   FIX: plural-tolerant — "hotels", "restaurants", "temples" etc.
+   previously failed \bhotel\b-style word-boundary checks. ================= */
 const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") => {
   const m = normalizeQuery(msg);
-  if (/\b(temple|shrine|gurudwara|dargah|masjid|mosque|church|cathedral)\b/.test(m)) return "hindu temple";
-  if (/\bmuseum\b/.test(m))                                                            return "museum";
-  if (/\bbeach\b/.test(m))                                                             return "beach";
-  if (/\b(park|garden|nature|wildlife|forest|waterfall|lake|hill|mountain)\b/.test(m)) return "park";
-  if (/\b(mall|shopping|market|bazaar|bazar)\b/.test(m))                               return "shopping mall";
-  if (/\b(hospital|clinic|medical|doctor|pharmacy)\b/.test(m))                         return "hospital";
-  if (/\b(atm|bank)\b/.test(m))                                                        return "bank";
-  if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m))                              return "gas station";
+  if (/\b(temples?|shrines?|gurudwaras?|dargahs?|masjids?|mosques?|churches?|cathedrals?)\b/.test(m)) return "hindu temple";
+  if (/\bmuseums?\b/.test(m))                                                            return "museum";
+  if (/\bbeach(?:es)?\b/.test(m))                                                        return "beach";
+  if (/\b(parks?|gardens?|nature|wildlife|forests?|waterfalls?|lakes?|hills?|mountains?)\b/.test(m)) return "park";
+  if (/\b(malls?|shopping|markets?|bazaars?|bazars?)\b/.test(m))                         return "shopping mall";
+  if (/\b(hospitals?|clinics?|medical|doctors?|pharmac(?:y|ies))\b/.test(m))             return "hospital";
+  if (/\b(atms?|banks?)\b/.test(m))                                                      return "bank";
+  if (/\b(petrol|fuel|gas stations?|diesel|cng)\b/.test(m))                              return "gas station";
   return defaultKeyword;
 };
 
-/* ================= detectIntent ================= */
+/* ================= detectIntent =================
+   FIX: every nearby/guide keyword regex is now plural-tolerant.
+   "hotels near me" previously failed every \bhotel\b / \brestaurant\b
+   / \btemple\b check (plural "s" breaks the trailing word boundary)
+   and silently fell through to nearby_general → "tourist attraction"
+   → beaches/lakes. Same gap existed in the non-proximity guide_*
+   branch ("best hotels in Kochi" with no "near me"). ================= */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
 const detectIntent = (msg = "") => {
@@ -627,25 +669,25 @@ const detectIntent = (msg = "") => {
 
   // 3. Nearby (real-time Google Places) — only with explicit proximity signal
   if (hasProximity) {
-    if (/\btemple\b/.test(m))                                   return "nearby_temple";
-    if (/\b(restaurant|dhaba|cafe|dining|eat|food)\b/.test(m)) return "nearby_food";
-    if (/\b(hotel|stay|lodge|resort|accommodation)\b/.test(m)) return "nearby_hotel";
-    if (/\b(hospital|clinic|medical|pharmacy)\b/.test(m))      return "nearby_hospital";
-    if (/\b(atm|bank)\b/.test(m))                              return "nearby_bank";
-    if (/\b(petrol|fuel|gas station|diesel|cng)\b/.test(m))   return "nearby_fuel";
+    if (/\btemples?\b/.test(m))                                                            return "nearby_temple";
+    if (/\b(restaurants?|dhabas?|caf[ée]s?|dining|eating|foods?)\b/.test(m))               return "nearby_food";
+    if (/\b(hotels?|stays?|lodges?|resorts?|accommodations?)\b/.test(m))                    return "nearby_hotel";
+    if (/\b(hospitals?|clinics?|medical|pharmac(?:y|ies))\b/.test(m))                       return "nearby_hospital";
+    if (/\b(atms?|banks?)\b/.test(m))                                                       return "nearby_bank";
+    if (/\b(petrol|fuel|gas stations?|diesel|cng)\b/.test(m))                               return "nearby_fuel";
     return "nearby_general";
   }
 
   // 4. AI Travel Guide — content questions (no proximity)
   if (/\b(local food|local dish|famous food|famous dish|what to eat|must eat|dish in|dish of|cuisine|street food|best food|food to taste|must.?try food|food in|food of|best to eat|food recommendation)\b/.test(m))
     return "guide_food";
-  if (/\b(restaurant|where to eat|places to eat|best restaurants|dining)\b/.test(m))
+  if (/\b(restaurants?|where to eat|places to eat|best restaurants|dining)\b/.test(m))
     return "guide_food";
-  if (/\bfood\b/.test(m)) return "guide_food";
+  if (/\bfoods?\b/.test(m)) return "guide_food";
 
-  if (/\btemple\b/.test(m)) return "guide_temple";
+  if (/\btemples?\b/.test(m)) return "guide_temple";
 
-  if (/\b(hotel|stay|lodge|resort|accommodation|where to stay|place to stay|houseboat|homestay|boat house|boathouse)\b/.test(m))
+  if (/\b(hotels?|stays?|lodges?|resorts?|accommodations?|where to stay|place to stay|houseboats?|homestays?|boat house|boathouse)\b/.test(m))
     return "guide_hotel";
 
   if (/\b(place to visit|best place|tourist place|tourist spot|tourist attraction|must visit|attraction|things to do|sightseeing|visit in|explore|famous place|landmark|one day|itinerary)\b/.test(m))
@@ -689,32 +731,18 @@ const isTripActive = (s) => {
 };
 
 /* ================= extractPlaceFromQuery ================= */
-/*
-  NOT_A_CITY — words that appear after spatial prepositions but are
-  NOT city names. Prevents "in alappuzha per one person" from being
-  extracted as city = "Alappuzha Per One".
-
-  Added: per, one, person, people, night, day, days, hour, hours,
-         head, adult, adults, member, members, couple, group,
-         booking, package, boat, house, cost, price, rate, charge.
-*/
 const NOT_A_CITY = new Set([
-  // verbs
   "taste","visit","eat","see","try","go","travel","find","get","know","do",
   "explore","check","book","plan","reach","stay","watch","enjoy","experience",
   "discover","look","search","ask","tell","show","help","use","buy","take",
   "make","give","keep","come","leave","start","stop","spend",
-  // pronouns / determiners
   "me","my","our","your","their","this","that","these","those","a","an","the",
-  // place-type words (not city names)
   "temple","food","hotel","restaurant","beach","park","weather","forecast",
   "houseboat","boathouse","boat","house","accommodation","resort","lodge",
-  // quantity / unit words  ← THE FIX for "per one person" extraction
   "per","one","two","three","four","five","six","seven","eight","nine","ten",
   "person","people","persons","head","adult","adults","member","members",
   "couple","group","family","traveller","travellers","traveler","travelers",
   "night","nights","day","days","hour","hours","week","weeks","month","months",
-  // price / booking words
   "cost","price","rate","charge","fee","amount","budget","booking","package",
   "deal","offer","plan","scheme","tariff",
 ]);
@@ -723,13 +751,10 @@ const extractPlaceFromQuery = (msg = "") => {
   if (!msg) return null;
   const m = normalizeQuery(msg);
 
-  // Priority 1: "in <city>" — take LAST occurrence, validate against NOT_A_CITY
   const inMatches = [...m.matchAll(/\bin\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})/g)];
-  // Note: reduced from {0,2} to {0,1} — city names are at most 2 words
   if (inMatches.length > 0) {
     const candidate = inMatches[inMatches.length - 1][1].trim();
     const words     = candidate.split(/\s+/);
-    // Every word in the candidate must not be a non-city word
     const isValid = words.every((w) => !NOT_A_CITY.has(w.toLowerCase()));
     if (isValid && candidate.length > 2) {
       console.log(`[extractPlace] "in" → "${candidate}"`);
@@ -737,7 +762,6 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // Priority 2: "at <city>"
   const atMatch = m.match(/\bat\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})/);
   if (atMatch) {
     const candidate = atMatch[1].trim();
@@ -748,7 +772,6 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // Priority 3: "near/around <city>" — but NOT "near me"
   const nearMatch = m.match(/\b(?:near|around)\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})/);
   if (nearMatch) {
     const candidate = nearMatch[1].trim();
@@ -759,7 +782,6 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // Priority 4: "to <city>"
   const toMatch = m.match(/\bto\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,1})(?:\s*[?!.,]|$)/);
   if (toMatch) {
     const candidate = toMatch[1].trim();
@@ -775,31 +797,69 @@ const extractPlaceFromQuery = (msg = "") => {
 };
 
 /* ================= fetchNearby ================= */
+const nearbySearchPlaces = async (lat, lng, keyword, radiusMetres) => {
+  const res = await axios.get(
+    "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+    {
+      params: {
+        location: `${lat},${lng}`,
+        radius:   radiusMetres,
+        keyword,
+        region:   "in",
+        key:      process.env.GOOGLE_API_KEY,
+      },
+    }
+  );
+  return (res.data.results || []).map(Planner.formatPlace);
+};
+
+const textSearchPlaces = async (keyword, city) => {
+  const res = await axios.get(
+    "https://maps.googleapis.com/maps/api/place/textsearch/json",
+    { params: { query: `${keyword} near ${city}`, key: process.env.GOOGLE_API_KEY } }
+  );
+  return (res.data.results || []).map(Planner.formatPlace);
+};
+
+const dedupeAndSortPlaces = (list) => {
+  const seen = new Set();
+  const deduped = [];
+  for (const p of list) {
+    const key = p.placeId || p.place_id || `${p.name}|${p.lat}|${p.lng}`;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(p);
+  }
+  deduped.sort((a, b) => {
+    const ratingDiff = (b.rating || 0) - (a.rating || 0);
+    if (ratingDiff !== 0) return ratingDiff;
+    const reviewDiff = (b.reviewsCount || 0) - (a.reviewsCount || 0);
+    if (reviewDiff !== 0) return reviewDiff;
+    const da = a.distanceKm ?? Infinity;
+    const db = b.distanceKm ?? Infinity;
+    return da - db;
+  });
+  return deduped;
+};
+
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
   try {
-    if (city && city.trim()) {
-      const res = await axios.get(
-        "https://maps.googleapis.com/maps/api/place/textsearch/json",
-        { params: { query: `${keyword} in ${city}`, key: process.env.GOOGLE_API_KEY } }
-      );
-      return res.data.results.slice(0, 6).map(Planner.formatPlace);
-    }
+    let results = [];
+
     if (lat && lng) {
-      const res = await axios.get(
-        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-        {
-          params: {
-            location: `${lat},${lng}`,
-            radius:   radiusMetres,
-            keyword,
-            region:   "in",
-            key:      process.env.GOOGLE_API_KEY,
-          },
-        }
-      );
-      return res.data.results.slice(0, 6).map(Planner.formatPlace);
+      results = await nearbySearchPlaces(lat, lng, keyword, radiusMetres);
     }
-    return [];
+
+    if (results.length < 5 && city && city.trim()) {
+      const topUp = await textSearchPlaces(keyword, city);
+      results = results.concat(topUp);
+    }
+
+    if (!results.length && (!city || !city.trim())) {
+      return [];
+    }
+
+    return dedupeAndSortPlaces(results).slice(0, 6);
   } catch (e) {
     console.log("fetchNearby failed:", e.message);
     return [];
@@ -833,7 +893,7 @@ module.exports = {
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI, askTravelGuide, fetchWeather,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
-  extractRadius, extractPlaceKeyword,
-  isTripActive, nextStep, ensureRoute,
+  extractRadius, extractPlaceKeyword, sanitizeGuideReply,
+  isTripActive, nextStep, ensureRoute, PROXIMITY_RE,
   T, Train, Planner,
 };
