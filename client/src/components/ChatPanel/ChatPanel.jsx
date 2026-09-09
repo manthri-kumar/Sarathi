@@ -19,8 +19,6 @@ const GENERAL_QUICK_ACTIONS = ["Plan a trip", "Places near me", "Food near me", 
 const TEMPLE_NAME_RE = /temple|mandir|kovil|devasthanam|shrine|\bmath\b/i;
 const looksLikeTemple = (name = "") => TEMPLE_NAME_RE.test(name);
 
-// Content-based follow-up chips — classified from the reply itself,
-// not a fixed per-mode list, so chips actually track what was just said.
 const FOLLOWUP_POOLS = {
   temple: ["Temple timings", "Festivals here", "Nearby food", "Temple story", "How to reach", "Who built this?"],
   food: ["Best restaurants", "Budget food", "Vegetarian options", "Local desserts", "Street food spots"],
@@ -38,14 +36,59 @@ const classifyReply = (msg, isTempleMode) => {
   return "general";
 };
 
-// Backend can override via msg.followUps: string[] — no contract change required otherwise.
 const getFollowUps = (msg, isTempleMode, askedSet) => {
   if (msg.followUps?.length) return msg.followUps.filter((f) => !askedSet.has(f)).slice(0, 4);
 
   const pool = FOLLOWUP_POOLS[classifyReply(msg, isTempleMode)] || FOLLOWUP_POOLS.general;
   let remaining = pool.filter((f) => !askedSet.has(f));
-  if (remaining.length < 3) remaining = pool; // recycle instead of chips silently vanishing
+  if (remaining.length < 3) remaining = pool;
   return remaining.slice(0, 4);
+};
+
+/* ── Stable session identity ── */
+const getOrCreateAnonId = () => {
+  let id = localStorage.getItem("sarathi_chat_session_id");
+  if (!id) {
+    id = (crypto?.randomUUID && crypto.randomUUID()) ||
+      `anon-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem("sarathi_chat_session_id", id);
+  }
+  return id;
+};
+
+const getUserId = () => {
+  try {
+    const authedId = JSON.parse(localStorage.getItem("user"))?._id;
+    if (authedId) return authedId;
+  } catch {
+    /* no stored user — fall through to anonymous id */
+  }
+  return getOrCreateAnonId();
+};
+
+const makeId = () =>
+  (crypto?.randomUUID && crypto.randomUUID()) ||
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/* ── Never let an unvalidated backend response reach rendering. ── */
+const validateChatResponse = (data, isTempleMode) => {
+  if (isTempleMode) {
+    return {
+      text: typeof data?.reply === "string" && data.reply.trim()
+        ? data.reply
+        : "I couldn't retrieve a response. Please try again.",
+    };
+  }
+  if (data?.type === "places") {
+    return { ...data, data: Array.isArray(data.data) ? data.data : [] };
+  }
+  if (typeof data?.reply === "string") {
+    return { ...data, text: data.reply };
+  }
+  if (data?.type) {
+    return data;
+  }
+  return { text: "Sorry, I couldn't process that response. Please try again.", isError: true };
 };
 
 const ChatPanel = ({ closeChat, templeContext = null }) => {
@@ -55,20 +98,63 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
   const getInitialMessage = () =>
     isTempleMode
       ? {
+          id: makeId(),
           text: `Namaste 🙏 I'm your spiritual guide for ${templeContext.name}.\n\nAsk me about history, rituals, festivals, darshan timings, or how to reach here.`,
           sender: "bot",
         }
-      : { text: "Hi 👋 I'm Sarathi AI. Ask me anything about your next trip.", sender: "bot" };
+      : { id: makeId(), text: "Hi 👋 I'm Sarathi AI. Ask me anything about your next trip.", sender: "bot" };
 
   const [messages, setMessages] = useState([getInitialMessage()]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
   const chatEndRef = useRef(null);
+  const bodyRef = useRef(null);
   const inputRef = useRef(null);
   const askedRef = useRef(new Set());
+  const abortControllerRef = useRef(null);
+
+  /* ── NEW: rehydrate from the real backend session on mount.
+     FIX: previously every mount showed a blank "Hi 👋" greeting
+     even when MongoDB still had an in-progress trip or a real
+     conversation history, which made replies like the "How many
+     travellers?" reprompt look like a random bug instead of a
+     continuation of a session the user couldn't see. This is
+     read-only — it never mutates the backend session, and if the
+     fetch fails or there's no prior history it silently falls back
+     to the normal greeting exactly as before. Skipped in temple
+     mode, which is scoped per-temple, not per-user. */
+  useEffect(() => {
+    if (isTempleMode) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/session/${getUserId()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (Array.isArray(data.history) && data.history.length > 0) {
+          const rehydrated = data.history.map((h) => ({
+            id: makeId(),
+            text: h.content,
+            sender: h.role === "user" ? "user" : "bot",
+          }));
+          setMessages(rehydrated);
+          setShowQuickActions(false);
+        }
+      } catch {
+        // Non-fatal — keep the default greeting if this fails.
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
+    abortControllerRef.current?.abort();
     setMessages([getInitialMessage()]);
     setInput("");
     setShowQuickActions(true);
@@ -77,8 +163,17 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
   }, [templeContext?.name]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const el = bodyRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (nearBottom) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [messages, typing]);
+
+  useEffect(() => {
+    return () => abortControllerRef.current?.abort();
+  }, []);
 
   const navigateTo = (place) => {
     const lat = localStorage.getItem("lat");
@@ -91,7 +186,17 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     );
   };
 
-  const resetChat = () => {
+  const resetChat = async () => {
+    abortControllerRef.current?.abort();
+    try {
+      await fetch(`${API_BASE}/api/chat/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: getUserId() }),
+      });
+    } catch {
+      // Non-fatal — UI still resets locally even if the backend call fails.
+    }
     setMessages([getInitialMessage()]);
     setInput("");
     setShowQuickActions(true);
@@ -104,11 +209,15 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
     askedRef.current.add(msg);
 
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setMessages((prev) => {
       if (prev.filter((m) => m.sender === "user").length === 0) {
         setShowQuickActions(false);
       }
-      return [...prev, { text: msg, sender: "user" }];
+      return [...prev, { id: makeId(), text: msg, sender: "user" }];
     });
     setInput("");
     setTyping(true);
@@ -130,7 +239,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           }
         : {
             message: msg,
-            userId: JSON.parse(localStorage.getItem("user"))?._id || "user1",
+            userId: getUserId(),
             lat: localStorage.getItem("lat"),
             lng: localStorage.getItem("lng"),
             city: localStorage.getItem("city"),
@@ -140,6 +249,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       let data;
@@ -155,17 +265,15 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         throw new Error(data?.error || `Server error (HTTP ${res.status}). Please try again.`);
       }
 
-      setTyping(false);
+      const safeMsg = validateChatResponse(data, isTempleMode);
 
-      if (isTempleMode) {
-        setMessages((prev) => [
-          ...prev,
-          { text: data.reply || "I couldn't retrieve a response. Please try again.", sender: "bot" },
-        ]);
-      } else {
-        setMessages((prev) => [...prev, { ...data, sender: "bot", text: data.reply || "" }]);
-      }
+      setTyping(false);
+      setMessages((prev) => [...prev, { id: makeId(), ...safeMsg, sender: "bot" }]);
     } catch (err) {
+      if (err.name === "AbortError") {
+        return;
+      }
+
       setTyping(false);
 
       let userFacingError = err.message;
@@ -181,7 +289,12 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         userFacingError = "Too many requests — the AI is busy. Please wait a few seconds and try again.";
       }
 
-      setMessages((prev) => [...prev, { text: userFacingError, sender: "bot", isError: true }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: makeId(), text: userFacingError, sender: "bot", isError: true, failedText: msg },
+      ]);
+    } finally {
+      setTyping(false);
     }
   };
 
@@ -224,14 +337,21 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           <button className="chat-icon-btn" onClick={resetChat} aria-label="New chat" title="New chat">
             ↺
           </button>
-          <button className="chat-icon-btn chat-close-btn" onClick={closeChat} aria-label="Close">
+          <button
+            className="chat-icon-btn chat-close-btn"
+            onClick={() => {
+              abortControllerRef.current?.abort();
+              closeChat();
+            }}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
       </div>
 
       {/* ── BODY ── */}
-      <div className="chat-body">
+      <div className="chat-body" ref={bodyRef}>
         {messages.map((msg, i) => {
           const isPlainText = (!msg.type || msg.type === undefined) && msg.text;
           const followUps =
@@ -240,7 +360,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               : [];
 
           return (
-            <div className={`chat-row ${msg.sender}`} key={i}>
+            <div className={`chat-row ${msg.sender}`} key={msg.id}>
               {msg.sender === "bot" && <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>}
 
               {isPlainText && (
@@ -257,8 +377,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                       <button
                         className="chat-retry-btn"
                         onClick={() => {
-                          const lastUser = [...messages].reverse().find((m) => m.sender === "user");
-                          if (lastUser) sendMessage(lastUser.text);
+                          if (msg.failedText) sendMessage(msg.failedText);
                         }}
                       >
                         ↺ Retry
@@ -279,55 +398,63 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
               )}
 
               {msg.type === "places" && (
-                <div className="chat-cards">
-                  {msg.data?.map((p, idx) => {
-                    const isDish = p.lat == null || p.lng == null;
-                    const isTemple = !isDish && (isTempleMode || looksLikeTemple(p.name));
-                    return (
-                      <div key={idx} className={`chat-card ${isDish ? "chat-card-dish" : ""}`}>
-                        <div className="chat-card-media">
-                          <img src={p.image} alt={p.name} loading="lazy" />
-                          {!isDish && p.openNow != null && (
-                            <span className={`chat-card-badge ${p.openNow ? "open" : "closed"}`}>
-                              {p.openNow ? "Open" : "Closed"}
-                            </span>
-                          )}
-                          {isDish && <span className="chat-card-badge dish">🍽 Must Try</span>}
-                        </div>
-                        <div className="card-content">
-                          <h4>{p.name}</h4>
-                          <p className="card-meta">
-                            {p.rating && <span className="card-rating">⭐ {p.rating}</span>}
-                            {p.reviewsCount != null && <span className="card-dot">·</span>}
-                            {p.reviewsCount != null && <span>{p.reviewsCount} reviews</span>}
-                            {!isDish && p.distanceKm != null && <span className="card-dot">·</span>}
-                            {!isDish && p.distanceKm != null && <span>{p.distanceKm} km</span>}
-                          </p>
-                          {p.bestTime && <p className="subtitle">{p.bestTime}</p>}
-                          {p.description && <p className="desc">{p.description}</p>}
-                          <div className="card-actions">
-                            {!isDish && <button onClick={() => navigateTo(p)}>Navigate</button>}
-                            {isTemple && (
-                              <button
-                                className="card-secondary"
-                                onClick={() => sendMessage(`Tell me the story of ${p.name}`)}
-                              >
-                                Temple Story
-                              </button>
+                <div className="chat-bubble-wrap">
+                  <div className="chat-cards">
+                    {msg.data?.map((p, idx) => {
+                      const isDish = p.lat == null || p.lng == null;
+                      const isTemple = !isDish && (isTempleMode || looksLikeTemple(p.name));
+                      return (
+                        <div key={p.placeId || idx} className={`chat-card ${isDish ? "chat-card-dish" : ""}`}>
+                          <div className="chat-card-media">
+                            <img src={p.image} alt={p.name} loading="lazy" />
+                            {!isDish && p.openNow != null && (
+                              <span className={`chat-card-badge ${p.openNow ? "open" : "closed"}`}>
+                                {p.openNow ? "Open" : "Closed"}
+                              </span>
                             )}
-                            {isDish && (
-                              <button
-                                className="card-secondary"
-                                onClick={() => sendMessage(`Best restaurants for ${p.name}`)}
-                              >
-                                Find Restaurants
-                              </button>
-                            )}
+                            {isDish && <span className="chat-card-badge dish">🍽 Must Try</span>}
+                          </div>
+                          <div className="card-content">
+                            <h4>{p.name}</h4>
+                            <p className="card-meta">
+                              {p.rating && <span className="card-rating">⭐ {p.rating}</span>}
+                              {p.reviewsCount != null && <span className="card-dot">·</span>}
+                              {p.reviewsCount != null && <span>{p.reviewsCount} reviews</span>}
+                              {!isDish && p.distanceKm != null && <span className="card-dot">·</span>}
+                              {!isDish && p.distanceKm != null && <span>{p.distanceKm} km</span>}
+                            </p>
+                            {p.bestTime && <p className="subtitle">{p.bestTime}</p>}
+                            {p.description && <p className="desc">{p.description}</p>}
+                            <div className="card-actions">
+                              {!isDish && <button onClick={() => navigateTo(p)}>Navigate</button>}
+                              {isTemple && (
+                                <button
+                                  className="card-secondary"
+                                  onClick={() => sendMessage(`Tell me the story of ${p.name}`)}
+                                >
+                                  Temple Story
+                                </button>
+                              )}
+                              {isDish && (
+                                <button
+                                  className="card-secondary"
+                                  onClick={() => sendMessage(`Best restaurants for ${p.name}`)}
+                                >
+                                  Find Restaurants
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  {msg.reprompt && (
+                    <div className="chat-bubble" style={{ marginTop: 6 }}>
+                      <MessageFormatter text={msg.reprompt} />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -336,18 +463,18 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                 <div className="trip-summary-card">
                   <div className="summary-head">
                     <span>📋 Trip Summary</span>
-                    <strong>₹{msg.summary.costs.total.toLocaleString()}</strong>
+                    <strong>₹{msg.summary?.costs?.total?.toLocaleString()}</strong>
                   </div>
 
                   <div className="summary-grid">
                     {[
-                      ["From", msg.summary.from],
-                      ["To", msg.summary.to],
-                      ["Travelers", msg.summary.travellers],
-                      ["Days", msg.summary.days],
-                      ["Hotel", msg.summary.hotelType],
-                      ...(msg.summary.distanceKm ? [["Distance", `${msg.summary.distanceKm} km`]] : []),
-                      ...(msg.summary.travelTime ? [["Travel time", msg.summary.travelTime]] : []),
+                      ["From", msg.summary?.from],
+                      ["To", msg.summary?.to],
+                      ["Travelers", msg.summary?.travellers],
+                      ["Days", msg.summary?.days],
+                      ["Hotel", msg.summary?.hotelType],
+                      ...(msg.summary?.distanceKm ? [["Distance", `${msg.summary.distanceKm} km`]] : []),
+                      ...(msg.summary?.travelTime ? [["Travel time", msg.summary.travelTime]] : []),
                     ].map(([k, v]) => (
                       <div key={k} className="summary-row">
                         <span>{k}</span>
@@ -356,7 +483,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                     ))}
                   </div>
 
-                  {msg.summary.transportDetails?.fare && (
+                  {msg.summary?.transportDetails?.fare && (
                     <div className="summary-costs">
                       <div className="summary-row">
                         <span>Transport</span>
@@ -393,7 +520,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                           )}
                           <div className="summary-row">
                             <span>Fuel cost</span>
-                            <span>₹{msg.summary.transportDetails.breakdown.fuelCost.toLocaleString()}</span>
+                            <span>₹{msg.summary.transportDetails.breakdown.fuelCost?.toLocaleString()}</span>
                           </div>
                           <div className="summary-row">
                             <span>Toll (est.)</span>
@@ -410,22 +537,22 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
                   <div className="summary-costs">
                     <div className="summary-row">
-                      <span>Transport (×{msg.summary.travellers})</span>
-                      <span>₹{msg.summary.costs.transport.toLocaleString()}</span>
+                      <span>Transport (×{msg.summary?.travellers})</span>
+                      <span>₹{msg.summary?.costs?.transport?.toLocaleString()}</span>
                     </div>
                     <div className="summary-row">
                       <span>Hotel</span>
-                      <span>₹{msg.summary.costs.hotel.toLocaleString()}</span>
+                      <span>₹{msg.summary?.costs?.hotel?.toLocaleString()}</span>
                     </div>
                     <div className="summary-row">
                       <span>Food</span>
-                      <span>₹{msg.summary.costs.food.toLocaleString()}</span>
+                      <span>₹{msg.summary?.costs?.food?.toLocaleString()}</span>
                     </div>
                     <div className="summary-row">
                       <span>Activities</span>
-                      <span>₹{msg.summary.costs.activities.toLocaleString()}</span>
+                      <span>₹{msg.summary?.costs?.activities?.toLocaleString()}</span>
                     </div>
-                    {msg.summary.remaining != null && (
+                    {msg.summary?.remaining != null && (
                       <div className="summary-row">
                         <span>💰 Remaining</span>
                         <span style={{ color: msg.summary.remaining < 0 ? "#f87171" : "#22c55e" }}>
@@ -490,7 +617,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                     <div className="budget-card">
                       <div className="budget-total">
                         <span>Total Budget</span>
-                        <strong>₹{msg.budget.total.toLocaleString()}</strong>
+                        <strong>₹{msg.budget.total?.toLocaleString()}</strong>
                       </div>
                       {[
                         ["Hotel", msg.budget.hotel],
@@ -512,14 +639,16 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                         <div key={jdx} className="mini-card">
                           <img src={item.place?.image} alt="" />
                           <div>
-                            <p>{item.place?.name}</p>
+                            <p>{item.place?.name || "Unnamed place"}</p>
                             <small>
                               {item.bestTime}
                               {item.visitDuration ? ` · ${item.visitDuration}` : ""}
                             </small>
-                            <button className="mini-card-navigate" onClick={() => navigateTo(item.place)}>
-                              Navigate
-                            </button>
+                            {item.place && (
+                              <button className="mini-card-navigate" onClick={() => navigateTo(item.place)}>
+                                Navigate
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -537,34 +666,34 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
                       <strong>Hotel</strong>
                     </div>
                     <div className="budget-subline">
-                      ₹{msg.budgetData.hotelRate} × {msg.budgetData.days} days × {msg.budgetData.roomsNeeded} rooms
+                      ₹{msg.budgetData?.hotelRate} × {msg.budgetData?.days} days × {msg.budgetData?.roomsNeeded} rooms
                     </div>
-                    <div className="budget-value">₹{msg.budgetData.hotelCost?.toLocaleString()}</div>
+                    <div className="budget-value">₹{msg.budgetData?.hotelCost?.toLocaleString()}</div>
                     <hr />
                     <div className="budget-line">
                       <strong>Food</strong>
                     </div>
                     <div className="budget-subline">
-                      ₹{msg.budgetData.foodRate} × {msg.budgetData.travellers} travelers × {msg.budgetData.days} days
+                      ₹{msg.budgetData?.foodRate} × {msg.budgetData?.travellers} travelers × {msg.budgetData?.days} days
                     </div>
-                    <div className="budget-value">₹{msg.budgetData.foodCost?.toLocaleString()}</div>
+                    <div className="budget-value">₹{msg.budgetData?.foodCost?.toLocaleString()}</div>
                     <hr />
                     <div className="budget-line">
                       <strong>Transport</strong>
                     </div>
                     <div className="budget-subline">
-                      ₹{msg.budgetData.transportRate} × {msg.budgetData.travellers}
+                      ₹{msg.budgetData?.transportRate} × {msg.budgetData?.travellers}
                     </div>
-                    <div className="budget-value">₹{msg.budgetData.transportCost?.toLocaleString()}</div>
+                    <div className="budget-value">₹{msg.budgetData?.transportCost?.toLocaleString()}</div>
                     <hr />
                     <div className="budget-line">
                       <strong>🎟 Activities</strong>
                     </div>
-                    <div className="budget-value">₹{msg.budgetData.activitiesCost?.toLocaleString()}</div>
+                    <div className="budget-value">₹{msg.budgetData?.activitiesCost?.toLocaleString()}</div>
                     <hr />
-                    <div className="budget-total">Budget: ₹{msg.budgetData.budget?.toLocaleString()}</div>
-                    <div className="budget-total">Required: ₹{msg.budgetData.totalCost?.toLocaleString()}</div>
-                    <div className="budget-short">Need Extra: ₹{msg.budgetData.shortBy?.toLocaleString()}</div>
+                    <div className="budget-total">Budget: ₹{msg.budgetData?.budget?.toLocaleString()}</div>
+                    <div className="budget-total">Required: ₹{msg.budgetData?.totalCost?.toLocaleString()}</div>
+                    <div className="budget-short">Need Extra: ₹{msg.budgetData?.shortBy?.toLocaleString()}</div>
                   </div>
                   <div className="budget-actions">
                     <button onClick={() => sendMessage("update budget")}>Update Budget</button>
@@ -579,8 +708,8 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
         {typing && (
           <div className="chat-row bot">
             <div className="chat-avatar">{isTempleMode ? "🛕" : "✦"}</div>
-            <div className="chat-typing">
-              <span className="sr-only">Sarathi is typing…</span>
+            <div className="chat-typing" aria-live="polite">
+              <span className="sr-only">Sarathi is thinking…</span>
               <span /><span /><span />
             </div>
           </div>
@@ -637,6 +766,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
             }
             disabled={typing}
             className="chat-input-field"
+            aria-label="Message Sarathi"
           />
           <button
             className="chat-send-btn"

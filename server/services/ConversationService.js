@@ -623,19 +623,7 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
   return defaultKeyword;
 };
 
-/* ================= detectIntent =================
-   FIX (this session): added a leading "tell me about / what is /
-   info about / describe" pattern to guide_city so bare overview
-   questions ("Tell me about Goa") resolve to a real structured
-   travel-guide reply instead of falling through to "general" (the
-   weak fallback that was producing "I'd be happy to help — could
-   you give me a bit more detail?"). Placed BEFORE the food/hotel/
-   temple checks so it only catches genuinely generic "about X"
-   phrasing — "tell me about hotels in Goa" still correctly matches
-   the hotel keyword check below since that check runs first in the
-   original order... NOTE: to keep priority correct we register this
-   check specifically ahead of guide_food but AFTER nothing else
-   changes, preserving all existing specific-keyword routing. ================= */
+/* ================= detectIntent ================= */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
 const detectIntent = (msg = "") => {
@@ -682,9 +670,7 @@ const detectIntent = (msg = "") => {
   if (/\b(hotels?|stays?|lodges?|resorts?|accommodations?|where to stay|place to stay|houseboats?|homestays?|boat house|boathouse)\b/.test(m))
     return "guide_hotel";
 
-  // 4c. NEW — generic "about a place" overview question. Must come
-  // before guide_knowledge's narrower checks so a plain "tell me
-  // about Goa" doesn't fall through to "general".
+  // 4c. Generic "about a place" overview question.
   if (/\b(tell me about|what is|what'?s|info(?:rmation)? about|know about|describe)\b/.test(m))
     return "guide_city";
 
@@ -790,8 +776,6 @@ const extractPlaceFromQuery = (msg = "") => {
     }
   }
 
-  // NEW — supports "tell me about Goa" style phrasing with no
-  // preposition at all, needed for the guide_city fix above.
   const aboutMatch = m.match(/\b(?:tell me about|what is|what'?s|info(?:rmation)? about|know about|describe)\s+([a-z][a-z]*(?:\s+[a-z][a-z]*){0,2})/);
   if (aboutMatch) {
     const candidate = aboutMatch[1].trim();
@@ -804,6 +788,48 @@ const extractPlaceFromQuery = (msg = "") => {
 
   console.log(`[extractPlace] No city found in: "${m}"`);
   return null;
+};
+
+/* ================= REAL-TIME NEARBY MAPPER =================
+   Dedicated to Google Places nearby/text search results ONLY.
+   NEVER reuse Planner.formatPlace (TripPlannerService.js) here —
+   that one is for itinerary day-cards and hardcodes bestTime /
+   "Popular and recommended place" filler that has nothing to do
+   with a real-time search result. This mapper only ever surfaces
+   fields Google actually returned — no fabricated metadata. ================= */
+const toRad = (deg) => (deg * Math.PI) / 180;
+
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+  if ([lat1, lng1, lat2, lng2].some((v) => v == null)) return null;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10; // 1 decimal place
+};
+
+const mapNearbyPlace = (p, origin = null) => {
+  const lat = p.geometry?.location?.lat ?? null;
+  const lng = p.geometry?.location?.lng ?? null;
+  const photoRef = p.photos?.[0]?.photo_reference;
+
+  return {
+    placeId:      p.place_id || null,
+    name:         p.name,
+    address:      p.formatted_address || p.vicinity || null,
+    rating:       p.rating ?? null,
+    reviewsCount: p.user_ratings_total ?? null,
+    openNow:      p.opening_hours?.open_now ?? null,
+    lat, lng,
+    distanceKm:   origin ? haversineKm(origin.lat, origin.lng, lat, lng) : null,
+    image: photoRef
+      ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoRef}&key=${process.env.GOOGLE_API_KEY}`
+      : null,
+    types: p.types || [],
+  };
 };
 
 /* ================= fetchNearby ================= */
@@ -820,15 +846,16 @@ const nearbySearchPlaces = async (lat, lng, keyword, radiusMetres) => {
       },
     }
   );
-  return (res.data.results || []).map(Planner.formatPlace);
+  const origin = { lat: parseFloat(lat), lng: parseFloat(lng) };
+  return (res.data.results || []).map((p) => mapNearbyPlace(p, origin));
 };
 
-const textSearchPlaces = async (keyword, city) => {
+const textSearchPlaces = async (keyword, city, origin = null) => {
   const res = await axios.get(
     "https://maps.googleapis.com/maps/api/place/textsearch/json",
     { params: { query: `${keyword} near ${city}`, key: process.env.GOOGLE_API_KEY } }
   );
-  return (res.data.results || []).map(Planner.formatPlace);
+  return (res.data.results || []).map((p) => mapNearbyPlace(p, origin));
 };
 
 const dedupeAndSortPlaces = (list) => {
@@ -855,13 +882,14 @@ const dedupeAndSortPlaces = (list) => {
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
   try {
     let results = [];
+    const origin = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
 
     if (lat && lng) {
       results = await nearbySearchPlaces(lat, lng, keyword, radiusMetres);
     }
 
     if (results.length < 5 && city && city.trim()) {
-      const topUp = await textSearchPlaces(keyword, city);
+      const topUp = await textSearchPlaces(keyword, city, origin);
       results = results.concat(topUp);
     }
 
@@ -905,5 +933,6 @@ module.exports = {
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
   extractRadius, extractPlaceKeyword, sanitizeGuideReply,
   isTripActive, nextStep, ensureRoute, PROXIMITY_RE,
+  mapNearbyPlace, haversineKm,
   T, Train, Planner,
 };

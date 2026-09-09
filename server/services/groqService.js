@@ -4,25 +4,31 @@ const Groq = require("groq-sdk");
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Confirmed active Groq models (June 2026). Order = default fallback chain.
+// Groq deprecated llama-3.1-8b-instant and llama-3.3-70b-versatile
+// (shutdown 08/16/26) and llama3-8b-8192/llama3-70b-8192 before that.
+// Current recommended chain per https://console.groq.com/docs/deprecations
+// as of Sep 2026. VERIFY this list against that page periodically —
+// Groq rotates models on a ~monthly cycle and this WILL go stale again.
 const DEFAULT_MODELS = [
-  "llama-3.1-8b-instant",
-  "llama-3.3-70b-versatile",
-  "llama3-8b-8192",
-  "llama3-70b-8192",
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+  "qwen/qwen3.6-27b",
 ];
 
-// Models that support response_format: { type: "json_object" }.
+// UNVERIFIED — I don't have confirmed data on which of these support
+// response_format: { type: "json_object" } on Groq. Test this against
+// your actual extractTripSlots / getFoodFromAI JSON calls before relying
+// on it; if a model 400s with jsonMode on, drop it from this set.
 const JSON_CAPABLE = new Set([
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
 ]);
 
 const DEFAULTS = {
   temperature: 0.3,
   maxTokens: 512,
   jsonMode: false,
-  model: null,        // null → use the DEFAULT_MODELS fallback chain
+  model: null, // null → use the DEFAULT_MODELS fallback chain
 };
 
 /**
@@ -56,7 +62,6 @@ const askGroq = async (prompt, options = {}) => {
         max_tokens: cfg.maxTokens,
       };
 
-      // JSON mode only where the model supports it (else Groq 400s).
       if (cfg.jsonMode && JSON_CAPABLE.has(model)) {
         payload.response_format = { type: "json_object" };
       }
@@ -70,11 +75,20 @@ const askGroq = async (prompt, options = {}) => {
       return text;
     } catch (err) {
       const status = err?.status || err?.response?.status;
-      console.error(`[GROQ] ${model} failed — status: ${status}, msg: ${err.message}`);
+      const code = err?.error?.error?.code || err?.error?.code;
+      console.error(
+        `[GROQ] ${model} failed — status: ${status}, code: ${code || "n/a"}, msg: ${err.message}`
+      );
 
       // Auth errors are terminal — no point trying other models.
       if (status === 401 || status === 403) {
         throw new Error(`GROQ_AUTH_FAILED: ${err.message}`);
+      }
+
+      // Decommissioned model — log loudly so this shows up in Render
+      // logs immediately instead of silently falling through every time.
+      if (code === "model_decommissioned") {
+        console.error(`[GROQ] ⚠️ "${model}" is DECOMMISSIONED — remove it from DEFAULT_MODELS.`);
       }
 
       lastError = err;
