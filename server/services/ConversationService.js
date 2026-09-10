@@ -97,7 +97,7 @@ const SPELL_CORRECTIONS = [
   ["hospitals","hospital"],["clinics","clinic"],["pharmacies","pharmacy"],
   ["banks","bank"],["atms","atm"],
   ["restaurants","restaurant"],
-  // Indian cities — sorted longest-first to prevent partial matches
+  // Indian cities
   ["vishakhapatnam","visakhapatnam"],["vizag","visakhapatnam"],
   ["hydrabad","hyderabad"],["hyderbad","hyderabad"],
   ["hderabad","hyderabad"],["huderbad","hyderabad"],
@@ -185,7 +185,7 @@ Message: "${msg}"`;
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   FORMATTING_RULES — single source of truth for all AI responses.
+   FORMATTING_RULES
 ═══════════════════════════════════════════════════════════════ */
 const FORMATTING_RULES = `
 ## RESPONSE FORMATTING RULES — follow these exactly, every time:
@@ -593,20 +593,26 @@ const fetchWeather = async (lat, lng, cityName) => {
   }
 };
 
-/* ================= extractRadius ================= */
+/* ================= extractRadius =================
+   FIX: default changed from 5000m to 1000m. "near me" without an
+   explicit distance must start at 1km, not 5km — a smaller starting
+   pool is exactly what keeps low-review local places (Andhra Ruchulu)
+   from being crowded out by farther, higher-prominence results. ================= */
+const RADIUS_RE = /(?:within|around|in|upto|up to|radius|range)?\s*(\d+(?:\.\d+)?)\s*(km|kilometer|kilometres|kms|k|m|meter|metres|mile|miles)/;
+
+const hasExplicitRadius = (msg = "") => RADIUS_RE.test(normalizeQuery(msg));
+
 const extractRadius = (msg = "") => {
   const m = normalizeQuery(msg);
-  const match = m.match(
-    /(?:within|around|in|upto|up to|radius|range)?\s*(\d+(?:\.\d+)?)\s*(km|kilometer|kilometres|kms|k|m|meter|metres|mile|miles)/
-  );
-  if (!match) return 5000;
+  const match = m.match(RADIUS_RE);
+  if (!match) return 1000;
   const value = parseFloat(match[1]);
   const unit  = match[2];
   let metres;
   if (unit === "mile" || unit === "miles")              metres = Math.round(value * 1609.34);
   else if (unit === "m" || unit === "meter" || unit === "metres") metres = Math.round(value);
   else                                                   metres = Math.round(value * 1000);
-  return Math.min(Math.max(metres, 500), 50000);
+  return Math.min(Math.max(metres, 200), 50000);
 };
 
 /* ================= extractPlaceKeyword ================= */
@@ -623,8 +629,33 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
   return defaultKeyword;
 };
 
-/* ================= detectIntent ================= */
+/* ================= detectIntent =================
+   FIX: added a nearby_named branch. A "near me" query whose subject
+   is NOT a generic category word (e.g. "Andhra Ruchulu near me") is
+   a named-business lookup, not a category search — it must never
+   fall through to nearby_general (which searches "tourist attraction"
+   and would return sunflower fields / junctions for a restaurant name). ================= */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
+
+const CATEGORY_WORDS = new Set([
+  "food","restaurant","restaurants","hotel","hotels","stay","stays","lodge","lodges",
+  "resort","resorts","accommodation","accommodations","temple","temples","shrine","shrines",
+  "hospital","hospitals","clinic","clinics","pharmacy","bank","banks","atm","atms",
+  "fuel","petrol","diesel","cng","gas","station","stations","place","places",
+  "attraction","attractions","spot","spots","good","best","closest","nearest",
+  "within","km","kms","kilometer","kilometers","kilometres","m","meter","meters","metres",
+]);
+
+const extractNearMeSubject = (raw = "") => raw.replace(PROXIMITY_RE, "").replace(/\s+/g, " ").trim();
+
+const looksLikeNamedPlace = (subject = "") => {
+  if (!subject) return false;
+  const words = subject.toLowerCase().replace(/[^a-z\s]/g, "").split(/\s+/).filter(Boolean);
+  if (!words.length) return false;
+  return !words.every((w) => CATEGORY_WORDS.has(w));
+};
+
+const extractNamedPlaceQuery = (raw = "") => extractNearMeSubject(raw);
 
 const detectIntent = (msg = "") => {
   const m = normalizeQuery(msg);
@@ -637,7 +668,7 @@ const detectIntent = (msg = "") => {
     m.startsWith("plan ") || m === "plan trip"
   ) return "trip";
 
-  // 2. Weather — before general to prevent hallucination
+  // 2. Weather
   if (/\b(weather|temperature|forecast|rain|humidity|climate today|how hot|how cold|uv index|sunrise|sunset)\b/.test(m))
     return "weather";
 
@@ -651,26 +682,25 @@ const detectIntent = (msg = "") => {
     if (/\b(hospitals?|clinics?|medical|pharmac(?:y|ies))\b/.test(m))                       return "nearby_hospital";
     if (/\b(atms?|banks?)\b/.test(m))                                                       return "nearby_bank";
     if (/\b(petrol|fuel|gas stations?|diesel|cng)\b/.test(m))                               return "nearby_fuel";
+
+    const subject = extractNearMeSubject(m);
+    if (looksLikeNamedPlace(subject)) return "nearby_named";
+
     return "nearby_general";
   }
 
   // 4. AI Travel Guide — content questions (no proximity)
-
-  // 4a. Food — checked before the generic "about" pattern so
-  // "tell me about the food in Goa" still routes to guide_food.
   if (/\b(local food|local dish|famous food|famous dish|what to eat|must eat|dish in|dish of|cuisine|street food|best food|food to taste|must.?try food|food in|food of|best to eat|food recommendation)\b/.test(m))
     return "guide_food";
   if (/\b(restaurants?|where to eat|places to eat|best restaurants|dining)\b/.test(m))
     return "guide_food";
   if (/\bfoods?\b/.test(m)) return "guide_food";
 
-  // 4b. Temple / Hotel — also checked before the generic pattern
   if (/\btemples?\b/.test(m)) return "guide_temple";
 
   if (/\b(hotels?|stays?|lodges?|resorts?|accommodations?|where to stay|place to stay|houseboats?|homestays?|boat house|boathouse)\b/.test(m))
     return "guide_hotel";
 
-  // 4c. Generic "about a place" overview question.
   if (/\b(tell me about|what is|what'?s|info(?:rmation)? about|know about|describe)\b/.test(m))
     return "guide_city";
 
@@ -790,15 +820,12 @@ const extractPlaceFromQuery = (msg = "") => {
   return null;
 };
 
-/* ================= REAL-TIME NEARBY MAPPER =================
-   Dedicated to Google Places nearby/text search results ONLY.
-   NEVER reuse Planner.formatPlace (TripPlannerService.js) here —
-   that one is for itinerary day-cards and hardcodes bestTime /
-   "Popular and recommended place" filler that has nothing to do
-   with a real-time search result. This mapper only ever surfaces
-   fields Google actually returned — no fabricated metadata. ================= */
+/* ================= REAL-TIME NEARBY MAPPER ================= */
 const toRad = (deg) => (deg * Math.PI) / 180;
 
+// FIX: no rounding here — filtering against a radius needs full
+// precision. Rounding is applied only for the displayed distanceKm
+// field, and separately for the human distanceText field.
 const haversineKm = (lat1, lng1, lat2, lng2) => {
   if ([lat1, lng1, lat2, lng2].some((v) => v == null)) return null;
   const R = 6371;
@@ -808,13 +835,20 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c * 10) / 10; // 1 decimal place
+  return R * c;
+};
+
+const formatDistanceText = (km) => {
+  if (km == null) return null;
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
 };
 
 const mapNearbyPlace = (p, origin = null) => {
   const lat = p.geometry?.location?.lat ?? null;
   const lng = p.geometry?.location?.lng ?? null;
   const photoRef = p.photos?.[0]?.photo_reference;
+  const rawKm = origin ? haversineKm(origin.lat, origin.lng, lat, lng) : null;
 
   return {
     placeId:      p.place_id || null,
@@ -824,7 +858,8 @@ const mapNearbyPlace = (p, origin = null) => {
     reviewsCount: p.user_ratings_total ?? null,
     openNow:      p.opening_hours?.open_now ?? null,
     lat, lng,
-    distanceKm:   origin ? haversineKm(origin.lat, origin.lng, lat, lng) : null,
+    distanceKm:   rawKm != null ? Math.round(rawKm * 100) / 100 : null,
+    distanceText: formatDistanceText(rawKm),
     image: photoRef
       ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoRef}&key=${process.env.GOOGLE_API_KEY}`
       : null,
@@ -832,19 +867,43 @@ const mapNearbyPlace = (p, origin = null) => {
   };
 };
 
-/* ================= fetchNearby ================= */
-const nearbySearchPlaces = async (lat, lng, keyword, radiusMetres) => {
+/* ================= category → Google type / allow-list =================
+   FIX: nearbysearch now passes `type` (not just `keyword`) for tighter
+   Google-side filtering, and results are additionally validated against
+   an allow-list of acceptable Google types so a restaurant query can
+   never surface a park/beach/tourist_attraction. ================= */
+const KEYWORD_TO_GOOGLE_TYPE = {
+  "restaurant":   "restaurant",
+  "hotel":        "lodging",
+  "hindu temple": "hindu_temple",
+  "hospital":     "hospital",
+  "bank":         "bank",
+  "gas station":  "gas_station",
+};
+
+const CATEGORY_ALLOW_TYPES = {
+  restaurant:   ["restaurant", "cafe", "food", "meal_takeaway", "meal_delivery", "bakery", "bar"],
+  lodging:      ["lodging"],
+  hindu_temple: ["hindu_temple", "place_of_worship"],
+  hospital:     ["hospital", "doctor", "health"],
+  bank:         ["bank", "atm", "finance"],
+  gas_station:  ["gas_station"],
+};
+
+/* ================= Google Places calls ================= */
+const nearbySearchPlaces = async (lat, lng, keyword, radiusMetres, googleType = null) => {
+  const params = {
+    location: `${lat},${lng}`,
+    radius:   radiusMetres,
+    keyword,
+    region:   "in",
+    key:      process.env.GOOGLE_API_KEY,
+  };
+  if (googleType) params.type = googleType;
+
   const res = await axios.get(
     "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-    {
-      params: {
-        location: `${lat},${lng}`,
-        radius:   radiusMetres,
-        keyword,
-        region:   "in",
-        key:      process.env.GOOGLE_API_KEY,
-      },
-    }
+    { params }
   );
   const origin = { lat: parseFloat(lat), lng: parseFloat(lng) };
   return (res.data.results || []).map((p) => mapNearbyPlace(p, origin));
@@ -858,49 +917,142 @@ const textSearchPlaces = async (keyword, city, origin = null) => {
   return (res.data.results || []).map((p) => mapNearbyPlace(p, origin));
 };
 
-const dedupeAndSortPlaces = (list) => {
+// FIX: named-business lookup ("Andhra Ruchulu near me"). Uses textsearch
+// with the GPS position as a location bias so results near the user rank
+// higher, then re-sorts by our own computed distance regardless.
+const searchNamedPlaceNearby = async (name, lat, lng, city) => {
+  try {
+    const origin = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
+    const params = { query: name, key: process.env.GOOGLE_API_KEY };
+    if (origin) {
+      params.location = `${origin.lat},${origin.lng}`;
+      params.radius = 20000; // bias only — textsearch does not hard-restrict to this
+    } else if (city) {
+      params.query = `${name} near ${city}`;
+    }
+    console.log(`[NEARBY DEBUG] named-place search query="${params.query}" biasedToGPS=${!!origin}`);
+    const res = await axios.get(
+      "https://maps.googleapis.com/maps/api/place/textsearch/json",
+      { params }
+    );
+    const results = (res.data.results || []).map((p) => mapNearbyPlace(p, origin));
+    console.log(`[NEARBY DEBUG] named-place rawResults=${results.length}`);
+    return dedupeAndSortPlaces(results, "distance").slice(0, 5);
+  } catch (e) {
+    console.log("searchNamedPlaceNearby failed:", e.message);
+    return [];
+  }
+};
+
+// FIX: sortBy is now a parameter — "near me" defaults to distance
+// ascending; "best/rating" explicitly requests rating descending.
+// Previously this always sorted rating-first regardless of intent,
+// which is the actual root cause of the far-restaurants-first bug.
+const dedupeAndSortPlaces = (list, sortBy = "distance") => {
   const seen = new Set();
   const deduped = [];
   for (const p of list) {
-    const key = p.placeId || p.place_id || `${p.name}|${p.lat}|${p.lng}`;
+    const key = p.placeId || `${p.name}|${p.lat}|${p.lng}`;
     if (!key || seen.has(key)) continue;
     seen.add(key);
     deduped.push(p);
   }
-  deduped.sort((a, b) => {
-    const ratingDiff = (b.rating || 0) - (a.rating || 0);
-    if (ratingDiff !== 0) return ratingDiff;
-    const reviewDiff = (b.reviewsCount || 0) - (a.reviewsCount || 0);
-    if (reviewDiff !== 0) return reviewDiff;
-    const da = a.distanceKm ?? Infinity;
-    const db = b.distanceKm ?? Infinity;
-    return da - db;
-  });
+
+  const byDistance = (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+  const byRating = (a, b) => {
+    const r = (b.rating || 0) - (a.rating || 0);
+    if (r !== 0) return r;
+    const rc = (b.reviewsCount || 0) - (a.reviewsCount || 0);
+    if (rc !== 0) return rc;
+    return byDistance(a, b);
+  };
+
+  deduped.sort(sortBy === "rating" ? byRating : byDistance);
   return deduped;
 };
 
-const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 5000) => {
+/* ================= fetchNearby =================
+   FIX — complete rewrite of the search flow:
+   1. Starts at 1km (not 5km), walks 1→3→5→10km ONLY when the user
+      did not specify an explicit radius, and stops as soon as it has
+      ≥5 results — so it never over-expands past what's needed.
+   2. An explicit user radius (e.g. "within 500 meters") is honoured
+      exactly and never expanded past.
+   3. Every candidate is filtered to distanceKm <= requested radius —
+      Google's own radius parameter is not trusted as sufficient on
+      its own (this is what let 6.3km results leak in via the old
+      unconstrained city text-search top-up).
+   4. City-wide text search is now ONLY used when there is no GPS at
+      all — never as a "top-up" blended into a GPS-based nearby search.
+   5. Returns { results, radiusUsed, expanded } instead of a bare
+      array, so the caller can render an honest "within Xkm" /
+      "expanded to Xkm" label instead of a static string. ================= */
+const PROGRESSIVE_RADII_M = [1000, 3000, 5000, 10000];
+
+const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 1000, opts = {}) => {
+  const { explicitRadius = false, sortBy = "distance" } = opts;
+  const origin = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
+  const googleType = KEYWORD_TO_GOOGLE_TYPE[keyword] || null;
+  const allowTypes = googleType ? CATEGORY_ALLOW_TYPES[googleType] : null;
+
+  console.log(
+    `[NEARBY DEBUG] keyword="${keyword}" googleType="${googleType || "n/a"}" ` +
+    `lat=${lat} lng=${lng} city="${city}" requestedRadius=${radiusMetres} explicit=${explicitRadius}`
+  );
+
   try {
-    let results = [];
-    const origin = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
-
-    if (lat && lng) {
-      results = await nearbySearchPlaces(lat, lng, keyword, radiusMetres);
+    if (!origin) {
+      if (!city || !city.trim()) return { results: [], radiusUsed: null, expanded: false };
+      console.log(`[NEARBY DEBUG] no GPS available — falling back to city textsearch for "${city}"`);
+      const topUp = await textSearchPlaces(keyword, city, null);
+      const filtered = allowTypes
+        ? topUp.filter((p) => (p.types || []).some((t) => allowTypes.includes(t)))
+        : topUp;
+      return { results: dedupeAndSortPlaces(filtered, sortBy).slice(0, 10), radiusUsed: null, expanded: false };
     }
 
-    if (results.length < 5 && city && city.trim()) {
-      const topUp = await textSearchPlaces(keyword, city, origin);
-      results = results.concat(topUp);
+    const laddered = PROGRESSIVE_RADII_M.filter((m) => m >= radiusMetres);
+    const ladder = explicitRadius ? [radiusMetres] : (laddered.length ? laddered : [radiusMetres]);
+
+    let finalResults = [];
+    let radiusUsed = ladder[0];
+
+    for (const stepMetres of ladder) {
+      const raw = await nearbySearchPlaces(origin.lat, origin.lng, keyword, stepMetres, googleType);
+      console.log(`[NEARBY DEBUG] radius=${stepMetres}m rawResults=${raw.length}`);
+      raw.forEach((p) =>
+        console.log(`[NEARBY PLACE] name="${p.name}" distance=${p.distanceText} types=${(p.types || []).join(",")}`)
+      );
+
+      const withinRadius = raw.filter((p) => p.distanceKm != null && p.distanceKm <= stepMetres / 1000);
+      const typeFiltered = allowTypes
+        ? withinRadius.filter((p) => (p.types || []).some((t) => allowTypes.includes(t)))
+        : withinRadius;
+
+      const droppedByType = withinRadius.filter((p) => !typeFiltered.includes(p));
+      droppedByType.forEach((p) =>
+        console.log(`[NEARBY DEBUG] FILTERED OUT: "${p.name}" reason=type-mismatch types=${(p.types || []).join(",")}`)
+      );
+
+      console.log(`[NEARBY DEBUG] withinRadius=${withinRadius.length} typeFiltered=${typeFiltered.length}`);
+
+      finalResults = typeFiltered;
+      radiusUsed = stepMetres;
+
+      if (explicitRadius || finalResults.length >= 5) break;
     }
 
-    if (!results.length && (!city || !city.trim())) {
-      return [];
-    }
+    const sorted = dedupeAndSortPlaces(finalResults, sortBy);
+    console.log(`[NEARBY DEBUG] sortedBy=${sortBy} finalResults=${sorted.length} radiusUsed=${radiusUsed}`);
 
-    return dedupeAndSortPlaces(results).slice(0, 6);
+    return {
+      results: sorted.slice(0, 10),
+      radiusUsed,
+      expanded: !explicitRadius && radiusUsed !== ladder[0],
+    };
   } catch (e) {
-    console.log("fetchNearby failed:", e.message);
-    return [];
+    console.log("[NEARBY DEBUG] fetchNearby failed:", e.message);
+    return { results: [], radiusUsed: radiusMetres, expanded: false };
   }
 };
 
@@ -931,8 +1083,9 @@ module.exports = {
   regexExtract, extractTripSlots,
   looksLikeStepAnswer, askAI, askTravelGuide, fetchWeather,
   fetchNearby, extractPlaceFromQuery, getFoodFromAI, detectIntent,
-  extractRadius, extractPlaceKeyword, sanitizeGuideReply,
+  extractRadius, hasExplicitRadius, extractPlaceKeyword, sanitizeGuideReply,
   isTripActive, nextStep, ensureRoute, PROXIMITY_RE,
-  mapNearbyPlace, haversineKm,
+  mapNearbyPlace, haversineKm, formatDistanceText,
+  extractNamedPlaceQuery, searchNamedPlaceNearby,
   T, Train, Planner,
 };

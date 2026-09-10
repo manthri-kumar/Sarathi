@@ -65,13 +65,45 @@ const repromptFor = (step) => {
   return "\n\nWhenever you're ready, let's continue with your trip — just pick from the options above.";
 };
 
+/* ── Shared "near me"-style search helper ── */
+const buildRangeLabel = (radiusUsed, expanded) => {
+  if (radiusUsed == null) return null;
+  const kmLabel = radiusUsed >= 1000 ? `${(radiusUsed / 1000).toString().replace(/\.0$/, "")} km` : `${radiusUsed} m`;
+  return expanded ? `Only a few results nearby — showing within ${kmLabel}` : `Within ${kmLabel}`;
+};
+
+const runNearbySearch = async (intent, raw, lat, lng, city, activeCity) => {
+  const placeCity     = C.extractPlaceFromQuery(raw) || city || activeCity;
+  const radiusMetres  = C.extractRadius(raw);
+  const explicit      = C.hasExplicitRadius(raw);
+  const placeType     = intent.replace("nearby_", "");
+
+  if (intent === "nearby_named") {
+    const name = C.extractNamedPlaceQuery(raw);
+    console.log(`[CHAT] nearby_named → name="${name}"`);
+    const data = await C.searchNamedPlaceNearby(name, lat, lng, placeCity);
+    return { data, placeType: "named", placeCity, radiusUsed: null, expanded: false, rangeLabel: null };
+  }
+
+  const keyword = NEARBY_KEYWORD[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
+  console.log(`[CHAT] nearby → intent=${intent} keyword="${keyword}" radius=${radiusMetres}m explicit=${explicit} city="${placeCity}"`);
+
+  const { results, radiusUsed, expanded } = await C.fetchNearby(
+    lat, lng, keyword, placeCity, radiusMetres, { explicitRadius: explicit, sortBy: "distance" }
+  );
+
+  return {
+    data: results,
+    placeType,
+    placeCity,
+    radiusUsed,
+    expanded,
+    rangeLabel: buildRangeLabel(radiusUsed, expanded),
+  };
+};
+
 /* ════════════════════════════════════════════════════════════════
    GET /api/chat/session/:userId — READ-ONLY session peek.
-   NEW: added to fix the "reload hides an active trip" bug.
-   Never mutates the session — purely lets the frontend decide
-   whether to rehydrate real history/trip-in-progress state instead
-   of always rendering a misleading blank "Hi 👋" greeting after a
-   page refresh, while MongoDB still has step="travellers" etc.
 ════════════════════════════════════════════════════════════════ */
 router.get("/session/:userId", async (req, res) => {
   try {
@@ -186,7 +218,6 @@ router.post("/", async (req, res) => {
 
     console.log("[CHAT]", { userId, message: raw, previousStep: s.step, intent, inFlow });
 
-    // Clear stale planning step
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
       await saveSession(s);
@@ -198,7 +229,6 @@ router.post("/", async (req, res) => {
     ══════════════════════════════════════════════════════════════ */
     if (!inFlow) {
 
-      /* ── Trip start ── */
       if (intent === "trip") {
         const slots = await C.extractTripSlots(raw);
         s.trip = {
@@ -221,7 +251,6 @@ router.post("/", async (req, res) => {
         return advance(s, res, ack);
       }
 
-      /* ── Weather (real Open-Meteo data) ── */
       if (intent === "weather") {
         console.log(`[CHAT] weather → lat=${lat} lng=${lng} city=${city}`);
         const result = await C.fetchWeather(lat, lng, city || s.activeCity);
@@ -238,26 +267,15 @@ router.post("/", async (req, res) => {
          TYPE 2: REAL-TIME NEARBY SEARCH → Google Places → cards
       ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("nearby_")) {
-        const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
-        const radiusMetres = C.extractRadius(raw);
-        const keyword = NEARBY_KEYWORD[intent]
-          || C.extractPlaceKeyword(raw, "tourist attraction");
-        const placeType = intent.replace("nearby_", "");
+        const { data, placeType, placeCity, radiusUsed, rangeLabel } =
+          await runNearbySearch(intent, raw, lat, lng, city, s.activeCity);
 
-        console.log(
-          `[CHAT] nearby → intent=${intent} keyword="${keyword}" ` +
-          `radius=${radiusMetres}m city="${placeCity}"`
-        );
-
-        const places = await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres);
-        if (placeCity && placeCity !== city) {
-          s.activeCity = placeCity;
-        }
+        if (placeCity && placeCity !== city) s.activeCity = placeCity;
         Ctx.updateNearbySearchContext(s, {
-          intent, results: places, radius: radiusMetres, placeType,
+          intent, results: data, radius: radiusUsed, placeType,
         });
         await saveSession(s);
-        return res.json({ type: "places", data: places, placeType });
+        return res.json({ type: "places", data, placeType, rangeLabel });
       }
 
       /* ─────────────────────────────────────────────────────────────
@@ -283,7 +301,36 @@ router.post("/", async (req, res) => {
 
       /* ─────────────────────────────────────────────────────────────
          GENERAL — multi-turn context-aware conversational fallback.
+
+         FIX: ContextService already has a purpose-built entity-
+         follow-up path (isEntityFollowUp / answerAboutActivePlace),
+         explicitly built to handle "temple near me" → "timings" →
+         "how far is it?" grounded in the ACTUAL active place. It was
+         never wired up here — every follow-up was silently falling
+         through to the generic resolveContext + askAIWithContext
+         path instead, which has no idea what "it" refers to beyond
+         a loose pronoun rewrite. This checks the entity path first.
       ───────────────────────────────────────────────────────────── */
+      const placeOverride = Ctx.detectPlaceMentionOverride(s, raw);
+      if (placeOverride) {
+        Ctx.updateEntityContext(s, {
+          place: placeOverride.name,
+          placeId: placeOverride.placeId,
+        });
+      }
+
+      if (Ctx.isEntityFollowUp(s, raw)) {
+        console.log(`[CHAT] Entity follow-up about "${s.activePlace}": "${raw}"`);
+        const reply = await Ctx.answerAboutActivePlace(s, raw);
+        await Ctx.updateSessionContext(s, raw, reply, {
+          intent:       "entity_followup",
+          city:         city || null,
+          extractTopic: false,
+        });
+        await saveSession(s);
+        return res.json({ reply });
+      }
+
       let messageForAI = raw;
       const isFollowUp = Ctx.isContextualFollowUp(raw);
 
@@ -314,7 +361,6 @@ router.post("/", async (req, res) => {
     if (!C.looksLikeStepAnswer(s.step, raw)) {
       const offTopicIntent = C.detectIntent(raw);
 
-      /* Weather mid-flow */
       if (offTopicIntent === "weather") {
         const result = await C.fetchWeather(lat, lng, city || s.activeCity);
         await Ctx.updateSessionContext(s, raw, result.reply, {
@@ -324,34 +370,24 @@ router.post("/", async (req, res) => {
         return res.json({ reply: `${result.reply}${repromptFor(s.step)}` });
       }
 
-      /* Nearby search mid-flow */
       if (offTopicIntent.startsWith("nearby_")) {
-        const placeCity    = C.extractPlaceFromQuery(raw) || city || s.activeCity;
-        const radiusMetres = C.extractRadius(raw);
-        const keyword = NEARBY_KEYWORD[offTopicIntent]
-          || C.extractPlaceKeyword(raw, "tourist attraction");
-        const placeType = offTopicIntent.replace("nearby_", "");
+        const { data, placeType, placeCity, radiusUsed, rangeLabel } =
+          await runNearbySearch(offTopicIntent, raw, lat, lng, city, s.activeCity);
 
-        console.log(
-          `[CHAT] nearby(in-flow) → intent=${offTopicIntent} keyword="${keyword}" ` +
-          `radius=${radiusMetres}m city="${placeCity}"`
-        );
-
-        const places = await C.fetchNearby(lat, lng, keyword, placeCity, radiusMetres);
         if (placeCity && placeCity !== city) s.activeCity = placeCity;
         Ctx.updateNearbySearchContext(s, {
-          intent: offTopicIntent, results: places, radius: radiusMetres, placeType,
+          intent: offTopicIntent, results: data, radius: radiusUsed, placeType,
         });
         await saveSession(s);
         return res.json({
           type: "places",
-          data: places,
+          data,
           placeType,
+          rangeLabel,
           reprompt: repromptFor(s.step),
         });
       }
 
-      /* AI Travel Guide content question mid-flow */
       if (offTopicIntent.startsWith("guide_")) {
         const topic = offTopicIntent.replace("guide_", "");
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
@@ -363,7 +399,6 @@ router.post("/", async (req, res) => {
         return res.json({ reply: `${reply}${repromptFor(s.step)}` });
       }
 
-      /* Genuinely general/off-topic question */
       const answer   = await Ctx.askAIWithContext(s, raw, city || s.activeCity);
       await Ctx.updateSessionContext(s, raw, answer, { extractTopic: false });
       await saveSession(s);
@@ -565,7 +600,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Final fallback within flow
     const fallbackReply = await C.askAI(raw, city);
     return res.json({ reply: fallbackReply });
 
@@ -593,7 +627,6 @@ router.post("/reset", async (req, res) => {
     s.lastNearbyIntent = null;
     s.lastSearchRadius = null;
     s.lastGuideTopic = null;
-    // currentLocationCity / conversationCity / activeCity intentionally preserved.
 
     await saveSession(s);
     return res.json({ success: true });
