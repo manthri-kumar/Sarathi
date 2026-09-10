@@ -133,6 +133,23 @@ const normalizeQuery = (raw = "") => {
   return corrected.trim().replace(/\s+/g, " ");
 };
 
+/* ================= GREETINGS / CLOSINGS =================
+   FIX (Bug 2/34): "hi" after "temples near me" was answering with
+   the previous temple's details, because nothing in the pipeline
+   recognized a bare greeting as distinct from a genuine follow-up.
+   isGreetingOrClosing is the single source of truth for this and is
+   used both here (to short-circuit detectIntent) and in
+   ContextService (to short-circuit isContextualFollowUp /
+   isEntityFollowUp) so a greeting can never be misread as "about
+   the active place" no matter which code path reaches it first. ================= */
+const GREETING_RE = /^(hi+|hii+|hello+|hey+|heya|yo|hola|namaste|namaskar|good\s?morning|good\s?afternoon|good\s?evening|good\s?night|sup|whats\s?up|greetings)$/;
+const CLOSING_RE  = /^(bye|goodbye|see\s?you|see\s?ya|thanks?|thank\s?you|thx|ty|ok|okay|okie|cool|nice|great|got\s?it|sounds?\s?good)$/;
+
+const isGreetingOrClosing = (msg = "") => {
+  const m = normalizeQuery(msg);
+  return GREETING_RE.test(m) || CLOSING_RE.test(m);
+};
+
 /* ================= REGEX SLOT FALLBACK ================= */
 const regexExtract = (msg = "") => {
   const m = msg.toLowerCase();
@@ -593,11 +610,7 @@ const fetchWeather = async (lat, lng, cityName) => {
   }
 };
 
-/* ================= extractRadius =================
-   FIX: default changed from 5000m to 1000m. "near me" without an
-   explicit distance must start at 1km, not 5km — a smaller starting
-   pool is exactly what keeps low-review local places (Andhra Ruchulu)
-   from being crowded out by farther, higher-prominence results. ================= */
+/* ================= extractRadius ================= */
 const RADIUS_RE = /(?:within|around|in|upto|up to|radius|range)?\s*(\d+(?:\.\d+)?)\s*(km|kilometer|kilometres|kms|k|m|meter|metres|mile|miles)/;
 
 const hasExplicitRadius = (msg = "") => RADIUS_RE.test(normalizeQuery(msg));
@@ -629,12 +642,7 @@ const extractPlaceKeyword = (msg = "", defaultKeyword = "tourist attraction") =>
   return defaultKeyword;
 };
 
-/* ================= detectIntent =================
-   FIX: added a nearby_named branch. A "near me" query whose subject
-   is NOT a generic category word (e.g. "Andhra Ruchulu near me") is
-   a named-business lookup, not a category search — it must never
-   fall through to nearby_general (which searches "tourist attraction"
-   and would return sunflower fields / junctions for a restaurant name). ================= */
+/* ================= detectIntent ================= */
 const PROXIMITY_RE = /\b(near me|nearby|close to me|around me|close by|closeby|within\s+\d+(?:\.\d+)?\s?(?:km|kms|kilometers?|m|meters?|metres?|miles?|mile))\b/i;
 
 const CATEGORY_WORDS = new Set([
@@ -660,6 +668,11 @@ const extractNamedPlaceQuery = (raw = "") => extractNearMeSubject(raw);
 const detectIntent = (msg = "") => {
   const m = normalizeQuery(msg);
   console.log(`[detectIntent] normalized: "${m}"`);
+
+  // 0. Greeting / closing — checked FIRST, before anything else,
+  // so "hi" can never be misrouted into trip/nearby/guide/general
+  // with stale conversation context attached.
+  if (isGreetingOrClosing(m)) return "greeting";
 
   // 1. Trip planning
   if (
@@ -713,7 +726,18 @@ const detectIntent = (msg = "") => {
   return "general";
 };
 
-/* ================= looksLikeStepAnswer ================= */
+/* ================= looksLikeStepAnswer =================
+   FIX (Bug 1 / state-machine safety): two missing cases.
+     - "train_class" had NO case at all — it hit `default: return
+       false`, so a valid class selection like "3" was routed into
+       the off-topic branch and answered by the general LLM instead
+       of being read as a class choice. Reproduced exactly in
+       screenshot 2 (the "three quick things near Vallikavu" reply).
+     - "summary" also had no case — any free-text during the summary
+       step (not one of the literal "confirm trip"/"edit X" commands
+       handled earlier) skipped the dedicated summary handler and
+       went to the LLM for no reason. Now always treated as a step
+       answer so it reaches that handler directly. ================= */
 const looksLikeStepAnswer = (step, raw) => {
   const lower = raw.toLowerCase().trim();
   if (lower.endsWith("?")) return false;
@@ -722,11 +746,13 @@ const looksLikeStepAnswer = (step, raw) => {
     case "travellers": case "days": case "car_mileage": return /\d/.test(lower);
     case "budget":       return lower === "skip" || /\d/.test(lower);
     case "transport":    return /^[1-4]$/.test(lower) || /train|car|bus|flight/.test(lower);
+    case "train_class":  return /^[1-5]$/.test(lower) || /general|sleeper|3\s?ac|2\s?ac|1\s?ac/.test(lower);
     case "car_fuel":     return /^[1-4]$/.test(lower) || /petrol|diesel|cng|ev/.test(lower);
     case "bus_type":     return /^[1-5]$/.test(lower) || /ordinary|express|luxury|sleeper|ac/.test(lower);
     case "flight_class": return /^[1-3]$/.test(lower) || /economy|business|premium/.test(lower);
     case "hotel":        return /^[1-3]$/.test(lower) || /budget|standard|luxury|no|skip|none/.test(lower);
     case "source": case "destination": return lower.split(" ").length <= 4;
+    case "summary":      return true;
     default: return false;
   }
 };
@@ -823,9 +849,6 @@ const extractPlaceFromQuery = (msg = "") => {
 /* ================= REAL-TIME NEARBY MAPPER ================= */
 const toRad = (deg) => (deg * Math.PI) / 180;
 
-// FIX: no rounding here — filtering against a radius needs full
-// precision. Rounding is applied only for the displayed distanceKm
-// field, and separately for the human distanceText field.
 const haversineKm = (lat1, lng1, lat2, lng2) => {
   if ([lat1, lng1, lat2, lng2].some((v) => v == null)) return null;
   const R = 6371;
@@ -867,11 +890,7 @@ const mapNearbyPlace = (p, origin = null) => {
   };
 };
 
-/* ================= category → Google type / allow-list =================
-   FIX: nearbysearch now passes `type` (not just `keyword`) for tighter
-   Google-side filtering, and results are additionally validated against
-   an allow-list of acceptable Google types so a restaurant query can
-   never surface a park/beach/tourist_attraction. ================= */
+/* ================= category → Google type / allow-list ================= */
 const KEYWORD_TO_GOOGLE_TYPE = {
   "restaurant":   "restaurant",
   "hotel":        "lodging",
@@ -917,16 +936,13 @@ const textSearchPlaces = async (keyword, city, origin = null) => {
   return (res.data.results || []).map((p) => mapNearbyPlace(p, origin));
 };
 
-// FIX: named-business lookup ("Andhra Ruchulu near me"). Uses textsearch
-// with the GPS position as a location bias so results near the user rank
-// higher, then re-sorts by our own computed distance regardless.
 const searchNamedPlaceNearby = async (name, lat, lng, city) => {
   try {
     const origin = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
     const params = { query: name, key: process.env.GOOGLE_API_KEY };
     if (origin) {
       params.location = `${origin.lat},${origin.lng}`;
-      params.radius = 20000; // bias only — textsearch does not hard-restrict to this
+      params.radius = 20000;
     } else if (city) {
       params.query = `${name} near ${city}`;
     }
@@ -944,10 +960,6 @@ const searchNamedPlaceNearby = async (name, lat, lng, city) => {
   }
 };
 
-// FIX: sortBy is now a parameter — "near me" defaults to distance
-// ascending; "best/rating" explicitly requests rating descending.
-// Previously this always sorted rating-first regardless of intent,
-// which is the actual root cause of the far-restaurants-first bug.
 const dedupeAndSortPlaces = (list, sortBy = "distance") => {
   const seen = new Set();
   const deduped = [];
@@ -971,22 +983,7 @@ const dedupeAndSortPlaces = (list, sortBy = "distance") => {
   return deduped;
 };
 
-/* ================= fetchNearby =================
-   FIX — complete rewrite of the search flow:
-   1. Starts at 1km (not 5km), walks 1→3→5→10km ONLY when the user
-      did not specify an explicit radius, and stops as soon as it has
-      ≥5 results — so it never over-expands past what's needed.
-   2. An explicit user radius (e.g. "within 500 meters") is honoured
-      exactly and never expanded past.
-   3. Every candidate is filtered to distanceKm <= requested radius —
-      Google's own radius parameter is not trusted as sufficient on
-      its own (this is what let 6.3km results leak in via the old
-      unconstrained city text-search top-up).
-   4. City-wide text search is now ONLY used when there is no GPS at
-      all — never as a "top-up" blended into a GPS-based nearby search.
-   5. Returns { results, radiusUsed, expanded } instead of a bare
-      array, so the caller can render an honest "within Xkm" /
-      "expanded to Xkm" label instead of a static string. ================= */
+/* ================= fetchNearby ================= */
 const PROGRESSIVE_RADII_M = [1000, 3000, 5000, 10000];
 
 const fetchNearby = async (lat, lng, keyword, city, radiusMetres = 1000, opts = {}) => {
@@ -1087,5 +1084,6 @@ module.exports = {
   isTripActive, nextStep, ensureRoute, PROXIMITY_RE,
   mapNearbyPlace, haversineKm, formatDistanceText,
   extractNamedPlaceQuery, searchNamedPlaceNearby,
+  isGreetingOrClosing,
   T, Train, Planner,
 };
