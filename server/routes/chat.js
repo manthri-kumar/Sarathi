@@ -6,7 +6,6 @@ const ChatSession = require("../models/ChatSession");
 const C           = require("../services/ConversationService");
 const Ctx         = require("../services/ContextService");
 
-/* ── Keyword map: nearby_* intent → Google Places search term ── */
 const NEARBY_KEYWORD = {
   nearby_temple:   "hindu temple",
   nearby_food:     "restaurant",
@@ -17,7 +16,6 @@ const NEARBY_KEYWORD = {
   nearby_general:  "tourist attraction",
 };
 
-/* ── Session helpers ── */
 const loadSession = async (userId) => {
   let s = await ChatSession.findOne({ userId });
   if (!s) s = await ChatSession.create({ userId, step: null, trip: {}, history: [] });
@@ -56,7 +54,6 @@ const finalizeTransport = async (s, res, details) => {
   return res.json({ reply: C.QUESTION[s.step] });
 };
 
-/* ── Safe reprompt builder — NEVER inject `undefined` into a reply. ── */
 const repromptFor = (step) => {
   if (step === "summary") {
     return "\n\nWhenever you're ready — tap **Confirm** to generate your itinerary, or an Edit button to change a detail.";
@@ -65,7 +62,14 @@ const repromptFor = (step) => {
   return "\n\nWhenever you're ready, let's continue with your trip — just pick from the options above.";
 };
 
-/* ── Shared "near me"-style search helper ── */
+const GREETINGS = [
+  "Hi there! 👋 What can I help you with today?",
+  "Hello! Ready to plan your next trip or explore somewhere nearby?",
+  "Hey! How can I help with your travel plans?",
+  "Namaste 🙏 What would you like to explore today?",
+];
+const pickGreeting = () => GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+
 const buildRangeLabel = (radiusUsed, expanded) => {
   if (radiusUsed == null) return null;
   const kmLabel = radiusUsed >= 1000 ? `${(radiusUsed / 1000).toString().replace(/\.0$/, "")} km` : `${radiusUsed} m`;
@@ -102,9 +106,6 @@ const runNearbySearch = async (intent, raw, lat, lng, city, activeCity) => {
   };
 };
 
-/* ════════════════════════════════════════════════════════════════
-   GET /api/chat/session/:userId — READ-ONLY session peek.
-════════════════════════════════════════════════════════════════ */
 router.get("/session/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -131,9 +132,6 @@ router.get("/session/:userId", async (req, res) => {
   }
 });
 
-/* ════════════════════════════════════════════════════════════════
-   MAIN HANDLER
-════════════════════════════════════════════════════════════════ */
 router.post("/", async (req, res) => {
   try {
     const { message, userId = "user1", lat, lng, city } = req.body;
@@ -145,7 +143,6 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ reply: "Please enter a message." });
     }
 
-    /* ── Date / time shortcuts ── */
     const now = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     );
@@ -166,7 +163,6 @@ router.post("/", async (req, res) => {
     if (/^(today|what is today|date and day)$/i.test(lower))
       return res.json({ reply: `📅 Today is **${currentDay}, ${currentDate}**.` });
 
-    /* ── Trip edit / control commands ── */
     if (lower === "update budget" && s.trip?.destination) {
       s.trip.budget = undefined;
       s.step = "budget";
@@ -212,7 +208,6 @@ router.post("/", async (req, res) => {
       }
     }
 
-    /* ── Flow & intent detection ── */
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
@@ -224,9 +219,6 @@ router.post("/", async (req, res) => {
       console.log("[FLOW] stale step cleared → IDLE");
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       NOT IN FLOW — main response routing
-    ══════════════════════════════════════════════════════════════ */
     if (!inFlow) {
 
       if (intent === "trip") {
@@ -251,6 +243,15 @@ router.post("/", async (req, res) => {
         return advance(s, res, ack);
       }
 
+      if (intent === "greeting") {
+        const reply = pickGreeting();
+        await Ctx.updateSessionContext(s, raw, reply, {
+          intent: "greeting", city: city || null, extractTopic: false,
+        });
+        await saveSession(s);
+        return res.json({ reply });
+      }
+
       if (intent === "weather") {
         console.log(`[CHAT] weather → lat=${lat} lng=${lng} city=${city}`);
         const result = await C.fetchWeather(lat, lng, city || s.activeCity);
@@ -263,9 +264,6 @@ router.post("/", async (req, res) => {
         return res.json({ reply: result.reply });
       }
 
-      /* ─────────────────────────────────────────────────────────────
-         TYPE 2: REAL-TIME NEARBY SEARCH → Google Places → cards
-      ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("nearby_")) {
         const { data, placeType, placeCity, radiusUsed, rangeLabel } =
           await runNearbySearch(intent, raw, lat, lng, city, s.activeCity);
@@ -278,9 +276,6 @@ router.post("/", async (req, res) => {
         return res.json({ type: "places", data, placeType, rangeLabel });
       }
 
-      /* ─────────────────────────────────────────────────────────────
-         TYPE 1: AI TRAVEL GUIDE → rich structured Markdown text.
-      ───────────────────────────────────────────────────────────── */
       if (intent.startsWith("guide_")) {
         const topic = intent.replace("guide_", "");
         const placeCity = C.extractPlaceFromQuery(raw) || city || s.activeCity;
@@ -299,18 +294,6 @@ router.post("/", async (req, res) => {
         return res.json({ reply });
       }
 
-      /* ─────────────────────────────────────────────────────────────
-         GENERAL — multi-turn context-aware conversational fallback.
-
-         FIX: ContextService already has a purpose-built entity-
-         follow-up path (isEntityFollowUp / answerAboutActivePlace),
-         explicitly built to handle "temple near me" → "timings" →
-         "how far is it?" grounded in the ACTUAL active place. It was
-         never wired up here — every follow-up was silently falling
-         through to the generic resolveContext + askAIWithContext
-         path instead, which has no idea what "it" refers to beyond
-         a loose pronoun rewrite. This checks the entity path first.
-      ───────────────────────────────────────────────────────────── */
       const placeOverride = Ctx.detectPlaceMentionOverride(s, raw);
       if (placeOverride) {
         Ctx.updateEntityContext(s, {
@@ -355,11 +338,17 @@ router.post("/", async (req, res) => {
       return res.json({ reply });
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       IN FLOW — dual-mode: off-topic question while trip planning
-    ══════════════════════════════════════════════════════════════ */
     if (!C.looksLikeStepAnswer(s.step, raw)) {
       const offTopicIntent = C.detectIntent(raw);
+
+      if (offTopicIntent === "greeting") {
+        const reply = pickGreeting();
+        await Ctx.updateSessionContext(s, raw, reply, {
+          intent: "greeting", city: city || null, extractTopic: false,
+        });
+        await saveSession(s);
+        return res.json({ reply: `${reply}${repromptFor(s.step)}` });
+      }
 
       if (offTopicIntent === "weather") {
         const result = await C.fetchWeather(lat, lng, city || s.activeCity);
@@ -370,6 +359,12 @@ router.post("/", async (req, res) => {
         return res.json({ reply: `${result.reply}${repromptFor(s.step)}` });
       }
 
+      /* FIX (Bug 14): nearby search mid-trip-flow must return ONLY
+         the nearby results — no reprompt text appended. The trip
+         state (s.step, s.trip) is deliberately left completely
+         untouched here, so it's still there, unmodified, the moment
+         the user later says "continue my trip". We just stop
+         narrating that fact after every unrelated nearby search. */
       if (offTopicIntent.startsWith("nearby_")) {
         const { data, placeType, placeCity, radiusUsed, rangeLabel } =
           await runNearbySearch(offTopicIntent, raw, lat, lng, city, s.activeCity);
@@ -384,7 +379,6 @@ router.post("/", async (req, res) => {
           data,
           placeType,
           rangeLabel,
-          reprompt: repromptFor(s.step),
         });
       }
 
@@ -405,9 +399,6 @@ router.post("/", async (req, res) => {
       return res.json({ reply: `${answer}${repromptFor(s.step)}` });
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       IN FLOW — step handlers
-    ══════════════════════════════════════════════════════════════ */
     if (s.step === "source") {
       s.trip.source =
         ["current", "use current", "📍"].some((x) => lower.includes(x)) && city
@@ -611,9 +602,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-/* ════════════════════════════════════════════════════════════════
-   POST /api/chat/reset — "New Chat"
-════════════════════════════════════════════════════════════════ */
 router.post("/reset", async (req, res) => {
   try {
     const { userId = "user1" } = req.body;
