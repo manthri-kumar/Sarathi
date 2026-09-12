@@ -54,22 +54,28 @@ function normalizeDishName(rawName) {
   return name.trim();
 }
 
-// Produces alternate phrasings so connector-word order
-// ("A with B" vs "B with A" vs "A and B") doesn't sink a match.
-function buildNameVariants(name) {
-  const variants = new Set();
-  variants.add(name);
+// Builds an ordered, capped list of search queries for a dish name.
+// The bare name goes FIRST: Commons frequently has an exact-title file
+// (e.g. "Karimeen Pollichathu.jpg" lives in Category:Karimeen), so
+// leading with a context suffix like "Kerala food" only dilutes that
+// match. Variants and context queries are tried only if the precise
+// name doesn't land a hit.
+function buildSearchQueries(name) {
+  const queries = [name];
 
   const withAndMatch = name.match(/^(.+?)\s+(?:with|and)\s+(.+)$/i);
   if (withAndMatch) {
     const [, first, second] = withAndMatch;
-    variants.add(`${second} with ${first}`);
-    variants.add(`${first} ${second}`);
-    variants.add(first.trim());
-    variants.add(second.trim());
+    queries.push(`${second} with ${first}`); // reversed connector order
+    queries.push(first.trim()); // e.g. "Puttu" alone
+    queries.push(second.trim()); // e.g. "Kadala Curry" alone
   }
 
-  return Array.from(variants).filter(Boolean);
+  queries.push(`${name} Kerala food`);
+
+  // De-dupe while preserving order, and cap total queries per dish so
+  // one obscure name can't trigger dozens of sequential external calls.
+  return Array.from(new Set(queries.filter(Boolean))).slice(0, 5);
 }
 
 async function fetchJson(url) {
@@ -178,33 +184,16 @@ async function searchWikipedia(query) {
   return null;
 }
 
-async function lookupOnce(name) {
-  const attempts = [`${name} Kerala food`, `${name} Indian dish`, name];
-
-  for (const query of attempts) {
-    try {
-      const commonsResult = await searchCommons(query);
-      if (commonsResult) return commonsResult;
-    } catch {
-      // fall through to the next attempt
-    }
-  }
-
-  for (const query of attempts) {
-    try {
-      const wikiResult = await searchWikipedia(query);
-      if (wikiResult) return wikiResult;
-    } catch {
-      // fall through
-    }
-  }
-
-  return null;
-}
-
 /**
  * Look up a single dish image, using and populating the in-memory
  * cache. Never throws.
+ *
+ * Search order: bare name and near-variants against Commons first
+ * (stops at the first hit — this is usually a 1-call round trip for
+ * dishes with an exact-title Commons file), then the same query list
+ * against Wikipedia's full-text search only if Commons found nothing.
+ * At most 5 queries × 2 sources = 10 external calls, worst case, and
+ * almost always far fewer because of the early-exit on success.
  */
 async function getDishImage(rawName) {
   const name = normalizeDishName(rawName);
@@ -215,12 +204,20 @@ async function getDishImage(rawName) {
     return imageCache.get(cacheKey);
   }
 
+  const queries = buildSearchQueries(name);
   let result = null;
+
   try {
-    const variants = buildNameVariants(name);
-    for (const variant of variants) {
-      result = await lookupOnce(variant);
+    for (const query of queries) {
+      result = await searchCommons(query).catch(() => null);
       if (result) break;
+    }
+
+    if (!result) {
+      for (const query of queries) {
+        result = await searchWikipedia(query).catch(() => null);
+        if (result) break;
+      }
     }
   } catch (error) {
     console.error(`[FOOD IMAGE] Lookup error for "${name}":`, error.message);
