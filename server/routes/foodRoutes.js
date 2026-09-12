@@ -1,13 +1,10 @@
 "use strict";
 
 const express = require("express");
+const { getFoodForCity } = require("../controllers/foodController");
 
 const router = express.Router();
 
-const {
-  getLocalFood,
-} = require("../controllers/foodController");
-
-router.get("/", getLocalFood);
+router.get("/", getFoodForCity);
 
 module.exports = router;

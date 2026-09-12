@@ -1,117 +1,134 @@
 "use strict";
 
-const axios = require("axios");
-const C = require("../services/ConversationService");
+const Groq = require("groq-sdk");
+const { getDishImages } = require("../services/foodImageService");
 
-const WIKIPEDIA_API =
-  "https://en.wikipedia.org/api/rest_v1/page/summary";
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const getWikipediaImage = async (dishName) => {
-  if (!dishName) return null;
+// Same fallback order your logs already show working:
+// openai/gpt-oss-20b sometimes returns an empty body, openai/gpt-oss-120b
+// reliably succeeds. Preserved exactly — not changed.
+const GROQ_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"];
+
+function buildPrompt(city) {
+  return (
+    `You are a food guide for Indian travellers. List 6 authentic local dishes ` +
+    `a visitor to "${city}" should try. Respond with ONLY a JSON array (no markdown, ` +
+    `no commentary, no surrounding text) where each item has exactly these fields:\n` +
+    `{"name": string, "description": string (one sentence), "region": string, "cuisine": string}.\n` +
+    `Dishes must be genuinely associated with ${city} or its surrounding region.`
+  );
+}
+
+// Groq sometimes wraps JSON in a ```json fence even when told not to —
+// this strips that before parsing instead of failing on it.
+function extractJsonArray(text) {
+  if (!text) return null;
+
+  const trimmed = text.trim();
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fencedMatch ? fencedMatch[1].trim() : trimmed;
+
+  const start = candidate.indexOf("[");
+  const end = candidate.lastIndexOf("]");
+  if (start === -1 || end === -1 || end < start) return null;
 
   try {
-    const title = encodeURIComponent(
-      String(dishName).trim().replace(/\s+/g, "_")
-    );
-
-    const response = await axios.get(
-      `${WIKIPEDIA_API}/${title}`,
-      {
-        timeout: 6000,
-        headers: {
-          "User-Agent":
-            "SarathiTravelAssistant/1.0 (travel application)",
-          Accept: "application/json",
-        },
-      }
-    );
-
-    const data = response.data;
-
-    if (
-      data &&
-      data.type !== "disambiguation" &&
-      data.thumbnail &&
-      data.thumbnail.source
-    ) {
-      return {
-        image: data.thumbnail.source,
-        imageSource: "Wikimedia Commons / Wikipedia",
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.warn(
-      `[FOOD IMAGE] Could not find image for "${dishName}":`,
-      error.response?.status || error.message
-    );
-
+    const parsed = JSON.parse(candidate.slice(start, end + 1));
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
     return null;
   }
-};
+}
 
-const enrichDishWithImage = async (dish) => {
-  const result = await getWikipediaImage(dish.name);
+function sanitizeDish(rawDish) {
+  if (!rawDish || typeof rawDish !== "object") return null;
+  const name = String(rawDish.name || "").trim();
+  if (!name) return null;
 
   return {
-    name: dish.name || "",
-    description: dish.description || "",
-    region: dish.region || "",
-    cuisine: dish.cuisine || "",
-    image: result?.image || null,
-    imageSource: result?.imageSource || null,
+    name,
+    description: String(rawDish.description || "").trim(),
+    region: String(rawDish.region || "").trim(),
+    cuisine: String(rawDish.cuisine || "").trim(),
   };
-};
+}
 
-/**
- * GET /api/food?city=Kochi
- *
- * Returns local food/dish recommendations.
- *
- * Food items are dishes, NOT restaurants.
- */
-exports.getLocalFood = async (req, res) => {
+async function generateDishesForCity(city) {
+  let lastError = null;
+
+  for (const model of GROQ_MODELS) {
+    console.log(`[GROQ] Trying model: ${model}`);
+
+    try {
+      const completion = await groq.chat.completions.create({
+        model,
+        messages: [{ role: "user", content: buildPrompt(city) }],
+        temperature: 0.6,
+        max_tokens: 1200,
+      });
+
+      const content = completion?.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error("Empty response from Groq");
+      }
+
+      const dishes = extractJsonArray(content)
+        ?.map(sanitizeDish)
+        .filter(Boolean);
+
+      if (!dishes || !dishes.length) {
+        throw new Error("Could not parse a dish list from Groq response");
+      }
+
+      console.log(`[GROQ] ✓ Success with ${model}, length: ${content.length}`);
+      return dishes;
+    } catch (error) {
+      lastError = error;
+      console.log(
+        `[GROQ] ${model} failed — status: ${error.status}, code: ${
+          error.code || "n/a"
+        }, msg: ${error.message}`
+      );
+    }
+  }
+
+  throw lastError || new Error("All Groq models failed");
+}
+
+async function getFoodForCity(req, res) {
   const city = String(req.query.city || "").trim();
 
   if (!city) {
-    return res.status(400).json({
-      error: "city query param is required",
-    });
+    return res
+      .status(400)
+      .json({ error: "city query parameter is required" });
   }
 
   try {
-    const rawDishes = await C.getFoodFromAI(city);
+    const dishes = await generateDishesForCity(city);
 
-    const safeDishes = Array.isArray(rawDishes)
-      ? rawDishes
-          .filter(
-            (dish) =>
-              dish &&
-              typeof dish === "object" &&
-              typeof dish.name === "string" &&
-              dish.name.trim()
-          )
-          .slice(0, 8)
-      : [];
+    // Concurrent, cached, never-throwing image lookups — a single bad
+    // dish can't fail the whole request.
+    const images = await getDishImages(dishes.map((dish) => dish.name));
 
-    const dishes = await Promise.all(
-      safeDishes.map(enrichDishWithImage)
-    );
+    const dishesWithImages = dishes.map((dish, index) => ({
+      ...dish,
+      image: images[index]?.image || null,
+      imageSource: images[index]?.imageSource || null,
+    }));
 
-    return res.json({
-      city,
-      dishes,
-    });
+    return res.json({ city, dishes: dishesWithImages });
   } catch (error) {
     console.error(
-      "[getLocalFood] error:",
-      error.response?.data || error.message
+      `[FOOD] Failed to generate dishes for "${city}":`,
+      error.message
     );
-
-    return res.status(500).json({
-      error:
-        "Failed to fetch local food recommendations.",
-    });
+    return res
+      .status(500)
+      .json({ error: "Failed to generate local food recommendations" });
   }
-};
+}
+
+module.exports = { getFoodForCity };
