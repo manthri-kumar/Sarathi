@@ -109,6 +109,68 @@
   margin: 4px 0 0;
 }
 
+/* ── Best place to taste — visually secondary to the dish itself:
+   a quieter border-top divider, smaller text, no image, so the food
+   photo/name/description stay the clear focal point of the card. ── */
+.food-card-bestplace {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.food-card-bestplace-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.food-card-bestplace-name {
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.food-card-bestplace-meta {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.76rem;
+  margin: 0;
+}
+
+.food-card-bestplace-none {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+  font-style: italic;
+  margin: 0;
+}
+
+.food-card-navigate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(0, 255, 132, 0.12);
+  border: 1px solid rgba(0, 255, 132, 0.3);
+  color: #00ff84;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.food-card-navigate:hover {
+  background: rgba(0, 255, 132, 0.2);
+}
+
 .food-card-source {
   color: rgba(255, 255, 255, 0.35);
   font-size: 0.68rem;

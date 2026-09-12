@@ -3,60 +3,58 @@
 /**
  * Region-aware, nationwide dish image lookup.
  *
- * HISTORY:
- *   v1 root cause: called the Wikipedia REST "page summary" endpoint
- *   using the dish name as an EXACT page title — 404s on any dish
- *   without a real, exactly-titled English Wikipedia article.
- *   v2 fix: switched to Commons/Wikipedia SEARCH instead of exact-title
- *   lookup, but hardcoded every query with "<name> Kerala food" —
- *   which actively hurt relevance for dishes from every OTHER state
- *   (a Telangana dish's search would drag in Kerala-tagged results).
+ * v4 (this version) adds a Google Custom Search Image tier ahead of
+ * Commons/Wikipedia, using the EXISTING GOOGLE_API_KEY + GOOGLE_CSE_ID
+ * already configured on Render (per the project's env vars) — this is
+ * Google's own documented Custom Search JSON API
+ * (https://developers.google.com/custom-search/v1/using_rest),
+ * not scraping, not an undocumented endpoint.
  *
- * v3 (this version):
- *   - Accepts dish METADATA (name, region, cuisine, description), not
- *     just a bare name. Still accepts a plain string for backward
- *     compatibility — treated as { name: <string> }.
- *   - Builds search queries dynamically from whatever region/cuisine
- *     the AI actually returned, via a lightweight state/region alias
- *     map — no state is hardcoded as a default.
- *   - Scores Commons/Wikipedia candidates instead of blindly trusting
- *     the first result: rewards title/description/category overlap
- *     with the dish name and its real region, and PENALIZES mentions
- *     of a *different* Indian state (so a Kerala-tagged photo can't
- *     win for a Rajasthani dish, and vice versa).
- *   - Every external call is timeout-guarded and never throws; a
- *     failed or low-confidence lookup resolves to
- *     { image: null, imageSource: null } so one bad dish never fails
- *     the whole /api/food request.
+ * WHY THIS WAS NEEDED (root cause of the screenshot):
+ * The v3 scoring fix (region-conflict penalty, name-token matching)
+ * is verified working by the existing test file — it correctly picks
+ * the on-topic candidate when one exists. But Commons/Wikipedia only
+ * host encyclopedia-curated media, and a lot of real, well-known
+ * regional dishes (Ragi Mudde, Mysore Biryani, etc.) simply have no
+ * dedicated Commons file or Wikipedia article with a thumbnail. That's
+ * a COVERAGE gap, not a relevance bug — v3 correctly returned null
+ * rather than a wrong image, which is why every card fell back to the
+ * emoji placeholder. Google Custom Search draws on the general web's
+ * food photography, which has far higher coverage for exactly this
+ * kind of dish.
+ *
+ * IMPORTANT CAVEAT I cannot verify myself: the Custom Search Engine
+ * tied to GOOGLE_CSE_ID must have "Image search" AND "Search the
+ * entire web" enabled in its own dashboard — this is a manual setting
+ * in Google's Programmable Search Engine control panel, not something
+ * any code or env var can turn on. If GOOGLE_CSE_ID was created for a
+ * different, more restricted purpose, this tier will return zero
+ * results (never an error — see getGoogleConfigStatus below) and the
+ * pipeline will fall through to Commons/Wikipedia exactly as before.
+ *
+ * Free tier is 100 queries/day; billing raises it to 10,000/day at
+ * $5 per 1,000. The existing imageCache + MAX_QUERIES_PER_DISH cap
+ * (unchanged from v3) keep this bounded — see Part 9 performance note.
  */
 
+const GOOGLE_CSE_API = "https://www.googleapis.com/customsearch/v1";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 const WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php";
 const WIKIPEDIA_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary";
 
 const FETCH_TIMEOUT_MS = 6000;
-const MIN_IMAGE_WIDTH = 200; // filters out icons/flags/logos
+const MIN_IMAGE_WIDTH = 200;
 const CACHE_MAX_ENTRIES = 500;
-const MAX_QUERIES_PER_DISH = 5; // caps total external calls per dish
-const MIN_ACCEPT_SCORE = 3; // require at least one real name-token match
+const MAX_QUERIES_PER_DISH = 5;
+const MIN_ACCEPT_SCORE = 3;
+const MAX_GOOGLE_QUERIES_PER_DISH = 2; // separate, smaller cap — this tier costs quota
 
-// In-memory cache, alive for the lifetime of the server process.
-// Keyed by "name|region|cuisine" (lowercased) -> { image, imageSource }.
 const imageCache = new Map();
 
-// A handful of common English stopwords/connector words that add no
-// search or scoring value.
 const STOPWORDS = new Set([
   "with", "and", "the", "of", "in", "a", "an", "for", "on", "to",
 ]);
 
-// Known Indian state/region names mapped to alias terms used both for
-// building contextual search queries AND for scoring: a candidate
-// image that mentions a DIFFERENT state from this list is penalized,
-// which is what keeps a "Kerala fish curry" photo from being picked
-// for a Telangana dish. This is a relevance aid, not a hard rule —
-// dishes with an unrecognized/unusual region string simply skip the
-// state-conflict penalty rather than being forced into one of these.
 const REGION_CONTEXTS = {
   "kerala": ["kerala"],
   "tamil nadu": ["tamil nadu", "tamil", "chennai"],
@@ -85,19 +83,13 @@ const ALL_REGION_ALIASES = Object.values(REGION_CONTEXTS).flat();
 
 function normalizeDishName(rawName) {
   if (!rawName) return "";
-
   let name = String(rawName).trim();
-
   name = name.replace(/\s+/g, " ");
   name = name.replace(/^["'“”‘’]+|["'“”‘’]+$/g, "");
   name = name.replace(/[.,;:]+$/g, "");
-
   return name.trim();
 }
 
-// Accepts either a plain string (backward compatible with earlier
-// callers of getDishImage("dish name")) or a metadata object. Never
-// throws on odd input.
 function normalizeDishInput(input) {
   if (typeof input === "string") {
     return { name: normalizeDishName(input), region: "", cuisine: "", description: "" };
@@ -121,11 +113,6 @@ function tokenize(text) {
     .filter((t) => t.length > 1 && !STOPWORDS.has(t));
 }
 
-// Finds the REGION_CONTEXTS entry (if any) that the dish's own
-// region/cuisine fields point to, WITHOUT assuming a default. Returns
-// { aliases, key } or { aliases: [], key: null } when the region is
-// unrecognized — in which case we fall back to using the AI's raw
-// region/cuisine strings verbatim rather than forcing a state.
 function resolveRegionContext(region, cuisine) {
   const needle = `${region} ${cuisine}`.toLowerCase().trim();
   if (!needle) return { aliases: [], key: null };
@@ -139,12 +126,8 @@ function resolveRegionContext(region, cuisine) {
   return { aliases: [region, cuisine].map((s) => s.trim()).filter(Boolean), key: null };
 }
 
-// Builds an ordered, capped list of search queries for a dish, using
-// whatever region/cuisine metadata the AI actually returned. No state
-// is hardcoded — a Kerala dish gets Kerala context because its own
-// metadata says Kerala, not because the code assumes it.
 function buildSearchQueries({ name, region, cuisine }) {
-  const queries = [name]; // bare name first: exact-title Commons files are common
+  const queries = [name];
 
   const { aliases } = resolveRegionContext(region, cuisine);
   if (aliases.length) {
@@ -157,7 +140,7 @@ function buildSearchQueries({ name, region, cuisine }) {
   const withAndMatch = name.match(/^(.+?)\s+(?:with|and)\s+(.+)$/i);
   if (withAndMatch) {
     const [, first, second] = withAndMatch;
-    queries.push(`${second} with ${first}`); // reversed connector order
+    queries.push(`${second} with ${first}`);
     queries.push(first.trim());
     queries.push(second.trim());
   }
@@ -167,10 +150,6 @@ function buildSearchQueries({ name, region, cuisine }) {
   return Array.from(new Set(queries.filter(Boolean))).slice(0, MAX_QUERIES_PER_DISH);
 }
 
-// Builds the token sets used to score every candidate for one dish:
-// - nameTokens: must appear for a candidate to be trusted at all
-// - contextTokens: region/cuisine/description words that add confidence
-// - conflictTokens: OTHER states' names — penalize these on candidates
 function buildMatchContext({ name, region, cuisine, description }) {
   const { aliases, key } = resolveRegionContext(region, cuisine);
 
@@ -179,10 +158,6 @@ function buildMatchContext({ name, region, cuisine, description }) {
     new Set([...tokenize(aliases.join(" ")), ...tokenize(description).slice(0, 5)])
   );
 
-  // Only penalize OTHER recognized states — if we don't know this
-  // dish's real region (key === null), we don't have grounds to
-  // penalize anything, so conflictTokens stays empty rather than
-  // risking a false penalty on a legitimate image.
   const conflictTokens = key
     ? ALL_REGION_ALIASES.filter((alias) => !aliases.includes(alias))
     : [];
@@ -207,12 +182,9 @@ function scoreCandidateText(candidateText, { nameTokens, contextTokens, conflict
 async function fetchJson(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
   try {
     const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
     clearTimeout(timer);
@@ -229,8 +201,6 @@ function stripHtml(html) {
   return String(html).replace(/<[^>]*>/g, " ");
 }
 
-// Flattens a Commons imageinfo candidate's title/description/categories
-// into one lowercase blob for keyword scoring.
 function buildCandidateText(title, info) {
   const description = stripHtml(info.extmetadata?.ImageDescription?.value);
   const objectName = stripHtml(info.extmetadata?.ObjectName?.value);
@@ -238,17 +208,70 @@ function buildCandidateText(title, info) {
   return `${title} ${objectName} ${description} ${categories}`.toLowerCase();
 }
 
-// Searches Wikimedia Commons' File namespace for images matching the
-// query, then SCORES every candidate against the dish's own name and
-// region context instead of blindly trusting the first result. Filters
-// out icons/logos/SVGs and anything under MIN_IMAGE_WIDTH first.
+/**
+ * Whether Google Custom Search image lookup is even worth attempting —
+ * both env vars must be present. Exported so the controller/diagnostics
+ * can report configuration state without a network call.
+ */
+function getGoogleConfigStatus() {
+  return {
+    configured: Boolean(process.env.GOOGLE_API_KEY && process.env.GOOGLE_CSE_ID),
+  };
+}
+
+// Google's own documented Custom Search JSON API, image mode.
+// https://developers.google.com/custom-search/v1/using_rest
+async function searchGoogleImages(query, matchContext) {
+  if (!getGoogleConfigStatus().configured) return null;
+
+  const params = new URLSearchParams({
+    key: process.env.GOOGLE_API_KEY,
+    cx: process.env.GOOGLE_CSE_ID,
+    q: query,
+    searchType: "image",
+    num: "5",
+    safe: "active",
+  });
+
+  let data;
+  try {
+    data = await fetchJson(`${GOOGLE_CSE_API}?${params.toString()}`);
+  } catch (e) {
+    console.log(`[FOOD IMAGE] Google CSE request failed for "${query}": ${e.message}`);
+    return null;
+  }
+
+  const items = data?.items;
+  if (!items || !items.length) return null;
+
+  const candidates = items
+    .filter((it) => it.link && it.mime && it.mime.startsWith("image/"))
+    .map((it) => ({
+      title: it.title || "",
+      link: it.link,
+      score: scoreCandidateText(
+        `${it.title || ""} ${it.snippet || ""} ${it.displayLink || ""}`.toLowerCase(),
+        matchContext
+      ),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  if (!candidates.length || candidates[0].score < MIN_ACCEPT_SCORE) return null;
+
+  return {
+    image: candidates[0].link,
+    imageSource: "Google Image Search",
+    score: candidates[0].score,
+  };
+}
+
 async function searchCommons(query, matchContext) {
   const params = new URLSearchParams({
     action: "query",
     format: "json",
     origin: "*",
     generator: "search",
-    gsrnamespace: "6", // File: namespace
+    gsrnamespace: "6",
     gsrlimit: "6",
     gsrsearch: query,
     prop: "imageinfo",
@@ -272,9 +295,7 @@ async function searchCommons(query, matchContext) {
     }))
     .sort((a, b) => b.score - a.score);
 
-  if (!candidates.length || candidates[0].score < MIN_ACCEPT_SCORE) {
-    return null;
-  }
+  if (!candidates.length || candidates[0].score < MIN_ACCEPT_SCORE) return null;
 
   const best = candidates[0];
   const url = best.info.thumburl || best.info.url;
@@ -287,10 +308,6 @@ async function searchCommons(query, matchContext) {
   };
 }
 
-// Secondary fallback: full-text search Wikipedia (NOT an exact-title
-// lookup), then verify each candidate article is actually relevant
-// (via the same scoring approach) before trusting its thumbnail —
-// rather than assuming the first search hit is correct.
 async function searchWikipedia(query, matchContext) {
   const searchParams = new URLSearchParams({
     action: "query",
@@ -333,12 +350,6 @@ async function searchWikipedia(query, matchContext) {
   return null;
 }
 
-/**
- * Look up a single dish image. Accepts either a plain dish-name string
- * (backward compatible) or { name, region, cuisine, description }.
- * Never throws — a failed or low-confidence lookup resolves to
- * { image: null, imageSource: null }.
- */
 async function getDishImage(rawInput) {
   const dish = normalizeDishInput(rawInput);
   if (!dish.name) return { image: null, imageSource: null };
@@ -350,19 +361,28 @@ async function getDishImage(rawInput) {
 
   const queries = buildSearchQueries(dish);
   const matchContext = buildMatchContext(dish);
+  const googleConfigured = getGoogleConfigStatus().configured;
 
   console.log(
-    `[FOOD IMAGE] Searching: dish="${dish.name}" region="${dish.region}" cuisine="${dish.cuisine}" queries=${JSON.stringify(
-      queries
-    )}`
+    `[FOOD IMAGE] Searching: dish="${dish.name}" region="${dish.region}" cuisine="${dish.cuisine}" ` +
+    `googleCSE=${googleConfigured ? "enabled" : "not configured"} queries=${JSON.stringify(queries)}`
   );
 
   let result = null;
 
   try {
-    for (const query of queries) {
-      result = await searchCommons(query, matchContext).catch(() => null);
-      if (result) break;
+    if (googleConfigured) {
+      for (const query of queries.slice(0, MAX_GOOGLE_QUERIES_PER_DISH)) {
+        result = await searchGoogleImages(query, matchContext).catch(() => null);
+        if (result) break;
+      }
+    }
+
+    if (!result) {
+      for (const query of queries) {
+        result = await searchCommons(query, matchContext).catch(() => null);
+        if (result) break;
+      }
     }
 
     if (!result) {
@@ -382,7 +402,7 @@ async function getDishImage(rawInput) {
     );
   } else {
     console.warn(
-      `[FOOD IMAGE] No confident image found for "${dish.name}" (region="${dish.region}") after Commons + Wikipedia`
+      `[FOOD IMAGE] No confident image found for "${dish.name}" (region="${dish.region}") after Google/Commons/Wikipedia`
     );
   }
 
@@ -399,14 +419,8 @@ async function getDishImage(rawInput) {
   return finalResult;
 }
 
-/**
- * Batch version — looks up images for a list of dishes concurrently.
- * Each entry may be a plain name string or a { name, region, cuisine,
- * description } object; individual failures never reject the batch.
- */
 async function getDishImages(dishes = []) {
   const settled = await Promise.allSettled(dishes.map((dish) => getDishImage(dish)));
-
   return settled.map((outcome) =>
     outcome.status === "fulfilled" ? outcome.value : { image: null, imageSource: null }
   );
@@ -416,4 +430,5 @@ module.exports = {
   getDishImage,
   getDishImages,
   normalizeDishName,
+  getGoogleConfigStatus,
 };
