@@ -1,12 +1,18 @@
+"use strict";
+
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
 
-const express = require("express");
+// Load environment variables FIRST
 const dotenv = require("dotenv");
+dotenv.config();
+
+const express = require("express");
 const cors = require("cors");
 
 const connectDB = require("./config/db");
 
+// Routes — load these only AFTER dotenv.config()
 const authRoutes = require("./routes/authRoutes");
 const placesRoutes = require("./routes/placesRoutes");
 const itineraryRoutes = require("./routes/itineraryRoutes");
@@ -19,8 +25,6 @@ const dayPlannerRoutes = require("./routes/dayPlannerRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const geocodeRoutes = require("./routes/geocode");
 const foodRoutes = require("./routes/foodRoutes");
-
-dotenv.config();
 
 connectDB();
 
