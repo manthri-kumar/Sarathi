@@ -16,8 +16,8 @@ const tripRoutes = require("./routes/triproutes");
 const savedRoutes = require("./routes/savedRoutes");
 const tripPlannerRoutes = require("./routes/tripPlanner");
 const dayPlannerRoutes = require("./routes/dayPlannerRoutes");
-const recommendationRoutes = require("./routes/Recommendationroutes");
-const geocodeRoutes = require("./routes/geocodeRecommendationRoutes");
+const recommendationRoutes = require("./routes/recommendationRoutes");
+const geocodeRoutes = require("./routes/geocode");
 const foodRoutes = require("./routes/foodRoutes");
 
 dotenv.config();
@@ -47,7 +47,10 @@ app.get("/", (_req, res) => {
 });
 
 app.get("/test-direct", (_req, res) => {
-  res.json({ success: true, message: "direct route works" });
+  res.json({
+    success: true,
+    message: "direct route works",
+  });
 });
 
 const PORT = process.env.PORT || 5000;
