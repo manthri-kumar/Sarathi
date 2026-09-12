@@ -1,11 +1,12 @@
 // backend/src/routes/search.js  (Sarathi Render backend — Express)
 // Server-side only. Keys never reach the browser.
-//   GET /api/search/suggest?q=hyd   -> { suggestions: [{ description, placeId }] }
+//   GET /api/search/suggest?q=hyd        -> { suggestions: [{ description, placeId }] }
 //   GET /api/search/location?q=Hyderabad -> { city, lat, lng }
+//   GET /api/search/reverse?lat=..&lng=.. -> { city, lat, lng }
 //
 // Mount:  import searchRouter from "./routes/search.js";
 //         app.use("/api/search", searchRouter);
-// Env: GOOGLE_PLACES_KEY (autocomplete), GOOGLE_GEO_KEY (geocoding)
+// Env: GOOGLE_PLACES_KEY (autocomplete), GOOGLE_GEO_KEY (geocoding, forward + reverse)
 
 import { Router } from "express";
 
@@ -127,6 +128,53 @@ router.get("/location", async (req, res) => {
   } catch (err) {
     console.error("[search/location]", err);
     return res.status(500).json({ error: "location resolve failed" });
+  }
+});
+
+// NEW: reverse-geocode a lat/lng to a city name. This is the piece
+// Explore.jsx was missing — it was calling Google's Geocoding API
+// directly from the browser with a hardcoded key
+// (AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A) instead of going through
+// this backend, which is exactly the exposed-key pattern flagged
+// earlier in this project. Same cache/rate-limit/error shape as the
+// other two routes, and reuses pickCity so all three endpoints agree
+// on what counts as "the city" for a given Google result.
+router.get("/reverse", async (req, res) => {
+  const lat = (req.query.lat || "").toString().trim();
+  const lng = (req.query.lng || "").toString().trim();
+
+  if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) {
+    return res.status(400).json({ error: "valid lat and lng are required" });
+  }
+  if (!process.env.GOOGLE_GEO_KEY) {
+    return res.status(500).json({ error: "GOOGLE_GEO_KEY not configured" });
+  }
+  if (rateLimited(clientIp(req))) {
+    return res.status(429).json({ error: "Too many requests" });
+  }
+
+  // Rounded to ~11m precision — enough to dedupe repeat requests from
+  // the same spot without ever colliding two genuinely different places.
+  const key = `rev:${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
+
+  try {
+    const url =
+      "https://maps.googleapis.com/maps/api/geocode/json" +
+      `?latlng=${encodeURIComponent(lat)},${encodeURIComponent(lng)}` +
+      `&key=${process.env.GOOGLE_GEO_KEY}`;
+    const upstream = await fetch(url);
+    const data = await upstream.json();
+    const result = data.results?.[0];
+    if (!result) return res.status(404).json({ error: "Location not found" });
+
+    const payload = { city: pickCity(result) || "Your Location", lat: Number(lat), lng: Number(lng) };
+    cacheSet(key, payload);
+    return res.json(payload);
+  } catch (err) {
+    console.error("[search/reverse]", err);
+    return res.status(500).json({ error: "reverse geocode failed" });
   }
 });
 
