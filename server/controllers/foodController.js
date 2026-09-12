@@ -2,6 +2,7 @@
 
 const Groq = require("groq-sdk");
 const { getDishImages } = require("../services/foodImageService");
+const { findBestPlaces } = require("../services/foodPlaceService");
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -101,6 +102,8 @@ async function generateDishesForCity(city) {
 
 async function getFoodForCity(req, res) {
   const city = String(req.query.city || "").trim();
+  const lat = req.query.lat ? String(req.query.lat).trim() : null;
+  const lng = req.query.lng ? String(req.query.lng).trim() : null;
 
   if (!city) {
     return res
@@ -111,26 +114,38 @@ async function getFoodForCity(req, res) {
   try {
     const dishes = await generateDishesForCity(city);
 
-    // Concurrent, cached, never-throwing image lookups. Pass full dish
-    // metadata (not just the name) so the lookup can use region/cuisine
-    // context instead of guessing — a single bad dish can't fail the
-    // whole request.
-    const images = await getDishImages(
-      dishes.map((dish) => ({
-        name: dish.name,
-        region: dish.region,
-        cuisine: dish.cuisine,
-        description: dish.description,
-      }))
-    );
+    /* FIX (root cause confirmed by screenshot — every dish showed
+       "No nearby place found"): this controller previously called
+       ONLY getDishImages() and never called findBestPlaces() at all,
+       so `bestPlace` was never attached to any dish, ever, regardless
+       of city or dish. findBestPlaces already exists in
+       services/foodPlaceService.js, fully implemented (Google Places
+       Text Search + relevance scoring + reject-list filtering) — it
+       was simply never wired in here. Images and best-place lookups
+       are independent data sources, so they run CONCURRENTLY with
+       each other via Promise.all, and each one is ALREADY internally
+       Promise.allSettled (see getDishImages / findBestPlaces), so one
+       bad dish in either pipeline can never fail the whole request. */
+    const [images, bestPlaces] = await Promise.all([
+      getDishImages(
+        dishes.map((dish) => ({
+          name: dish.name,
+          region: dish.region,
+          cuisine: dish.cuisine,
+          description: dish.description,
+        }))
+      ),
+      findBestPlaces(dishes, { city, lat, lng }),
+    ]);
 
-    const dishesWithImages = dishes.map((dish, index) => ({
+    const dishesWithExtras = dishes.map((dish, index) => ({
       ...dish,
       image: images[index]?.image || null,
       imageSource: images[index]?.imageSource || null,
+      bestPlace: bestPlaces[index] || null,
     }));
 
-    return res.json({ city, dishes: dishesWithImages });
+    return res.json({ city, dishes: dishesWithExtras });
   } catch (error) {
     console.error(
       `[FOOD] Failed to generate dishes for "${city}":`,

@@ -3,38 +3,29 @@
 /**
  * Region-aware, nationwide dish image lookup.
  *
- * v4 (this version) adds a Google Custom Search Image tier ahead of
- * Commons/Wikipedia, using the EXISTING GOOGLE_API_KEY + GOOGLE_CSE_ID
- * already configured on Render (per the project's env vars) — this is
- * Google's own documented Custom Search JSON API
- * (https://developers.google.com/custom-search/v1/using_rest),
- * not scraping, not an undocumented endpoint.
+ * v5 (this version) fixes a real caching bug found while diagnosing
+ * the screenshot where EVERY Hyderabad dish showed no image at all:
+ * imageCache previously cached a { image: null } result FOREVER, with
+ * no expiry. If a dish was looked up once before Google CSE was fully
+ * working (an earlier deploy, a misconfigured CSE, a transient
+ * network failure), that null was permanently stuck in memory until
+ * the server process restarted — no later fix to the search logic
+ * could ever change the outcome for that specific dish. Positive
+ * results (a real image was found) still cache indefinitely, since a
+ * dish photo doesn't go stale; only NEGATIVE results now expire after
+ * NEGATIVE_CACHE_TTL_MS, so a transient failure gets retried instead
+ * of blacklisting a dish forever.
  *
- * WHY THIS WAS NEEDED (root cause of the screenshot):
- * The v3 scoring fix (region-conflict penalty, name-token matching)
- * is verified working by the existing test file — it correctly picks
- * the on-topic candidate when one exists. But Commons/Wikipedia only
- * host encyclopedia-curated media, and a lot of real, well-known
- * regional dishes (Ragi Mudde, Mysore Biryani, etc.) simply have no
- * dedicated Commons file or Wikipedia article with a thumbnail. That's
- * a COVERAGE gap, not a relevance bug — v3 correctly returned null
- * rather than a wrong image, which is why every card fell back to the
- * emoji placeholder. Google Custom Search draws on the general web's
- * food photography, which has far higher coverage for exactly this
- * kind of dish.
- *
- * IMPORTANT CAVEAT I cannot verify myself: the Custom Search Engine
- * tied to GOOGLE_CSE_ID must have "Image search" AND "Search the
- * entire web" enabled in its own dashboard — this is a manual setting
- * in Google's Programmable Search Engine control panel, not something
- * any code or env var can turn on. If GOOGLE_CSE_ID was created for a
- * different, more restricted purpose, this tier will return zero
- * results (never an error — see getGoogleConfigStatus below) and the
- * pipeline will fall through to Commons/Wikipedia exactly as before.
- *
- * Free tier is 100 queries/day; billing raises it to 10,000/day at
- * $5 per 1,000. The existing imageCache + MAX_QUERIES_PER_DISH cap
- * (unchanged from v3) keep this bounded — see Part 9 performance note.
+ * v5 also very slightly relaxes the acceptance threshold specifically
+ * for the Google Custom Search tier (MIN_ACCEPT_SCORE_GOOGLE = 2
+ * instead of the shared 3), per the request to make scoring
+ * "practical enough to accept clearly relevant real food photographs."
+ * Commons/Wikipedia keep the stricter threshold of 3 — those are
+ * full-text searches with a much higher false-positive rate, which is
+ * exactly why that threshold existed in the first place; Google image
+ * search results are pre-filtered by Google's own relevance ranking,
+ * so a title/snippet containing both dish-name tokens is already
+ * strong evidence at a lower combined score.
  */
 
 const GOOGLE_CSE_API = "https://www.googleapis.com/customsearch/v1";
@@ -46,10 +37,12 @@ const FETCH_TIMEOUT_MS = 6000;
 const MIN_IMAGE_WIDTH = 200;
 const CACHE_MAX_ENTRIES = 500;
 const MAX_QUERIES_PER_DISH = 5;
-const MIN_ACCEPT_SCORE = 3;
-const MAX_GOOGLE_QUERIES_PER_DISH = 2; // separate, smaller cap — this tier costs quota
+const MIN_ACCEPT_SCORE = 3; // Commons / Wikipedia
+const MIN_ACCEPT_SCORE_GOOGLE = 2; // Google CSE — see note above
+const MAX_GOOGLE_QUERIES_PER_DISH = 2;
+const NEGATIVE_CACHE_TTL_MS = 60 * 60 * 1000; // 1h — retry failures, don't blacklist forever
 
-const imageCache = new Map();
+const imageCache = new Map(); // value: { result, cachedAt, isNegative }
 
 const STOPWORDS = new Set([
   "with", "and", "the", "of", "in", "a", "an", "for", "on", "to",
@@ -208,11 +201,6 @@ function buildCandidateText(title, info) {
   return `${title} ${objectName} ${description} ${categories}`.toLowerCase();
 }
 
-/**
- * Whether Google Custom Search image lookup is even worth attempting —
- * both env vars must be present. Exported so the controller/diagnostics
- * can report configuration state without a network call.
- */
 function getGoogleConfigStatus() {
   return {
     configured: Boolean(process.env.GOOGLE_API_KEY && process.env.GOOGLE_CSE_ID),
@@ -242,6 +230,7 @@ async function searchGoogleImages(query, matchContext) {
   }
 
   const items = data?.items;
+  console.log(`[FOOD IMAGE] Google results for "${query}": ${items?.length || 0}`);
   if (!items || !items.length) return null;
 
   const candidates = items
@@ -249,6 +238,7 @@ async function searchGoogleImages(query, matchContext) {
     .map((it) => ({
       title: it.title || "",
       link: it.link,
+      thumbnailLink: it.image?.thumbnailLink || null,
       score: scoreCandidateText(
         `${it.title || ""} ${it.snippet || ""} ${it.displayLink || ""}`.toLowerCase(),
         matchContext
@@ -256,12 +246,17 @@ async function searchGoogleImages(query, matchContext) {
     }))
     .sort((a, b) => b.score - a.score);
 
-  if (!candidates.length || candidates[0].score < MIN_ACCEPT_SCORE) return null;
+  if (!candidates.length || candidates[0].score < MIN_ACCEPT_SCORE_GOOGLE) return null;
 
+  const best = candidates[0];
   return {
-    image: candidates[0].link,
+    // Prefer the direct image link (item.link) for <img src> — it's
+    // the actual full-size image URL per Google's documented response
+    // schema, not a search-results page. thumbnailLink is kept only
+    // as a fallback if link is somehow missing.
+    image: best.link || best.thumbnailLink,
     imageSource: "Google Image Search",
-    score: candidates[0].score,
+    score: best.score,
   };
 }
 
@@ -350,14 +345,35 @@ async function searchWikipedia(query, matchContext) {
   return null;
 }
 
+function getCached(cacheKey) {
+  const entry = imageCache.get(cacheKey);
+  if (!entry) return undefined;
+  if (entry.isNegative && Date.now() - entry.cachedAt > NEGATIVE_CACHE_TTL_MS) {
+    imageCache.delete(cacheKey);
+    return undefined;
+  }
+  return entry.result;
+}
+
+function setCached(cacheKey, result) {
+  if (imageCache.size >= CACHE_MAX_ENTRIES) {
+    const oldestKey = imageCache.keys().next().value;
+    imageCache.delete(oldestKey);
+  }
+  imageCache.set(cacheKey, {
+    result,
+    cachedAt: Date.now(),
+    isNegative: result.image === null,
+  });
+}
+
 async function getDishImage(rawInput) {
   const dish = normalizeDishInput(rawInput);
   if (!dish.name) return { image: null, imageSource: null };
 
   const cacheKey = `${dish.name}|${dish.region}|${dish.cuisine}`.toLowerCase();
-  if (imageCache.has(cacheKey)) {
-    return imageCache.get(cacheKey);
-  }
+  const cached = getCached(cacheKey);
+  if (cached !== undefined) return cached;
 
   const queries = buildSearchQueries(dish);
   const matchContext = buildMatchContext(dish);
@@ -376,6 +392,8 @@ async function getDishImage(rawInput) {
         result = await searchGoogleImages(query, matchContext).catch(() => null);
         if (result) break;
       }
+    } else {
+      console.log("[FOOD IMAGE] Google CSE configured=false — skipping to Commons/Wikipedia");
     }
 
     if (!result) {
@@ -410,11 +428,7 @@ async function getDishImage(rawInput) {
     ? { image: result.image, imageSource: result.imageSource }
     : { image: null, imageSource: null };
 
-  if (imageCache.size >= CACHE_MAX_ENTRIES) {
-    const oldestKey = imageCache.keys().next().value;
-    imageCache.delete(oldestKey);
-  }
-  imageCache.set(cacheKey, finalResult);
+  setCached(cacheKey, finalResult);
 
   return finalResult;
 }
