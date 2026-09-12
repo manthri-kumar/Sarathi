@@ -16,8 +16,8 @@ const tripRoutes = require("./routes/triproutes");
 const savedRoutes = require("./routes/savedRoutes");
 const tripPlannerRoutes = require("./routes/tripPlanner");
 const dayPlannerRoutes = require("./routes/dayPlannerRoutes");
-const recommendationRoutes = require("./routes/recommendationRoutes");
-const geocodeRoutes = require("./routes/geocodeRecommendationr
+const recommendationRoutes = require("./routes/Recommendationroutes");
+const geocodeRoutes = require("./routes/geocodeRecommendationRoutes");
 const foodRoutes = require("./routes/foodRoutes");
 
 dotenv.config();
