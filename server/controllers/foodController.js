@@ -16,7 +16,9 @@ function buildPrompt(city) {
     `a visitor to "${city}" should try. Respond with ONLY a JSON array (no markdown, ` +
     `no commentary, no surrounding text) where each item has exactly these fields:\n` +
     `{"name": string, "description": string (one sentence), "region": string, "cuisine": string}.\n` +
-    `Dishes must be genuinely associated with ${city} or its surrounding region.`
+    `Dishes must be genuinely associated with ${city} or its surrounding region. ` +
+    `Only include real, recognized dishes — do not invent fictional or made-up dish names. ` +
+    `"region" should be the Indian state (e.g. "Kerala", "Telangana", "Rajasthan").`
   );
 }
 
@@ -109,9 +111,18 @@ async function getFoodForCity(req, res) {
   try {
     const dishes = await generateDishesForCity(city);
 
-    // Concurrent, cached, never-throwing image lookups — a single bad
-    // dish can't fail the whole request.
-    const images = await getDishImages(dishes.map((dish) => dish.name));
+    // Concurrent, cached, never-throwing image lookups. Pass full dish
+    // metadata (not just the name) so the lookup can use region/cuisine
+    // context instead of guessing — a single bad dish can't fail the
+    // whole request.
+    const images = await getDishImages(
+      dishes.map((dish) => ({
+        name: dish.name,
+        region: dish.region,
+        cuisine: dish.cuisine,
+        description: dish.description,
+      }))
+    );
 
     const dishesWithImages = dishes.map((dish, index) => ({
       ...dish,
