@@ -9,46 +9,79 @@ const MyTrips = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const token = localStorage.getItem("token");
 
   /* LOAD TRIPS */
   const fetchTrips = useCallback(async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
+      setError("");
 
-    const res = await axios.get(
-  "https://sarathi-backend-7u0y.onrender.com/api/trips",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+      const res = await axios.get(
+        "https://sarathi-backend-7u0y.onrender.com/api/trips",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
+      );
+
+      /**
+       * GET /api/trips (server/routes/triproutes.js) returns
+       * `{ trips: [...] }`, not a bare array — the previous
+       * `setTrips(res.data || [])` stored the whole response object as
+       * `trips`. `{trips:[...]}` is truthy so `|| []` never applied, and
+       * `.length` on that object is `undefined` (not `0`), so the code
+       * skipped the "No Trips Yet" branch and called `.map()` directly
+       * on the object, which is what threw `trips.map is not a
+       * function` and blanked the page.
+       *
+       * Fixed to read the actual `trips` array off the response, with a
+       * plain-array fallback for robustness, and anything else treated
+       * as an unexpected shape rather than silently guessed at.
+       */
+      let list;
+      if (Array.isArray(res.data?.trips)) {
+        list = res.data.trips;
+      } else if (Array.isArray(res.data)) {
+        list = res.data;
+      } else {
+        console.error("[MyTrips] Unexpected /api/trips response shape:", res.data);
+        setError("Something went wrong loading your trips. Please try again.");
+        list = [];
       }
-    );
 
-    setTrips(res.data || []);
-  } catch (error) {
-    console.log(error);
-    setTrips([]);
-  } finally {
-    setLoading(false);
-  }
-}, [token]);
+      setTrips(list);
+    } catch (err) {
+      console.log(err);
+      setTrips([]);
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+        setError("Please sign in again to view your trips.");
+      } else {
+        setError("Unable to load your trips. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-
-useEffect(() => {
-  if (token) {
-    fetchTrips();
-  } else {
-    setLoading(false);
-  }
-}, [token, fetchTrips]);
+  useEffect(() => {
+    if (token) {
+      fetchTrips();
+    } else {
+      setLoading(false);
+      setError("Please sign in to view your trips.");
+    }
+  }, [token, fetchTrips]);
 
   /* DELETE */
   const handleDelete = async (id) => {
     try {
       await axios.delete(
-  `https://sarathi-backend-7u0y.onrender.com/api/trips/${id}`,
+        `https://sarathi-backend-7u0y.onrender.com/api/trips/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -64,16 +97,25 @@ useEffect(() => {
 
   /* 🔥 FIXED SAVE TO SAVED PAGE (USERWISE) */
   const handleSavePage = (trip) => {
-    const user =
-      JSON.parse(localStorage.getItem("user")) || {};
+    let user = {};
+    try {
+      user = JSON.parse(localStorage.getItem("user")) || {};
+    } catch {
+      user = {};
+    }
 
     const userId =
       user._id || user.id || user.email || "guest";
 
     const key = `savedTrips_${userId}`;
 
-    const oldSaved =
-      JSON.parse(localStorage.getItem(key)) || [];
+    let oldSaved = [];
+    try {
+      const parsedSaved = JSON.parse(localStorage.getItem(key));
+      oldSaved = Array.isArray(parsedSaved) ? parsedSaved : [];
+    } catch {
+      oldSaved = [];
+    }
 
     const exists = oldSaved.some(
       (item) =>
@@ -101,7 +143,7 @@ useEffect(() => {
   const saveEdit = async () => {
     try {
       await axios.put(
-  `https://sarathi-backend-7u0y.onrender.com/api/trips/${editingTrip._id}`,
+        `https://sarathi-backend-7u0y.onrender.com/api/trips/${editingTrip._id}`,
         {
           date: editingTrip.date,
           time: editingTrip.time,
@@ -160,7 +202,19 @@ useEffect(() => {
             <div className="empty-state">
               <h2>Loading...</h2>
             </div>
-          ) : trips.length === 0 ? (
+          ) : error ? (
+            <div className="empty-state">
+              <h2>Unable to Load Trips</h2>
+              <p>{error}</p>
+              <button
+                className="edit-btn"
+                style={{ marginTop: "16px", display: "inline-flex", width: "auto", padding: "12px 28px" }}
+                onClick={fetchTrips}
+              >
+                Retry
+              </button>
+            </div>
+          ) : !Array.isArray(trips) || trips.length === 0 ? (
             <div className="empty-state">
               <h2>No Trips Yet</h2>
             </div>
