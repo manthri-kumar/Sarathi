@@ -23,6 +23,23 @@ const tripDuration = (startDate, endDate) => {
   return { days, nights: Math.max(0, days - 1) };
 };
 
+/**
+ * normalizePlan — the restored plan must always be a plain, non-array
+ * object so every `Object.values(plan)` / `plan[id]` call downstream is
+ * safe. `JSON.parse` succeeds silently (no throw, so the surrounding
+ * try/catch never fires) for any valid JSON value, including the literal
+ * string "null", a JSON array, or a bare JSON string/number — none of
+ * which is a usable plan. Returns the value itself when it's a genuine
+ * plain object, otherwise null so the caller can fall back and self-heal
+ * the stored key.
+ */
+const normalizePlan = (value) => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value;
+  }
+  return null;
+};
+
 const CATEGORIES = [
   { id: "beach",    label: "Beach",    icon: "🏖" },
   { id: "mountains",label: "Mountains",icon: "⛰" },
@@ -205,18 +222,6 @@ function PlaceDetailsModal({ place, onClose, onAdd, alreadyAdded }) {
 
 /* ════════════════════════════════════════════════════════════════
    MINI MAP
-   ─────────────────────────────────────────────────────────────
-   Primary:  Google Static Maps API image, WITH the dark-theme
-             `style` params actually applied (previously built and
-             discarded — this was the ESLint-flagged bug).
-   Fallback: keyless Google Maps iframe embed. The OpenStreetMap
-             embed URL this replaced was dead code in a different
-             sense than `style` — its `query=` param has no
-             geocoding support in OSM's embed.html (only bbox/marker
-             coordinates work), so as originally written it could
-             never have rendered the right location. Rather than
-             keep two half-wired map providers, this keeps the one
-             that actually works without an API key.
 ════════════════════════════════════════════════════════════════ */
 function MiniMap({ places, city }) {
   if (!places.length && !city) return null;
@@ -245,8 +250,6 @@ function MiniMap({ places, city }) {
     );
   }
 
-  // Fallback: keyless Google Maps iframe embed — works without GOOGLE_KEY,
-  // accepts a free-text query (city name), unlike OSM's embed endpoint.
   const q = city || (places[0] ? `${places[0].lat},${places[0].lng}` : "India");
   return (
     <div className="mini-map-container">
@@ -267,7 +270,6 @@ function MiniMap({ places, city }) {
 export default function Itinerary() {
   const navigate     = useNavigate();
 
-  // search / filter state
   const [city,        setCity]        = useState("");
   const [startDate,   setStartDate]   = useState("");
   const [endDate,     setEndDate]     = useState("");
@@ -275,20 +277,16 @@ export default function Itinerary() {
   const [travellerOpen, setTravellerOpen] = useState(false);
   const [activeFilter, setActiveFilter]  = useState("");
 
-  // data state
   const [places,      setPlaces]      = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
 
-  // plan state
   const [plan,        setPlan]        = useState({}); // { placeId: placeObj }
   const [itinerary,   setItinerary]   = useState(null);
   const [itinLoading, setItinLoading] = useState(false);
 
-  // modal state
   const [selectedPlace, setSelectedPlace] = useState(null);
 
-  // UI state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const touchStartX = useRef(0);
 
@@ -296,7 +294,21 @@ export default function Itinerary() {
   useEffect(() => {
     const saved = localStorage.getItem("sarathiPlan");
     if (saved) {
-      try { setPlan(JSON.parse(saved)); } catch {}
+      try {
+        const parsed = JSON.parse(saved);
+        const normalized = normalizePlan(parsed);
+        if (normalized) {
+          setPlan(normalized);
+        } else {
+          // Corrupted value (e.g. the literal string "null", a JSON array,
+          // or a bare string/number) — discard it so this browser self-heals
+          // instead of re-reading the same bad key on every future load.
+          localStorage.removeItem("sarathiPlan");
+        }
+      } catch {
+        // Malformed JSON — nothing to restore; clear it so it doesn't linger.
+        localStorage.removeItem("sarathiPlan");
+      }
     }
   }, []);
 
@@ -359,7 +371,7 @@ export default function Itinerary() {
     localStorage.removeItem("sarathiPlan");
   };
 
-  const planArray   = Object.values(plan);
+  const planArray   = Object.values(plan || {});
   const planCount   = planArray.length;
 
   /* ── AI itinerary ── */
