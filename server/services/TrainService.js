@@ -24,13 +24,15 @@ const rapidHeaders = () => ({
 
 const resolveStationCode = async () => null;
 
+const { resolveStationCodes } = require("../data/cityStationMap");
+
 const fetchLiveTrains = async (fromCode, toCode, date) => {
   try {
     const res = await axios.get(`https://${RAPID_HOST}/api/v3/trainBetweenStations`, {
       params: { fromStationCode: fromCode, toStationCode: toCode, dateOfJourney: date },
       headers: rapidHeaders(),
     });
-    const list = res.data?.data || []; // VERIFY against your response
+    const list = res.data?.data || [];
     return list.map((t) => ({ trainNo: t.train_number, trainName: t.train_name }));
   } catch (e) {
     console.log("TRAIN fetchLiveTrains failed:", e.message);
@@ -44,7 +46,7 @@ const fetchLiveFare = async (trainNo, fromCode, toCode, klass) => {
       params: { trainNo, fromStationCode: fromCode, toStationCode: toCode },
       headers: rapidHeaders(),
     });
-    return res.data?.fare?.[klass] ?? null; // VERIFY against your response
+    return res.data?.fare?.[klass] ?? null;
   } catch (e) {
     console.log("TRAIN fetchLiveFare failed:", e.message);
     return null;
@@ -55,4 +57,5 @@ module.exports = {
   USE_LIVE, TRAIN_CLASSES,
   trainFareEstimate, trainClassMenu,
   resolveStationCode, fetchLiveTrains, fetchLiveFare,
+  resolveStationCodes,
 };

@@ -85,7 +85,9 @@ async function trainFare({ trainNumber, source, destination, journeyDate, classC
     if (err.response?.status === 404) {
       cacheSet(cacheKey, null, WEEK_MS); // class genuinely not on this train — cache the negative too
       return null;
+      
     }
+
     logErr("trainFare", err);
     throw errorFromAxios(err);
   }
