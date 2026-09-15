@@ -1,27 +1,22 @@
 "use strict";
 /**
- * Persists the pending fare board on the user's real ChatSession
- * document, in trip.pendingFareBoard — reusing the existing Mongoose
- * session/state mechanism (ChatSession.js) instead of a separate
- * in-memory store. Survives restarts, unlike the earlier version.
+ * TEMPORARY session store for the live fare board, keyed by userId.
+ * In-memory only — resets on restart, same limitation class as
+ * RailRadarClient's own cache. This exists ONLY because ContextService.js
+ * (referenced as the project's real multi-turn memory store) hasn't been
+ * shared with me. Swap saveBoard/getBoard for real ContextService calls
+ * once it has — nothing else in TrainFareIntentHandler needs to change.
  */
-const ChatSession = require("../../models/ChatSession"); // adjust path if models/ lives elsewhere
+const boards = new Map();
+const TTL_MS = 1000 * 60 * 15; // 15 min — long enough to pick a class
 
-async function saveBoard(userId, board) {
-  await ChatSession.findOneAndUpdate(
-    { userId },
-    { $set: { "trip.pendingFareBoard": board, "trip.pendingFareBoardAt": new Date() }, updatedAt: new Date() },
-    { upsert: true }
-  );
+function saveBoard(userId, board) {
+  boards.set(userId, { board, expiresAt: Date.now() + TTL_MS });
 }
-
-async function getBoard(userId) {
-  const session = await ChatSession.findOne({ userId }, "trip.pendingFareBoard trip.pendingFareBoardAt").lean();
-  const board = session?.trip?.pendingFareBoard;
-  if (!board) return null;
-  const age = Date.now() - new Date(session.trip.pendingFareBoardAt).getTime();
-  if (age > 1000 * 60 * 15) return null; // 15 min relevance window
-  return board;
+function getBoard(userId) {
+  const entry = boards.get(userId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { boards.delete(userId); return null; }
+  return entry.board;
 }
-
 module.exports = { saveBoard, getBoard };

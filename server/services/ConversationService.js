@@ -733,11 +733,15 @@ const detectIntent = (msg = "") => {
        the off-topic branch and answered by the general LLM instead
        of being read as a class choice. Reproduced exactly in
        screenshot 2 (the "three quick things near Vallikavu" reply).
-     - "summary" also had no case — any free-text during the summary
-       step (not one of the literal "confirm trip"/"edit X" commands
-       handled earlier) skipped the dedicated summary handler and
-       went to the LLM for no reason. Now always treated as a step
-       answer so it reaches that handler directly. ================= */
+     - The former "summary" case unconditionally returned true for
+       ANY input at that step, which swallowed every contextual
+       question (nearby_food, weather, guide_hotel, transport, etc.)
+       behind the generic "Tap Confirm..." fallback. Removed —
+       "summary" now falls through to `default: return false;`, so
+       genuine step answers ("confirm trip" / "edit ...") are still
+       caught earlier in chat.js by their own exact-match checks
+       before this function is ever called, while everything else
+       correctly reaches the off-topic intent block. ================= */
 const looksLikeStepAnswer = (step, raw) => {
   const lower = raw.toLowerCase().trim();
   if (lower.endsWith("?")) return false;
@@ -752,7 +756,6 @@ const looksLikeStepAnswer = (step, raw) => {
     case "flight_class": return /^[1-3]$/.test(lower) || /economy|business|premium/.test(lower);
     case "hotel":        return /^[1-3]$/.test(lower) || /budget|standard|luxury|no|skip|none/.test(lower);
     case "source": case "destination": return lower.split(" ").length <= 4;
-    case "summary":      return true;
     default: return false;
   }
 };
