@@ -737,9 +737,12 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           >
             <div className="chat-suggestions">
               {QUICK_ACTIONS.map((s, i) => (
+
                 <button
-                  key={i}
-                  className="chat-sug-pill"
+             
+                key={i}
+             
+                className="chat-sug-pill"
                   onClick={() => {
                     setShowQuickActions(false);
                     sendMessage(s);
