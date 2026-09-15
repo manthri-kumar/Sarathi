@@ -12,9 +12,23 @@ const getRoute = async (origin, destination) => {
       { params: { origins: origin, destinations: destination, key: process.env.GOOGLE_API_KEY } }
     );
     const el = res.data?.rows?.[0]?.elements?.[0];
-    if (!el || el.status !== "OK") return null;
+    if (!el || el.status !== "OK") {
+      console.log("[ROUTE] Distance Matrix failed", {
+        origin,
+        destination,
+        topLevelStatus: res.data?.status,
+        elementStatus: el?.status,
+        errorMessage: res.data?.error_message || null,
+      });
+      return null;
+    }
     return { km: Math.round(el.distance.value / 1000), durationText: el.duration.text };
-  } catch {
+  } catch (err) {
+    console.log("[ROUTE] Distance Matrix request threw", {
+      origin,
+      destination,
+      message: err.message,
+    });
     return null;
   }
 };
