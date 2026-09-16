@@ -400,3 +400,249 @@
     padding: 4px 8px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   MOST POPULAR PLACES — DETAILS MODAL
+   Uniquely namespaced (.popular-place-modal-*) — does not
+   reuse or override .modal-backdrop / .place-modal etc.
+   from Itinerary.css, and is not shared with RecommendedPlaces.
+═══════════════════════════════════════════════════════ */
+
+.popular-place-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.popular-place-modal {
+  width: min(900px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #0d1424;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.popular-place-modal-content {
+  display: flex;
+}
+
+/* ── Left: image ── */
+.popular-place-modal-image {
+  position: relative;
+  width: 42%;
+  min-width: 42%;
+  min-height: 420px;
+}
+
+.popular-place-modal-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.popular-place-modal-image-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(2, 6, 23, 0) 60%,
+    rgba(13, 20, 36, 0.4) 100%
+  );
+  pointer-events: none;
+}
+
+.popular-place-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.popular-place-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.06);
+}
+
+/* ── Right: info ── */
+.popular-place-modal-info {
+  flex: 1;
+  min-width: 0;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.popular-place-modal-name {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.popular-place-modal-location {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.popular-place-modal-rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.popular-place-modal-reviews {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.popular-place-modal-badge {
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #22c55e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.popular-place-modal-description {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0 0 22px;
+}
+
+.popular-place-modal-info-grid {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.popular-place-modal-info-card {
+  flex: 1;
+  min-width: 110px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popular-place-modal-info-label {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.popular-place-modal-info-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.popular-place-modal-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.popular-place-modal-cancel {
+  padding: 11px 26px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  font-size: 0.86rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.popular-place-modal-cancel:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.popular-place-modal-map-btn {
+  padding: 11px 26px;
+  background: linear-gradient(135deg, #00ff94, #22c55e);
+  border: none;
+  color: #000;
+  font-weight: 700;
+  font-size: 0.86rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.15s;
+}
+
+.popular-place-modal-map-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .popular-place-modal-content {
+    flex-direction: column;
+  }
+
+  .popular-place-modal-image {
+    width: 100%;
+    min-width: 100%;
+    min-height: 220px;
+  }
+
+  .popular-place-modal-info {
+    padding: 20px;
+  }
+
+  .popular-place-modal-name {
+    font-size: 1.3rem;
+  }
+
+  .popular-place-modal-info-grid {
+    flex-direction: column;
+  }
+
+  .popular-place-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .popular-place-modal-cancel,
+  .popular-place-modal-map-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
