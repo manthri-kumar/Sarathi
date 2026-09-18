@@ -5,6 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import googleLogo   from "../../assets/google.png";
 import sarathiLogo  from "../../assets/sarathi-logo.png";
+import mobileHeroImg from "../../assets/sarathi-mobile-hero.jpg"; // mobile-only Login/Signup hero photo
 
 const API_BASE = "https://sarathi-backend-7u0y.onrender.com";
 
@@ -451,6 +452,36 @@ function AuthPage() {
 
       {/* ── RIGHT PANEL ── */}
       <div className="right-panel">
+
+        {/* ── MOBILE-ONLY HERO ──────────────────────────────────────
+            Hidden on desktop purely via CSS (.mobile-hero { display:none })
+            and only enabled inside the existing ≤768px breakpoint.
+            Reuses the existing Sarathi logo asset and the existing
+            .hero-grad accent style. Purely presentational — no new
+            state, handlers, or logic. ── */}
+        <div className="mobile-hero">
+          <img src={mobileHeroImg} alt="" className="mobile-hero-img" />
+          <div className="mobile-hero-scrim" aria-hidden="true" />
+
+          <div className="mobile-hero-brand">
+            <img src={sarathiLogo} alt="Sarathi Logo" className="mobile-hero-logo" />
+            <span>Sarathi</span>
+          </div>
+
+          <div className="mobile-hero-copy">
+            <h1 className="mobile-hero-title">
+              {isLogin ? (
+                <>Let's explore<br />the <span className="hero-grad">world!</span></>
+              ) : (
+                <>New journeys<br /><span className="hero-grad">begin here</span></>
+              )}
+            </h1>
+            <p className="mobile-hero-sub">
+              {isLogin ? "Travel and play active sports" : "Create your account to get started"}
+            </p>
+          </div>
+        </div>
+
         <div className="auth-card">
           <h2>{isLogin ? "Welcome Back" : "Welcome to Sarathi"}</h2>
           <p className="auth-subtitle">
