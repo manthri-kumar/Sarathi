@@ -791,7 +791,7 @@ export default function Itinerary() {
                 </button>
 
                 <button className="save-template-btn" onClick={handleSaveDraft} disabled={!planCount}>
-                  💾 Save as Template
+                  Save as Template
                 </button>
 
                 {itinerary && (

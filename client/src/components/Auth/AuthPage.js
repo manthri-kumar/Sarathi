@@ -469,13 +469,7 @@ function AuthPage() {
           </div>
 
           <div className="mobile-hero-copy">
-            <h1 className="mobile-hero-title">
-              {isLogin ? (
-                <>Let's explore<br />the <span className="hero-grad">world!</span></>
-              ) : (
-                <>New journeys<br /><span className="hero-grad">begin here</span></>
-              )}
-            </h1>
+            <h1 className="mobile-hero-title">Your New Journey Begins Here</h1>
             <p className="mobile-hero-sub">
               {isLogin ? "Travel and play active sports" : "Create your account to get started"}
             </p>
