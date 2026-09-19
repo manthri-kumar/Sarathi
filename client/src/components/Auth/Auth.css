@@ -1087,18 +1087,23 @@ body {
     display: none;
   }
 
-  /* Two very subtle sparkle accents behind the wordmark — CSS-only,
-     no illustration asset, matching the reference's faint decoration. */
-  .mobile-hero::before,
-  .mobile-hero::after {
+  /* Subtle decorative sparkle motif behind the wordmark, matching
+     the reference — a single real asset (not CSS shapes), bled off
+     the top-left corner via the container's overflow:hidden. */
+  .mobile-hero::before {
     content: "";
     position: absolute;
-    background: rgba(134, 239, 172, 0.14);
-    clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+    top: -36px;
+    left: -48px;
+    width: 230px;
+    height: 230px;
+    background-image: url('../../assets/sarathi-sparkle.png');
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0.16;
     pointer-events: none;
+    z-index: 1;
   }
-  .mobile-hero::before { top: 20%; left: 10%;  width: 22px; height: 22px; }
-  .mobile-hero::after  { top: 8%;  right: 12%; width: 36px; height: 36px; opacity: 0.75; }
 
   .mobile-hero-brand {
     position: relative;
