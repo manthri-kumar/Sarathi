@@ -810,7 +810,7 @@ body {
   .auth-card {
     width: calc(100vw - 32px);
     max-width: none;
-    padding: 22px;
+    padding: 18px 20px 22px;
     border-radius: 22px;
     margin-top: 6px;
     border-color: rgba(74, 222, 128, 0.22);
@@ -820,10 +820,17 @@ body {
   }
 
   .auth-card:hover { transform: none; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
-  .auth-card h2   { font-size: 26px; margin: 0 0 2px; }
-  .auth-subtitle  { font-size: 13px; margin: 0 0 2px; }
 
-  .toggle { margin: 14px 0; padding: 4px; }
+  /* Target design starts the card directly at the toggle — the
+     "Welcome Back" / "Welcome to Sarathi" heading and its subtitle
+     are hidden on mobile only (both Login and Signup share these
+     elements, so one rule covers both). Desktop still shows them. */
+  .auth-card h2,
+  .auth-subtitle {
+    display: none;
+  }
+
+  .toggle { margin: 0 0 14px; padding: 4px; }
   .toggle::before { top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); }
   .toggle button  { padding: 12px; font-size: 14px; }
 
@@ -1050,13 +1057,11 @@ body {
 /* ════════════════════════════════════════════════════════════════
    ★ NEW ADDITIONS — MOBILE-ONLY LOGIN/SIGNUP BRANDING
    Hidden by default (desktop/tablet unaffected); only enabled
-   inside the existing ≤768px breakpoint below. Same class names as
-   before (.mobile-hero, .mobile-hero-img, .mobile-hero-scrim,
-   .mobile-hero-brand, .mobile-hero-copy, .mobile-hero-title,
-   .mobile-hero-sub) are reused — the JSX is untouched apart from
-   the tagline text. The mountain/cyclist photo + scrim are simply
-   not displayed on mobile any more (display:none below); the asset
-   and its <img>/handlers stay in the JSX, this is purely visual.
+   inside the existing ≤768px breakpoint below. Reuses
+   .mobile-hero / .mobile-hero-brand / .mobile-hero-copy /
+   .mobile-hero-title — the old mountain/cyclist photo, its scrim,
+   and the second copy line have been removed from the JSX, since
+   they were permanently hidden and no longer part of the design.
 ════════════════════════════════════════════════════════════════ */
 
 .mobile-hero { display: none; }
@@ -1079,27 +1084,26 @@ body {
     background: radial-gradient(120% 100% at 50% 0%, rgba(34, 197, 94, 0.16) 0%, rgba(6, 20, 12, 0.35) 45%, rgba(2, 4, 2, 0) 80%);
   }
 
-  /* The mountain/cyclist photo + its scrim are no longer part of the
-     mobile design — hidden here only. Asset import, <img>, and JSX
-     are left in place for desktop/possible future reuse. */
-  .mobile-hero-img,
-  .mobile-hero-scrim {
-    display: none;
-  }
-
-  /* Subtle decorative sparkle motif behind the wordmark, matching
-     the reference — a single real asset (not CSS shapes), bled off
-     the top-left corner via the container's overflow:hidden. */
+  /* Large cropped Sarathi symbol in the background — the SAME asset
+     as the foreground logo, scaled up, muted dark-green (not the
+     pale line-art white), and cropped by the container's
+     overflow:hidden so only part of it shows in the upper-left. */
   .mobile-hero::before {
     content: "";
     position: absolute;
-    top: -36px;
-    left: -48px;
-    width: 230px;
-    height: 230px;
-    background-image: url('../../assets/sarathi-sparkle.png');
-    background-repeat: no-repeat;
-    background-size: contain;
+    top: -10px;
+    left: -45px;
+    width: 170px;
+    height: 170px;
+    background-color: #1f6e3d;
+    -webkit-mask-image: url('../../assets/sarathi-sparkle.png');
+    mask-image: url('../../assets/sarathi-sparkle.png');
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: center;
+    mask-position: center;
     opacity: 0.16;
     pointer-events: none;
     z-index: 1;
@@ -1111,21 +1115,21 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: max(40px, calc(env(safe-area-inset-top) + 26px)) 20px 0;
+    gap: 6px;
+    padding: max(36px, calc(env(safe-area-inset-top) + 22px)) 20px 0;
   }
 
   .mobile-hero-logo {
-    width: 32px;
-    height: 32px;
+    width: 16px;
+    height: 16px;
     object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.35));
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.35));
   }
 
   .mobile-hero-brand span {
-    font-size: 30px;
+    font-size: 16px;
     font-weight: 800;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
     color: #ffffff;
   }
 
@@ -1133,23 +1137,18 @@ body {
     position: relative;
     z-index: 2;
     text-align: center;
-    padding: 6px 24px 22px;
+    padding: 4px 24px 18px;
   }
 
   .mobile-hero-title {
     margin: 0;
-    font-size: 17px;
+    font-size: 12.5px;
     font-weight: 500;
     line-height: 1.3;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.75);
   }
-
-  /* Reference tagline is a single line under the wordmark — the
-     second line of copy isn't part of this design. */
-  .mobile-hero-sub { display: none; }
 }
 
 @media (max-width: 380px) {
-  .mobile-hero-brand span { font-size: 26px; }
-  .mobile-hero-title      { font-size: 16px; }
+  .mobile-hero::before   { width: 145px; height: 145px; top: -8px; left: -38px; }
 }
