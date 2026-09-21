@@ -1111,17 +1111,17 @@ body {
   .mobile-bg-symbol {
     display: block;
     position: absolute;
-    top: -40px;
+    top: -30px;
     left: -95px;
-    width: 190px;
-    height: 190px;
+    width: 220px;
+    height: 215px;
     object-fit: contain;
     z-index: 0;
     pointer-events: none;
     user-select: none;
     opacity: 0.14;
     filter:
-      brightness(0) saturate(100%)
+      brightness(20%) saturate(100%)
       invert(19%) sepia(80%) saturate(1200%)
       hue-rotate(100deg) brightness(90%) contrast(90%);
   }
