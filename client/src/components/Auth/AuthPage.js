@@ -437,9 +437,9 @@ function AuthPage() {
           </p>
           <button className="explore-btns">Start Exploring →</button>
           <div className="hero-pills">
-            <div className="hero-pill"><span className="hp-icon">🗺</span><div className="hp-text"><h4>Smart Itineraries</h4><p>AI-built travel plans</p></div></div>
-            <div className="hero-pill"><span className="hp-icon">💎</span><div className="hp-text"><h4>Hidden Gems</h4><p>Discover unseen places</p></div></div>
-            <div className="hero-pill"><span className="hp-icon">📡</span><div className="hp-text"><h4>Live Updates</h4><p>Real-time travel insights</p></div></div>
+            <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Smart Itineraries</h4><p>AI-built travel plans</p></div></div>
+            <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Hidden Gems</h4><p>Discover unseen places</p></div></div>
+            <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Live Updates</h4><p>Real-time travel insights</p></div></div>
           </div>
         </div>
         <div className="lp-mountains" aria-hidden="true">
@@ -476,7 +476,7 @@ function AuthPage() {
           </p>
 
           {googleError && (
-            <div className="auth-error-banner">⚠️ {googleError}</div>
+            <div className="auth-error-banner"> {googleError}</div>
           )}
 
           <div className="toggle">
@@ -583,7 +583,7 @@ function AuthPage() {
                 </div>
 
                 {otpState.error && (
-                  <div className="forgot-error">⚠️ {otpState.error}</div>
+                  <div className="forgot-error"> {otpState.error}</div>
                 )}
 
                 <button
