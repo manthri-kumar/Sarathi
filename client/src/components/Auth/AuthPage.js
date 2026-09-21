@@ -458,8 +458,9 @@ function AuthPage() {
             Reuses the existing Sarathi logo asset. Purely
             presentational — no new state, handlers, or logic. ── */}
         <div className="mobile-hero">
+          <img src={sarathiLogo} alt="" className="mobile-bg-symbol" />
+
           <div className="mobile-hero-brand">
-            <img src={sarathiLogo} alt="Sarathi Logo" className="mobile-hero-logo" />
             <span>Sarathi</span>
           </div>
 

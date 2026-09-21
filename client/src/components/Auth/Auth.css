@@ -808,33 +808,53 @@ body {
   }
 
   .auth-card {
-    width: calc(100vw - 32px);
+    width: calc(100vw - 40px);
     max-width: none;
-    padding: 22px;
+    padding: 20px;
     border-radius: 22px;
-    margin-top: 6px;
-    border-color: rgba(74, 222, 128, 0.22);
+    margin-top: 8px;
+    background: rgba(4, 12, 8, 0.82);
+    border-color: rgba(34, 197, 94, 0.35);
     box-shadow:
       0 24px 60px rgba(0, 0, 0, 0.55),
       0 0 34px rgba(34, 197, 94, 0.10);
   }
 
   .auth-card:hover { transform: none; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
-  .auth-card h2   { font-size: 26px; margin: 0 0 2px; }
-  .auth-subtitle  { font-size: 13px; margin: 0 0 2px; }
 
-  .toggle { margin: 14px 0; padding: 4px; }
-  .toggle::before { top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); }
-  .toggle button  { padding: 12px; font-size: 14px; }
+  /* Target design starts the card directly at the toggle — the
+     "Welcome Back" / "Welcome to Sarathi" heading and its subtitle
+     are hidden on mobile only (both Login and Signup share these
+     elements, so one rule covers both). Desktop still shows them. */
+  .auth-card h2,
+  .auth-subtitle {
+    display: none;
+  }
 
-  .auth-card input { height: 54px; margin: 8px 0; font-size: 14.5px; border-radius: 14px; }
+  .toggle {
+    height: 58px;
+    margin: 0 0 14px;
+    padding: 5px;
+    border-radius: 30px;
+    box-sizing: border-box;
+  }
+  .toggle::before { top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px); border-radius: 26px; }
+  .toggle button  {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 14px;
+  }
+
+  .auth-card input { height: 44px; margin: 7px 0; font-size: 14px; border-radius: 13px; }
   .forgot-row      { margin: 0 2px 4px; }
   .forgot-link     { font-size: 12.5px; }
 
-  .auth-btn { height: 54px; margin-top: 8px; font-size: 15px; border-radius: 14px; }
-  .divider  { margin: 14px 0; }
+  .auth-btn { height: 45px; margin-top: 8px; font-size: 15px; border-radius: 12px; }
+  .divider  { margin: 12px 0; }
 
-  .google-icon-btn { height: 54px; border-radius: 14px; margin-top: 4px; }
+  .google-icon-btn { height: 44px; border-radius: 12px; margin-top: 4px; }
   .google-icon-btn::after { font-size: 14px; }
 
   .switch-text { margin-top: 12px; font-size: 12.5px; }
@@ -847,10 +867,9 @@ body {
 
 @media (max-width: 380px) {
   .right-panel    { padding: 0; }
-  .auth-card      { width: calc(100vw - 24px); padding: 20px; }
-  .auth-card h2   { font-size: 24px; }
-  .auth-card input { height: 52px; margin: 7px 0; }
-  .auth-btn, .google-icon-btn { height: 52px; }
+  .auth-card      { width: calc(100vw - 32px); padding: 18px; }
+  .auth-card input { height: 42px; margin: 6px 0; }
+  .auth-btn, .google-icon-btn { height: 42px; }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1050,111 +1069,18 @@ body {
 /* ════════════════════════════════════════════════════════════════
    ★ NEW ADDITIONS — MOBILE-ONLY LOGIN/SIGNUP BRANDING
    Hidden by default (desktop/tablet unaffected); only enabled
-   inside the existing ≤768px breakpoint below. Same class names as
-   before (.mobile-hero, .mobile-hero-img, .mobile-hero-scrim,
-   .mobile-hero-brand, .mobile-hero-copy, .mobile-hero-title,
-   .mobile-hero-sub) are reused — the JSX is untouched apart from
-   the tagline text. The mountain/cyclist photo + scrim are simply
-   not displayed on mobile any more (display:none below); the asset
-   and its <img>/handlers stay in the JSX, this is purely visual.
-════════════════════════════════════════════════════════════════ */
-
-.mobile-hero { display: none; }
-
-@media (max-width: 768px) {
-  .mobile-hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    position: relative;
-    width: 100%;
-    height: auto;
-    overflow: hidden;
-    flex-shrink: 0;
-    padding-bottom: 6px;
-    /* Premium black → deep green wash, replacing the photo. Fades to
-       fully transparent by 80% so it blends into .right-panel's own
-       #020402 background with no visible seam. */
-    background: radial-gradient(120% 100% at 50% 0%, rgba(34, 197, 94, 0.16) 0%, rgba(6, 20, 12, 0.35) 45%, rgba(2, 4, 2, 0) 80%);
-  }
-
-  /* The mountain/cyclist photo + its scrim are no longer part of the
-     mobile design — hidden here only. Asset import, <img>, and JSX
-     are left in place for desktop/possible future reuse. */
-  .mobile-hero-img,
-  .mobile-hero-scrim {
-    display: none;
-  }
-
-  /* Two very subtle sparkle accents behind the wordmark — CSS-only,
-     no illustration asset, matching the reference's faint decoration. */
-  .mobile-hero::before,
-  .mobile-hero::after {
-    content: "";
-    position: absolute;
-    background: rgba(134, 239, 172, 0.14);
-    clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
-    pointer-events: none;
-  }
-  .mobile-hero::before { top: 20%; left: 10%;  width: 22px; height: 22px; }
-  .mobile-hero::after  { top: 8%;  right: 12%; width: 36px; height: 36px; opacity: 0.75; }
-
-  .mobile-hero-brand {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: max(40px, calc(env(safe-area-inset-top) + 26px)) 20px 0;
-  }
-
-  .mobile-hero-logo {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.35));
-  }
-
-  .mobile-hero-brand span {
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: #ffffff;
-  }
-
-  .mobile-hero-copy {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    padding: 6px 24px 22px;
-  }
-
-  .mobile-hero-title {
-    margin: 0;
-    font-size: 17px;
-    font-weight: 500;
-    line-height: 1.3;
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  /* Reference tagline is a single line under the wordmark — the
-     second line of copy isn't part of this design. */
-  .mobile-hero-sub { display: none; }
-}
-
-@media (max-width: 380px) {
-  .mobile-hero-brand span { font-size: 26px; }
-  .mobile-hero-title      { font-size: 16px; }
-}
-/* ════════════════════════════════════════════════════════════════
-   ★ NEW ADDITIONS — MOBILE-ONLY LOGIN/SIGNUP BRANDING
-   Hidden by default (desktop/tablet unaffected); only enabled
-   inside the existing ≤768px breakpoint below. Reuses the existing
-   sarathiLogo asset for both the foreground wordmark AND the large
-   cropped background watermark (.mobile-bg-symbol) — no new asset,
-   no new icon, no clip-path star shapes.
+   inside the existing ≤768px breakpoint below. ONE section only —
+   a previous edit had left two separate, conflicting copies of this
+   block in the file (one with two clip-path "star" pseudo-elements
+   plus a small logo icon, one with an unused .mobile-bg-symbol rule
+   that had no matching JSX), which is why the star decorations and
+   small icon kept showing while the large watermark never appeared.
+   This replaces both with a single correct version:
+   - foreground branding is text-only ("Sarathi", no icon)
+   - exactly one background watermark, reusing the SAME sarathiLogo
+     asset (no separate decorative asset, no CSS-drawn shapes),
+     recolored via CSS filter to a muted green and cropped by
+     .mobile-hero's overflow:hidden so only part shows top-left
 ════════════════════════════════════════════════════════════════ */
 
 .mobile-hero { display: none; }
@@ -1165,47 +1091,39 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     position: relative;
     width: 100%;
-    height: auto;
+    height: 220px;
     overflow: hidden;
     flex-shrink: 0;
-    padding-bottom: 4px;
-    background: #020402;
+    background: #020503;
   }
 
-  /* The old photo/scrim classes are still referenced in JSX for
-     possible desktop reuse — kept out of the mobile layout only. */
-  .mobile-hero-img,
-  .mobile-hero-scrim {
-    display: none;
-  }
-
-  /* ── Large cropped background watermark ──
-     Same sarathiLogo asset, tinted dark muted green via CSS filter
-     (the source PNG itself is not green) and scaled far larger than
-     the foreground mark, positioned so it bleeds off the top-left
-     edge and is cropped by .mobile-hero's overflow:hidden. This is
-     an approximation of the exact green hue since it's produced by
-     filter math rather than an actual green source asset — check it
-     visually and nudge the hue-rotate value if it reads too blue or
-     too yellow on a real device. */
+  /* Large cropped background watermark — the exact same sarathiLogo
+     asset used for branding elsewhere in the app, scaled up and
+     recolored via filter (the source asset itself isn't green).
+     brightness(0) first forces the icon to solid black regardless
+     of its native color, then the invert/sepia/hue-rotate chain
+     shifts that black to a muted forest green. If this reads too
+     blue or too yellow on the real asset, nudge hue-rotate a bit —
+     the exact degree depends on the source PNG. */
   .mobile-bg-symbol {
     display: block;
     position: absolute;
-    top: -10px;
-    left: -45px;
-    width: clamp(150px, 45vw, 200px);
-    height: auto;
+    top: 20px;
+    left: -55px;
+    width: 190px;
+    height: 190px;
+    object-fit: contain;
     z-index: 0;
     pointer-events: none;
     user-select: none;
+    opacity: 0.14;
     filter:
       brightness(0) saturate(100%)
       invert(19%) sepia(80%) saturate(1200%)
       hue-rotate(100deg) brightness(90%) contrast(90%);
-    opacity: 0.13;
   }
 
   .mobile-hero-brand {
@@ -1214,19 +1132,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: max(36px, calc(env(safe-area-inset-top) + 22px)) 20px 0;
-  }
-
-  .mobile-hero-logo {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.3));
   }
 
   .mobile-hero-brand span {
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 800;
     letter-spacing: -0.02em;
     color: #ffffff;
@@ -1236,7 +1145,7 @@ body {
     position: relative;
     z-index: 2;
     text-align: center;
-    padding: 6px 24px 18px;
+    padding: 2px 24px 18px;
   }
 
   .mobile-hero-title {
@@ -1244,24 +1153,12 @@ body {
     font-size: 17px;
     font-weight: 500;
     line-height: 1.3;
-    color: rgba(255, 255, 255, 0.8);
-    white-space: nowrap;
-  }
-
-  .mobile-hero-sub { display: none; }
-
-  /* ── Auth card heading/subtitle hidden on mobile only ──
-     DOM/JSX unchanged — these still render for desktop; this rule
-     lives inside this same ≤768px block so desktop is untouched. */
-  .auth-card h2,
-  .auth-card .auth-subtitle {
-    display: none;
+    color: rgba(255, 255, 255, 0.82);
   }
 }
 
 @media (max-width: 380px) {
-  .mobile-bg-symbol       { width: clamp(130px, 42vw, 170px); top: -8px; left: -38px; }
-  .mobile-hero-brand span { font-size: 25px; }
-  .mobile-hero-logo       { width: 25px; height: 25px; }
+  .mobile-bg-symbol       { width: 165px; height: 165px; top: 16px; left: -48px; }
+  .mobile-hero-brand span { font-size: 32px; }
   .mobile-hero-title      { font-size: 16px; }
 }
