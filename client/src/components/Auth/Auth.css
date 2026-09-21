@@ -812,7 +812,7 @@ body {
     max-width: none;
     padding: 20px;
     border-radius: 22px;
-    margin-top: -22px;
+    margin-top: +22px;
     background: rgba(4, 12, 8, 0.82);
     border-color: rgba(34, 197, 94, 0.35);
     box-shadow:
@@ -1099,7 +1099,7 @@ body {
 .mobile-bg-symbol {
   display: block;
   position: absolute;
-  top: -45px;
+  top: -30px;
   left: -105px;
   width: 220px;
   height: 215px;
