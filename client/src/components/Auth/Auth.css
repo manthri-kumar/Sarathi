@@ -812,7 +812,7 @@ body {
     max-width: none;
     padding: 20px;
     border-radius: 22px;
-    margin-top: 8px;
+    margin-top: -22px;
     background: rgba(4, 12, 8, 0.82);
     border-color: rgba(34, 197, 94, 0.35);
     box-shadow:
@@ -1111,8 +1111,8 @@ body {
   .mobile-bg-symbol {
     display: block;
     position: absolute;
-    top: 20px;
-    left: -55px;
+    top: -40px;
+    left: -95px;
     width: 190px;
     height: 190px;
     object-fit: contain;
@@ -1158,7 +1158,7 @@ body {
 }
 
 @media (max-width: 380px) {
-  .mobile-bg-symbol       { width: 165px; height: 165px; top: 16px; left: -48px; }
+  .mobile-bg-symbol       { width: 165px; height: 165px; top: -35px; left: -82px; }
   .mobile-hero-brand span { font-size: 32px; }
   .mobile-hero-title      { font-size: 16px; }
 }
