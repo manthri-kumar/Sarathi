@@ -404,11 +404,12 @@ export default function Itinerary() {
     try {
       const token = localStorage.getItem("token");
       const payload = itinerary || { places: planArray, travellers, startDate, endDate };
-      await fetch(`${API_BASE}/api/trips`, {
+      const response = await fetch(`${API_BASE}/api/trips`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
+      if (!response.ok) throw new Error("Trip could not be saved");
       createTripConfirmationNotification(planCount);
       clearPlan();
       navigate("/my-trips");
@@ -417,9 +418,20 @@ export default function Itinerary() {
     }
   };
 
-  const handleSaveDraft = () => {
-    createDraftSavedNotification();
-    alert("Draft saved! ✅");
+  const handleSaveDraft = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/saved`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ templateName: "Trip draft", places: planArray, travellers, startDate, endDate, itinerary }),
+      });
+      if (!response.ok) throw new Error("Draft could not be saved");
+      createDraftSavedNotification();
+      alert("Draft saved! ✅");
+    } catch (error) {
+      alert(`Draft could not be saved: ${error.message}`);
+    }
   };
 
   /* ── date display + duration (single source of truth) ── */

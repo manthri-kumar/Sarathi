@@ -29,7 +29,7 @@
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
-  padding-left: 220px;
+  padding-left: 250px;
 }
 
 .itin-main {
@@ -965,7 +965,6 @@
 }
 
 @media (max-width: 900px) {
-  .itin-layout { padding-left: 0; }
   .itin-main   { padding: 16px; }
   .itin-grid   { grid-template-columns: 1fr; }
   .plan-column { position: static; }
@@ -976,8 +975,36 @@
   .search-main-btn { width: 100%; margin: 4px 0 0; }
 }
 
+@media (max-width: 768px) {
+  .itin-layout { padding-left: 0; }
+}
+
 @media (max-width: 600px) {
   .itin-title    { font-size: 1.6rem; }
+  .search-bar-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .search-segment {
+    width: 100%;
+    padding: 10px 8px;
+  }
+  .date-inputs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    min-width: 0;
+    width: 100%;
+  }
+  .date-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .traveller-dropdown {
+    left: 0;
+    min-width: 0;
+    width: 100%;
+  }
   .place-modal   { border-radius: var(--radius-md); }
   .place-modal-body { flex-direction: column; }
   .modal-left    { width: 100%; min-width: unset; }

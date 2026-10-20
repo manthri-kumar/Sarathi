@@ -166,7 +166,7 @@ const Explore = () => {
               `${API_BASE}/api/places?lat=${lat}&lng=${lng}`
             ),
             fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.REACT_APP_GOOGLE_MAPS_KEY || ""}`
             ),
           ]);
 

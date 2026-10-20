@@ -2,10 +2,13 @@ import { useState } from "react";
 import "./DayPlanner.css";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
+import { API_URL } from "../config";
 
 export default function DayPlanner() {
 
   const [loading, setLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [error, setError] = useState("");
 
   const [interest, setInterest] =
     useState("nature");
@@ -15,13 +18,14 @@ export default function DayPlanner() {
 
   const generatePlan = () => {
 
+    setError("");
+    setLoading(true);
+
     navigator.geolocation.getCurrentPosition(
 
       async (position) => {
 
         try {
-
-          setLoading(true);
 
           const lat =
             position.coords.latitude;
@@ -30,7 +34,7 @@ export default function DayPlanner() {
             position.coords.longitude;
 
           const res = await fetch(
-  "https://sarathi-backend-7u0y.onrender.com/api/day-planner/generate",
+  `${API_URL}/api/day-planner/generate`,
   {
     method: "POST",
     headers: {
@@ -43,6 +47,9 @@ export default function DayPlanner() {
     })
   }
 );
+          if (!res.ok) {
+            throw new Error(`Day planner request failed with status ${res.status}`);
+          }
           const data =
             await res.json();
 
@@ -52,7 +59,9 @@ export default function DayPlanner() {
 
         } catch (err) {
 
-          console.log(err);
+          console.error("Day planner request failed");
+
+          setError("We could not generate your day plan. Please try again.");
 
           setLoading(false);
 
@@ -61,9 +70,8 @@ export default function DayPlanner() {
       },
 
       () => {
-        alert(
-          "Please allow location access"
-        );
+        setError("Location access is required to create a nearby day plan.");
+        setLoading(false);
       }
 
     );
@@ -72,11 +80,19 @@ export default function DayPlanner() {
 
   return (
     <>
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} />
+
+      {sidebarOpen && (
+        <div
+          className="overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       <div className="main-content">
 
-        <Navbar />
+        <Navbar toggleSidebar={() => setSidebarOpen((open) => !open)} />
 
         <div className="day-page">
 
@@ -136,6 +152,7 @@ export default function DayPlanner() {
             <button
               className="generate-btn"
               onClick={generatePlan}
+              disabled={loading}
             >
               {
                 loading
@@ -145,6 +162,12 @@ export default function DayPlanner() {
             </button>
 
           </div>
+
+          {error && (
+            <div className="planner-error" role="alert">
+              {error}
+            </div>
+          )}
 
           {result?.stats && (
 
@@ -224,7 +247,9 @@ export default function DayPlanner() {
                       result.schedule
                         .night
                   }
-                ].map(
+                ]
+                .filter((item) => item.data && typeof item.data === "object")
+                .map(
                   (
                     item,
                     index

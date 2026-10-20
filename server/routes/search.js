@@ -134,7 +134,7 @@ router.get("/location", async (req, res) => {
 // NEW: reverse-geocode a lat/lng to a city name. This is the piece
 // Explore.jsx was missing — it was calling Google's Geocoding API
 // directly from the browser with a hardcoded key
-// (AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A) instead of going through
+// the configured server-side Google Maps key instead of going through
 // this backend, which is exactly the exposed-key pattern flagged
 // earlier in this project. Same cache/rate-limit/error shape as the
 // other two routes, and reuses pickCity so all three endpoints agree

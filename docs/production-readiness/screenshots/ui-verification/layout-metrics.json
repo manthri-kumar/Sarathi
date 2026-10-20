@@ -1,0 +1,1488 @@
+[
+  {
+    "page": "auth",
+    "width": 375,
+    "height": 812,
+    "pathname": "/",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Sarathi",
+      "Your New Journey Begins Here"
+    ]
+  },
+  {
+    "page": "dashboard",
+    "width": 375,
+    "height": 812,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "dashboard-menu",
+    "width": 375,
+    "height": 812,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "explore",
+    "width": 375,
+    "height": 812,
+    "pathname": "/explore",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": []
+  },
+  {
+    "page": "itinerary",
+    "width": 375,
+    "height": 812,
+    "pathname": "/itinerary",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -529,
+        "width": 78
+      }
+    ],
+    "h1": [
+      "✦ Plan Your Trip"
+    ]
+  },
+  {
+    "page": "day-planner",
+    "width": 375,
+    "height": 812,
+    "pathname": "/day-planner",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Plan Your Day"
+    ]
+  },
+  {
+    "page": "trip-planner",
+    "width": 375,
+    "height": 812,
+    "pathname": "/trip-planner",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Sarathi Trip Planner"
+    ]
+  },
+  {
+    "page": "my-trips",
+    "width": 375,
+    "height": 812,
+    "pathname": "/my-trips",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "My Trips"
+    ]
+  },
+  {
+    "page": "saved",
+    "width": 375,
+    "height": 812,
+    "pathname": "/saved",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Saved Trips"
+    ]
+  },
+  {
+    "page": "profile",
+    "width": 375,
+    "height": 812,
+    "pathname": "/profile",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "UI Tester"
+    ]
+  },
+  {
+    "page": "chat",
+    "width": 375,
+    "height": 812,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -607,
+        "right": -394,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -607,
+        "right": -525,
+        "width": 82
+      },
+      {
+        "label": "Nearby hotels",
+        "left": 342,
+        "right": 451,
+        "width": 108
+      }
+    ],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "auth",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Sarathi",
+      "Your New Journey Begins Here"
+    ]
+  },
+  {
+    "page": "dashboard",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "dashboard-menu",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "explore",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/explore",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": []
+  },
+  {
+    "page": "itinerary",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/itinerary",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -922,
+        "width": 78
+      }
+    ],
+    "h1": [
+      "✦ Plan Your Trip"
+    ]
+  },
+  {
+    "page": "day-planner",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/day-planner",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Plan Your Day"
+    ]
+  },
+  {
+    "page": "trip-planner",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/trip-planner",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Sarathi Trip Planner"
+    ]
+  },
+  {
+    "page": "my-trips",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/my-trips",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "My Trips"
+    ]
+  },
+  {
+    "page": "saved",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/saved",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Saved Trips"
+    ]
+  },
+  {
+    "page": "profile",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/profile",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "UI Tester"
+    ]
+  },
+  {
+    "page": "chat",
+    "width": 768,
+    "height": 1024,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Dashboard",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Explore",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "PlanMyTrip",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "My Trips",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Saved",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "temples",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Profile",
+        "left": -1000,
+        "right": -787,
+        "width": 213
+      },
+      {
+        "label": "Logout",
+        "left": -1000,
+        "right": -918,
+        "width": 82
+      }
+    ],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "auth",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Sarathi",
+      "Your New Journey Begins Here"
+    ]
+  },
+  {
+    "page": "dashboard",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "explore",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/explore",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": []
+  },
+  {
+    "page": "itinerary",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/itinerary",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "✦ Plan Your Trip"
+    ]
+  },
+  {
+    "page": "day-planner",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/day-planner",
+    "title": "Sarathi",
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Plan Your Day"
+    ]
+  },
+  {
+    "page": "trip-planner",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/trip-planner",
+    "title": "Sarathi",
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Sarathi Trip Planner"
+    ]
+  },
+  {
+    "page": "my-trips",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/my-trips",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "My Trips"
+    ]
+  },
+  {
+    "page": "saved",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/saved",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Saved Trips"
+    ]
+  },
+  {
+    "page": "profile",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/profile",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "UI Tester"
+    ]
+  },
+  {
+    "page": "chat",
+    "width": 1280,
+    "height": 900,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 1265,
+    "clientWidth": 1265,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Nearby hotels",
+        "left": 1207,
+        "right": 1316,
+        "width": 108
+      }
+    ],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "auth",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/",
+    "title": "Sarathi",
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Sarathi",
+      "Your New Journey Begins Here"
+    ]
+  },
+  {
+    "page": "dashboard",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 1905,
+    "clientWidth": 1905,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  },
+  {
+    "page": "explore",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/explore",
+    "title": "Sarathi",
+    "scrollWidth": 1905,
+    "clientWidth": 1905,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": []
+  },
+  {
+    "page": "itinerary",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/itinerary",
+    "title": "Sarathi",
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "✦ Plan Your Trip"
+    ]
+  },
+  {
+    "page": "day-planner",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/day-planner",
+    "title": "Sarathi",
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Plan Your Day"
+    ]
+  },
+  {
+    "page": "trip-planner",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/trip-planner",
+    "title": "Sarathi",
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Sarathi Trip Planner"
+    ]
+  },
+  {
+    "page": "my-trips",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/my-trips",
+    "title": "Sarathi",
+    "scrollWidth": 1905,
+    "clientWidth": 1905,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "My Trips"
+    ]
+  },
+  {
+    "page": "saved",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/saved",
+    "title": "Sarathi",
+    "scrollWidth": 1905,
+    "clientWidth": 1905,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "Saved Trips"
+    ]
+  },
+  {
+    "page": "profile",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/profile",
+    "title": "Sarathi",
+    "scrollWidth": 1905,
+    "clientWidth": 1905,
+    "horizontalOverflow": false,
+    "outside": [],
+    "h1": [
+      "UI Tester"
+    ]
+  },
+  {
+    "page": "chat",
+    "width": 1920,
+    "height": 1080,
+    "pathname": "/dashboard",
+    "title": "Sarathi",
+    "scrollWidth": 1905,
+    "clientWidth": 1905,
+    "horizontalOverflow": false,
+    "outside": [
+      {
+        "label": "Nearby hotels",
+        "left": 1847,
+        "right": 1956,
+        "width": 108
+      }
+    ],
+    "h1": [
+      "Discover the unexplored"
+    ]
+  }
+]

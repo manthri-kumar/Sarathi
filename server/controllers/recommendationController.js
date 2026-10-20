@@ -10,6 +10,11 @@ const getRecommendations = async (req, res) => {
         error: "Latitude and longitude required",
       });
     }
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: "Valid latitude and longitude required" });
+    }
 
     if (!GOOGLE_API_KEY) {
       return res.status(500).json({
@@ -26,7 +31,7 @@ const getRecommendations = async (req, res) => {
       `&type=tourist_attraction` +
       `&key=${GOOGLE_API_KEY}`;
 
-    const response = await axios.get(url);
+    const response = await axios.get(url, { timeout: 8000 });
 
     console.log(
       "Google Places Status:",
@@ -62,7 +67,7 @@ const getRecommendations = async (req, res) => {
               ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
               : null,
 
-          rating: place.rating || 4.5,
+          rating: Number.isFinite(place.rating) ? place.rating : null,
 
           reviews:
             place.user_ratings_total || 0,
@@ -74,8 +79,8 @@ const getRecommendations = async (req, res) => {
             placeLat && placeLng
               ? Math.round(
                   calculateDistance(
-                    Number(lat),
-                    Number(lng),
+                    latitude,
+                    longitude,
                     Number(placeLat),
                     Number(placeLng)
                   )
@@ -85,11 +90,6 @@ const getRecommendations = async (req, res) => {
           category: "Popular",
         };
       });
-
-    console.log(
-      "Recommendations mapped:",
-      recommendations.length
-    );
 
     return res.status(200).json({
       recommendations,

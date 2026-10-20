@@ -126,7 +126,7 @@ This is an automated message. Please do not reply to this email.`;
    @throws  Error with actionable message on failure
 ═══════════════════════════════════════════════════════════════════════════ */
 const sendOtpEmail = async (to, otp, purpose = "signup") => {
-  console.log(`📧 OTP email request → ${to} (purpose: ${purpose})`);
+  console.log(`OTP email requested (purpose: ${purpose})`);
 
   if (!process.env.BREVO_API_KEY || !process.env.SENDER_EMAIL) {
     const missing = [];
@@ -170,7 +170,7 @@ const sendOtpEmail = async (to, otp, purpose = "signup") => {
 
     if (!res.ok) {
       // HTTP status codes are actionable — unlike a silent socket timeout.
-      console.error(`❌ Brevo API responded HTTP ${res.status}: ${bodyText}`);
+      console.error(`Brevo API responded with HTTP ${res.status}`);
       if (res.status === 401) throw new Error("Brevo API key invalid or revoked. Check BREVO_API_KEY.");
       if (res.status === 400 && /sender/i.test(bodyText)) {
         throw new Error("Sender not verified in Brevo. Check SENDER_EMAIL.");

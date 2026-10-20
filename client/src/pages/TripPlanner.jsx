@@ -2,8 +2,11 @@ import { useState } from "react";
 import "./TripPlanner.css";
 import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
+import { API_URL } from "../config";
 export default function TripPlanner() {
   const [loading, setLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     destination: "",
@@ -19,9 +22,10 @@ export default function TripPlanner() {
   const generateTrip = async () => {
     try {
       setLoading(true);
+      setError("");
 
      const res = await fetch(
-  "https://sarathi-backend-7u0y.onrender.com/api/trip-planner/generate",
+  `${API_URL}/api/trip-planner/generate`,
   {
     method: "POST",
     headers: {
@@ -31,23 +35,36 @@ export default function TripPlanner() {
   }
 );
 
+      if (!res.ok) {
+        throw new Error(`Trip planner request failed with status ${res.status}`);
+      }
+
       const data = await res.json();
 
       setResult(data);
-      setLoading(false);
     } catch (err) {
-      console.log(err);
+      console.error("Trip planner request failed");
+      setError("We could not generate your trip. Please check your details and try again.");
+    } finally {
       setLoading(false);
     }
   };
 
  return (
   <>
-    <Sidebar />
+    <Sidebar isOpen={sidebarOpen} />
+
+    {sidebarOpen && (
+      <div
+        className="overlay"
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
+    )}
 
     <div className="main-content">
 
-      <Navbar />
+      <Navbar toggleSidebar={() => setSidebarOpen((open) => !open)} />
 
 <div className="trip-page">
       <div className="trip-header">
@@ -164,6 +181,7 @@ export default function TripPlanner() {
         <button
           className="generate-btn"
           onClick={generateTrip}
+          disabled={loading}
         >
           {loading
             ? "Generating..."
@@ -171,6 +189,12 @@ export default function TripPlanner() {
         </button>
 
       </div>
+
+      {error && (
+        <div className="planner-error" role="alert">
+          {error}
+        </div>
+      )}
 
       {result?.budget && (
         <div className="budget-card">
@@ -223,7 +247,7 @@ export default function TripPlanner() {
       )}
 
      {result?.itinerary?.length > 0 && (
-  <div className="pla-card">
+  <div className="trip-itinerary-card">
 
     <h2>📍 AI Generated Itinerary</h2>
 
@@ -236,17 +260,17 @@ export default function TripPlanner() {
 
         <h3>Day {day.day}</h3>
 
-        <div className="places-grid">
+        <div className="trip-places-grid">
 
           {day.morning && (
-            <div className="place-card">
+            <div className="trip-place-card">
 
               <img
                 src={day.morning.image}
                 alt={day.morning.name}
               />
 
-              <div className="place-content">
+              <div className="trip-place-content">
                 <span className="time-badge">
                   🌅 Morning
                 </span>
@@ -262,14 +286,14 @@ export default function TripPlanner() {
           )}
 
           {day.afternoon && (
-            <div className="place-card">
+            <div className="trip-place-card">
 
               <img
                 src={day.afternoon.image}
                 alt={day.afternoon.name}
               />
 
-              <div className="place-content">
+              <div className="trip-place-content">
                 <span className="time-badge">
                   ☀️ Afternoon
                 </span>
@@ -285,14 +309,14 @@ export default function TripPlanner() {
           )}
 
           {day.evening && (
-            <div className="place-card">
+            <div className="trip-place-card">
 
               <img
                 src={day.evening.image}
                 alt={day.evening.name}
               />
 
-              <div className="place-content">
+              <div className="trip-place-content">
                 <span className="time-badge">
                   🌇 Evening
                 </span>

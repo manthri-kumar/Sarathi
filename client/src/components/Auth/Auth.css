@@ -493,14 +493,19 @@ body {
 /* ===== SWITCH TEXT ===== */
 .switch-text { margin-top: 18px; font-size: 13.5px; color: #94a3b8; }
 
-.switch-text span {
+.switch-action {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: #4ade80;
+  font: inherit;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
-.switch-text span:hover { color: #86efac; }
+.switch-action:hover { color: #86efac; }
 
 /* ===== SOCIAL (legacy) ===== */
 .social-icons { display: flex; justify-content: center; }
@@ -534,6 +539,7 @@ body {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   animation: forgotOverlayIn 0.2s ease both;
+  overflow-y: auto;
 }
 
 .forgot-modal {
@@ -548,6 +554,8 @@ body {
   box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
   text-align: left;
   animation: forgotModalIn 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
 }
 
 .forgot-modal h3 { margin: 0 0 8px; font-size: 22px; font-weight: 800; color: #ffffff; }

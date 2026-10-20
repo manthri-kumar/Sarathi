@@ -67,4 +67,31 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const allowed = ["name", "destination", "places", "travellers", "startDate", "endDate", "itinerary", "budget", "image", "date", "time", "note"];
+    const update = Object.fromEntries(Object.entries(req.body || {}).filter(([key]) => allowed.includes(key)));
+    if (update.startDate && update.endDate && new Date(update.startDate) > new Date(update.endDate)) {
+      return res.status(400).json({ error: "Start date can't be after end date." });
+    }
+    const trip = await Trip.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { $set: update }, { new: true, runValidators: true });
+    if (!trip) return res.status(404).json({ error: "Trip not found." });
+    return res.json({ success: true, trip });
+  } catch (err) {
+    console.error("[PUT /api/trips/:id] error:", err.message);
+    return res.status(500).json({ error: "We couldn't update your trip." });
+  }
+});
+
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const deleted = await Trip.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!deleted) return res.status(404).json({ error: "Trip not found." });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /api/trips/:id] error:", err.message);
+    return res.status(500).json({ error: "We couldn't delete your trip." });
+  }
+});
+
 module.exports = router;

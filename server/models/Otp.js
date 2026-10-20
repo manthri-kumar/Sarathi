@@ -22,8 +22,11 @@ const OtpSchema = new mongoose.Schema({
 
   otp: {
     type: String,
-    required: true,
+    required: false,
+    select: false,
   },
+
+  otpHash: { type: String, required: false, select: false },
 
   purpose: {
     type: String,
@@ -45,6 +48,15 @@ const OtpSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+
+  // Failed verification attempts are persisted so limits work across
+  // requests and application instances.  Controllers reject after the fifth
+  // failed attempt and require a new OTP.
+  attempts: {
+    type: Number,
+    default: 0,
+    min: 0,
   },
 });
 

@@ -198,7 +198,7 @@
 
 @media (max-width: 768px) {
   .profile-page {
-    padding: 18px;
+    padding: 0;
   }
 
   .hero-left {

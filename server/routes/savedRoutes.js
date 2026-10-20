@@ -12,22 +12,17 @@ const auth = require("../middleware/authMiddleware");
 ========================= */
 router.post("/", auth, async (req, res) => {
   try {
-    const {
-      name,
-      date,
-      time,
-      budget,
-      note,
-      image
-    } = req.body;
+    const { name, templateName, destination, places, travellers, startDate, endDate, itinerary, budget, note, notes, image, date, time } = req.body || {};
+    const canonicalName = templateName || name || destination || "Untitled Trip";
 
     /* Prevent Duplicate */
     const exists =
       await SavedTrip.findOne({
         userId: req.user.id,
-        name,
-        date,
-        time
+        templateName: canonicalName,
+        destination: destination || null,
+        startDate: startDate || date || null,
+        endDate: endDate || null
       });
 
     if (exists) {
@@ -40,17 +35,21 @@ router.post("/", auth, async (req, res) => {
     const trip =
       await SavedTrip.create({
         userId: req.user.id,
-        name,
-        date,
-        time,
-        budget,
-        note,
-        image
+        templateName: canonicalName,
+        destination: destination || null,
+        places: Array.isArray(places) ? places : [],
+        travellers: travellers ?? null,
+        startDate: startDate || date || null,
+        endDate: endDate || null,
+        itinerary: itinerary || null,
+        notes: notes ?? note ?? "",
+        image,
+        budget
       });
 
     res.status(201).json(trip);
   } catch (error) {
-    console.log(error);
+    console.error("[POST /api/saved] error:", error.message);
     res.status(500).json({
       message:
         "Failed to save trip"
@@ -73,7 +72,7 @@ router.get("/", auth, async (req, res) => {
 
     res.json(trips);
   } catch (error) {
-    console.log(error);
+    console.error("[GET /api/saved] error:", error.message);
     res.status(500).json({
       message:
         "Failed to fetch saved trips"
@@ -97,7 +96,7 @@ router.delete("/:id", auth, async (req, res) => {
         "Saved trip removed"
     });
   } catch (error) {
-    console.log(error);
+    console.error("[DELETE /api/saved/:id] error:", error.message);
     res.status(500).json({
       message:
         "Delete failed"

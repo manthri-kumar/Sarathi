@@ -6,43 +6,38 @@ import "../pages/saved.css";
 const Saved = () => {
   const [savedTrips, setSavedTrips] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const API_BASE = process.env.REACT_APP_API_URL || "https://sarathi-backend-7u0y.onrender.com";
+  const token = localStorage.getItem("token");
 
-  /* LOAD USERWISE SAVED TRIPS */
   useEffect(() => {
-    const user =
-      JSON.parse(localStorage.getItem("user")) || {};
-
-    const userId =
-      user._id || user.id || user.email || "guest";
-
-    const data =
-      JSON.parse(
-        localStorage.getItem(
-          `savedTrips_${userId}`
-        )
-      ) || [];
-
-    setSavedTrips(data);
-  }, []);
+    if (!token) return;
+    fetch(`${API_BASE}/api/saved`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => { if (!res.ok) throw new Error("Unable to load saved trips"); return res.json(); })
+      .then((data) => {
+        if (Array.isArray(data) && data.length) return setSavedTrips(data);
+        try {
+          const user = JSON.parse(localStorage.getItem("user")) || {};
+          const legacy = JSON.parse(localStorage.getItem(`savedTrips_${user._id || user.id || user.email}`)) || [];
+          setSavedTrips(Array.isArray(legacy) ? legacy.map((trip, index) => ({ ...trip, _id: trip._id || `legacy-${index}`, legacyLocal: true })) : []);
+        } catch { setSavedTrips([]); }
+      })
+      .catch(() => setSavedTrips([]));
+  }, [API_BASE, token]);
 
   /* DELETE SAVED */
-  const handleDelete = (index) => {
-    const user =
-      JSON.parse(localStorage.getItem("user")) || {};
-
-    const userId =
-      user._id || user.id || user.email || "guest";
-
-    const updated = savedTrips.filter(
-      (_, i) => i !== index
-    );
-
-    setSavedTrips(updated);
-
-    localStorage.setItem(
-      `savedTrips_${userId}`,
-      JSON.stringify(updated)
-    );
+  const handleDelete = async (id) => {
+    const current = savedTrips.find((trip) => trip._id === id);
+    if (current?.legacyLocal) {
+      const remaining = savedTrips.filter((trip) => trip._id !== id);
+      setSavedTrips(remaining);
+      try {
+        const user = JSON.parse(localStorage.getItem("user")) || {};
+        localStorage.setItem(`savedTrips_${user._id || user.id || user.email}`, JSON.stringify(remaining.filter((trip) => trip.legacyLocal).map(({ legacyLocal, _id, ...trip }) => trip)));
+      } catch { /* best effort for legacy local records */ }
+      return;
+    }
+    const res = await fetch(`${API_BASE}/api/saved/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) setSavedTrips((current) => current.filter((trip) => trip._id !== id));
   };
 
   return (
@@ -100,9 +95,9 @@ const Saved = () => {
             <div className="saved-grid">
 
               {savedTrips.map(
-                (trip, index) => (
+                (trip) => (
                   <div
-                    key={index}
+                    key={trip._id}
                     className="saved-card"
                   >
                     <img
@@ -116,12 +111,12 @@ const Saved = () => {
                     <div className="saved-content">
 
                       <h3>
-                        {trip.name}
+                        {trip.templateName || trip.name || trip.destination || "Untitled Trip"}
                       </h3>
 
                       <p>
                         📅{" "}
-                        {trip.date ||
+                        {trip.startDate || trip.date ||
                           "N/A"}{" "}
                         {trip.time &&
                           `|  ${trip.time}`}
@@ -145,7 +140,7 @@ const Saved = () => {
 
                         <a
                           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                            trip.name
+                            trip.destination || trip.templateName || trip.name || "trip"
                           )}`}
                           target="_blank"
                           rel="noreferrer"
@@ -157,9 +152,7 @@ const Saved = () => {
                         <button
                           className="delete-btn"
                           onClick={() =>
-                            handleDelete(
-                              index
-                            )
+                            handleDelete(trip._id)
                           }
                         >
                           Remove

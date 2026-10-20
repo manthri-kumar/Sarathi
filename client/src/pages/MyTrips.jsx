@@ -3,6 +3,7 @@ import axios from "axios";
 import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
 import "../pages/mytrips.css";
+import { API_URL } from "../config";
 
 const MyTrips = () => {
   const [trips, setTrips] = useState([]);
@@ -20,7 +21,7 @@ const MyTrips = () => {
       setError("");
 
       const res = await axios.get(
-        "https://sarathi-backend-7u0y.onrender.com/api/trips",
+        `${API_URL}/api/trips`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -81,7 +82,7 @@ const MyTrips = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(
-        `https://sarathi-backend-7u0y.onrender.com/api/trips/${id}`,
+        `${API_URL}/api/trips/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -143,7 +144,7 @@ const MyTrips = () => {
   const saveEdit = async () => {
     try {
       await axios.put(
-        `https://sarathi-backend-7u0y.onrender.com/api/trips/${editingTrip._id}`,
+        `${API_URL}/api/trips/${editingTrip._id}`,
         {
           date: editingTrip.date,
           time: editingTrip.time,
@@ -180,6 +181,14 @@ const MyTrips = () => {
   return (
     <div className="dashboard">
       <Sidebar isOpen={sidebarOpen} />
+
+      {sidebarOpen && (
+        <div
+          className="overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       <div className="main-content">
 
@@ -231,7 +240,7 @@ const MyTrips = () => {
                       trip.image ||
                       "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800"
                     }
-                    alt=""
+                    alt={trip.name ? `${trip.name} trip` : "Saved trip destination"}
                   />
 
                   <div className="trip-content">
@@ -318,10 +327,15 @@ const MyTrips = () => {
 
           {/* EDIT MODAL */}
           {editingTrip && (
-            <div className="modal">
-              <div className="modal-box">
+            <div className="modal" role="presentation">
+              <div
+                className="modal-box"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="edit-trip-title"
+              >
 
-                <h2>Edit Trip</h2>
+                <h2 id="edit-trip-title">Edit Trip</h2>
 
                 <input
                   type="date"

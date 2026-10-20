@@ -11,19 +11,24 @@ exports.generateTrip = async (req, res) => {
       hotelType
     } = req.body;
 
+    if (typeof destination !== "string" || destination.trim().length < 2 || destination.length > 120) {
+      return res.status(400).json({ success: false, message: "A valid destination is required" });
+    }
+
     const totalDays = Number(days);
     const totalTravellers = Number(travellers);
     const totalBudget = Number(budget);
+    if (!Number.isInteger(totalDays) || totalDays < 1 || totalDays > 30 || !Number.isInteger(totalTravellers) || totalTravellers < 1 || totalTravellers > 50 || !Number.isFinite(totalBudget) || totalBudget < 0) {
+      return res.status(400).json({ success: false, message: "Invalid trip parameters" });
+    }
 
     /* ================= PLACES ================= */
 
     const placesRes = await axios.get(
       "https://maps.googleapis.com/maps/api/place/textsearch/json",
       {
-        params: {
-          query: `Top tourist attractions in ${destination}`,
-          key: process.env.GOOGLE_API_KEY
-        }
+        params: { query: `Top tourist attractions in ${destination.trim()}`, key: process.env.GOOGLE_API_KEY },
+        timeout: 10000
       }
     );
 
@@ -31,14 +36,13 @@ exports.generateTrip = async (req, res) => {
       .slice(0, totalDays * 3)
       .map((p) => ({
         name: p.name,
-        rating: p.rating || 4.5,
+        placeId: p.place_id || null,
+        rating: Number.isFinite(p.rating) ? p.rating : null,
         address: p.formatted_address || "",
 
         image: p.photos?.length
           ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}`
-          : `https://picsum.photos/600/400?random=${Math.floor(
-              Math.random() * 1000
-            )}`,
+          : null,
 
         lat: p.geometry.location.lat,
         lng: p.geometry.location.lng
@@ -108,9 +112,6 @@ exports.generateTrip = async (req, res) => {
           places[placeIndex++] || null
       });
     }
-
-    console.log("First Place:");
-    console.log(places[0]);
 
     res.json({
       success: true,

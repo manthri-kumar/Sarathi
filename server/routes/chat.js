@@ -5,6 +5,7 @@ const router      = express.Router();
 const ChatSession = require("../models/ChatSession");
 const C           = require("../services/ConversationService");
 const Ctx         = require("../services/ContextService");
+const requireAuth = require("../middleware/authMiddleware");
 
 const NEARBY_KEYWORD = {
   nearby_temple:   "hindu temple",
@@ -94,13 +95,13 @@ const runNearbySearch = async (intent, raw, lat, lng, city, activeCity) => {
 
   if (intent === "nearby_named") {
     const name = C.extractNamedPlaceQuery(raw);
-    console.log(`[CHAT] nearby_named → name="${name}"`);
+    console.log(`[CHAT] nearby_named → queryLength=${name.length}`);
     const data = await C.searchNamedPlaceNearby(name, lat, lng, placeCity);
     return { data, placeType: "named", placeCity, radiusUsed: null, expanded: false, rangeLabel: null };
   }
 
   const keyword = NEARBY_KEYWORD[intent] || C.extractPlaceKeyword(raw, "tourist attraction");
-  console.log(`[CHAT] nearby → intent=${intent} keyword="${keyword}" radius=${radiusMetres}m explicit=${explicit} city="${placeCity}"`);
+  console.log(`[CHAT] nearby → intent=${intent} radius=${radiusMetres}m explicit=${explicit}`);
 
   const { results, radiusUsed, expanded } = await C.fetchNearby(
     lat, lng, keyword, placeCity, radiusMetres, { explicitRadius: explicit, sortBy: "distance" }
@@ -139,9 +140,9 @@ const startNewTrip = async (raw, lat, lng, city) => {
   return { trip, slots };
 };
 
-router.get("/session/:userId", async (req, res) => {
+router.get("/session/:userId", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user?.id;
     if (!userId) return res.status(400).json({ error: "userId is required." });
 
     const s = await ChatSession.findOne({ userId });
@@ -165,10 +166,21 @@ router.get("/session/:userId", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
-    const { message, userId = "user1", lat, lng, city } = req.body;
-    const raw   = message?.trim();
+    const { message, lat, lng, city } = req.body;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Authentication required." });
+    const raw   = typeof message === "string" ? message.trim().slice(0, 2000) : "";
+    if (message != null && typeof message !== "string") {
+      return res.status(400).json({ error: "Message must be text." });
+    }
+    if (lat != null && (!Number.isFinite(Number(lat)) || Number(lat) < -90 || Number(lat) > 90)) {
+      return res.status(400).json({ error: "Invalid latitude." });
+    }
+    if (lng != null && (!Number.isFinite(Number(lng)) || Number(lng) < -180 || Number(lng) > 180)) {
+      return res.status(400).json({ error: "Invalid longitude." });
+    }
     const lower = raw?.toLowerCase() ?? "";
     const s     = await loadSession(userId);
 
@@ -244,7 +256,7 @@ router.post("/", async (req, res) => {
     const inFlow = C.isTripActive(s);
     const intent = C.detectIntent(raw);
 
-    console.log("[CHAT]", { userId, message: raw, previousStep: s.step, intent, inFlow });
+    console.log("[CHAT]", { userId, messageLength: raw.length, previousStep: s.step, intent, inFlow });
 
     if (!inFlow && s.step && C.ACTIVE.has(s.step)) {
       s.step = null;
@@ -635,9 +647,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.post("/reset", async (req, res) => {
+router.post("/reset", requireAuth, async (req, res) => {
   try {
-    const { userId = "user1" } = req.body;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Authentication required." });
     const s = await loadSession(userId);
 
     Ctx.clearHistory(s);

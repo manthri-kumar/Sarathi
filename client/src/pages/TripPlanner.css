@@ -1,7 +1,8 @@
 /* ================= MAIN LAYOUT ================= */
 
 .main-content {
-  margin-left: 220px;
+  flex: 1;
+  min-width: 0;
   min-height: 100vh;
   background: #020617;
 }
@@ -9,6 +10,15 @@
 .trip-page {
   padding: 30px;
   color: white;
+}
+
+.planner-error {
+  margin-bottom: 25px;
+  padding: 14px 16px;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 14px;
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
 }
 
 /* ================= HEADER ================= */
@@ -91,6 +101,12 @@
   transform: translateY(-2px);
 }
 
+.generate-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
+}
+
 /* ================= BUDGET ================= */
 
 .budget-card {
@@ -131,9 +147,24 @@
 /* ================= ITINERARY SECTION ================= */
 
 
-/* ================= GRID ================= */
+/* ================= ITINERARY ================= */
 
-.pla-grid {
+.trip-itinerary-card {
+  background: #08111f;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 24px;
+  padding: 28px;
+}
+
+.trip-itinerary-card > h2 {
+  margin: 0 0 24px;
+}
+
+.day-itinerary + .day-itinerary {
+  margin-top: 28px;
+}
+
+.trip-places-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 22px;
@@ -141,7 +172,7 @@
 
 /* ================= PLACE CARD ================= */
 
-.pla-card {
+.trip-place-card {
   background: linear-gradient(
     135deg,
     #071224,
@@ -159,14 +190,14 @@
   height: 100%;
 }
 
-.pla-card:hover {
+.trip-place-card:hover {
   transform: translateY(-6px);
 
   border-color:
     rgba(34,197,94,.35);
 }
 
-.pla-card img {
+.trip-place-card img {
   width: 100%;
   height: 220px;
 
@@ -175,11 +206,11 @@
   display: block;
 }
 
-.pla-content {
+.trip-place-content {
   padding: 18px;
 }
 
-.pla-content h4 {
+.trip-place-content h4 {
   font-size: 20px;
   line-height: 1.4;
 
@@ -189,7 +220,7 @@
   color: white;
 }
 
-.pla-content p {
+.trip-place-content p {
   color: #94a3b8;
 }
 
@@ -216,7 +247,7 @@
 
 @media (max-width: 1200px) {
 
-  .pla-grid {
+  .trip-places-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -229,14 +260,14 @@
   }
 
   .trip-page {
-    padding: 20px;
+    padding: 0;
   }
 
   .trip-grid {
     grid-template-columns: 1fr;
   }
 
-  .pla-grid {
+  .trip-places-grid {
     grid-template-columns: 1fr;
   }
 
@@ -245,7 +276,7 @@
   }
 
   .budget-card h2,
-  .places-card h2 {
+  .trip-itinerary-card h2 {
     font-size: 26px;
   }
 
@@ -253,7 +284,7 @@
     font-size: 24px;
   }
 
-  .place-card img {
+  .trip-place-card img {
     height: 220px;
   }
 

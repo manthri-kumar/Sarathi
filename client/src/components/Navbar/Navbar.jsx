@@ -8,7 +8,6 @@ import {
   User,
   Luggage,
   Heart,
-  Settings,
   LogOut,
 } from "lucide-react";
 
@@ -67,7 +66,6 @@ const Navbar = ({ toggleSidebar }) => {
     { icon: User, label: "My Profile", route: "/profile" },
     { icon: Luggage, label: "My Trips", route: "/my-trips" },
     { icon: Heart, label: "Saved Places", route: "/saved" },
-    { icon: Settings, label: "Settings", route: "/settings" },
   ];
 
   const filteredItems =
@@ -83,9 +81,17 @@ const Navbar = ({ toggleSidebar }) => {
     setShowProfileMenu(false);
   };
 
+  const handleKeyboardAction = (event, action) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  };
+
   const handleLogout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/login");
+    navigate("/");
     setShowProfileMenu(false);
   };
 
@@ -191,6 +197,8 @@ const Navbar = ({ toggleSidebar }) => {
               className="language-btn"
               onClick={() => setShowLanguages(!showLanguages)}
               title="Change Language"
+              aria-expanded={showLanguages}
+              aria-label="Change language"
             >
               <Languages size={20} />
             </button>
@@ -203,6 +211,12 @@ const Navbar = ({ toggleSidebar }) => {
                     setShowLanguages(false);
                   }}
                   className="dropdown-item"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyboardAction(event, () => {
+                    i18n.changeLanguage("en");
+                    setShowLanguages(false);
+                  })}
                 >
                   🇬🇧 English
                 </div>
@@ -212,6 +226,12 @@ const Navbar = ({ toggleSidebar }) => {
                     setShowLanguages(false);
                   }}
                   className="dropdown-item"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyboardAction(event, () => {
+                    i18n.changeLanguage("te");
+                    setShowLanguages(false);
+                  })}
                 >
                   🇮🇳 తెలుగు
                 </div>
@@ -221,6 +241,12 @@ const Navbar = ({ toggleSidebar }) => {
                     setShowLanguages(false);
                   }}
                   className="dropdown-item"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyboardAction(event, () => {
+                    i18n.changeLanguage("hi");
+                    setShowLanguages(false);
+                  })}
                 >
                   🇮🇳 हिन्दी
                 </div>
@@ -240,6 +266,7 @@ const Navbar = ({ toggleSidebar }) => {
               }
               title="Notifications"
               aria-label="Open Notifications"
+              aria-expanded={showNotificationDropdown}
             >
               <Bell size={18} />
               {unreadCount > 0 && (
@@ -260,6 +287,7 @@ const Navbar = ({ toggleSidebar }) => {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               role="button"
               tabIndex={0}
+              aria-expanded={showProfileMenu}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   setShowProfileMenu(!showProfileMenu);
@@ -314,6 +342,11 @@ const Navbar = ({ toggleSidebar }) => {
                         key={index}
                         className="dropdown-item clickable"
                         onClick={() => handleNavigate(item.route)}
+                        onKeyDown={(event) =>
+                          handleKeyboardAction(event, () => handleNavigate(item.route))
+                        }
+                        role="link"
+                        tabIndex={0}
                       >
                         <IconComponent size={18} />
                         <span>{item.label}</span>
@@ -327,6 +360,9 @@ const Navbar = ({ toggleSidebar }) => {
                 <div
                   className="dropdown-item logout clickable"
                   onClick={handleLogout}
+                  onKeyDown={(event) => handleKeyboardAction(event, handleLogout)}
+                  role="button"
+                  tabIndex={0}
                 >
                   <LogOut size={18} />
                   <span>Logout</span>
@@ -353,6 +389,8 @@ const Navbar = ({ toggleSidebar }) => {
               className="language-btn"
               onClick={() => setShowLanguages(!showLanguages)}
               title="Change Language"
+              aria-expanded={showLanguages}
+              aria-label="Change language"
             >
               <Languages size={18} />
             </button>
@@ -365,6 +403,12 @@ const Navbar = ({ toggleSidebar }) => {
                     setShowLanguages(false);
                   }}
                   className="dropdown-item"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyboardAction(event, () => {
+                    i18n.changeLanguage("en");
+                    setShowLanguages(false);
+                  })}
                 >
                   English
                 </div>
@@ -374,6 +418,12 @@ const Navbar = ({ toggleSidebar }) => {
                     setShowLanguages(false);
                   }}
                   className="dropdown-item"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyboardAction(event, () => {
+                    i18n.changeLanguage("te");
+                    setShowLanguages(false);
+                  })}
                 >
                   తెలుగు
                 </div>
@@ -383,6 +433,12 @@ const Navbar = ({ toggleSidebar }) => {
                     setShowLanguages(false);
                   }}
                   className="dropdown-item"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyboardAction(event, () => {
+                    i18n.changeLanguage("hi");
+                    setShowLanguages(false);
+                  })}
                 >
                   हिन्दी
                 </div>
@@ -400,6 +456,7 @@ const Navbar = ({ toggleSidebar }) => {
               }
               title="Notifications"
               aria-label="Open Notifications"
+              aria-expanded={showNotificationDropdown}
             >
               <Bell size={18} />
               {unreadCount > 0 && (
@@ -418,6 +475,7 @@ const Navbar = ({ toggleSidebar }) => {
               className="nav-avatar"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               aria-label="Profile menu"
+              aria-expanded={showProfileMenu}
             >
               {profilePic ? (
                 <img src={profilePic} alt={username} />
@@ -438,6 +496,11 @@ const Navbar = ({ toggleSidebar }) => {
                         key={index}
                         className="dropdown-item clickable"
                         onClick={() => handleNavigate(item.route)}
+                        onKeyDown={(event) =>
+                          handleKeyboardAction(event, () => handleNavigate(item.route))
+                        }
+                        role="link"
+                        tabIndex={0}
                       >
                         <IconComponent size={18} />
                         <span>{item.label}</span>
@@ -451,6 +514,9 @@ const Navbar = ({ toggleSidebar }) => {
                 <div
                   className="dropdown-item logout clickable"
                   onClick={handleLogout}
+                  onKeyDown={(event) => handleKeyboardAction(event, handleLogout)}
+                  role="button"
+                  tabIndex={0}
                 >
                   <LogOut size={18} />
                   <span>Logout</span>

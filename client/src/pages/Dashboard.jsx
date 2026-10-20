@@ -13,6 +13,7 @@ import "../styles/layout.css";
 const Dashboard = () => {
   const [openChat, setOpenChat] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [locationError, setLocationError] = useState("");
 
   const [userName, setUserName] = useState("");
   const [city, setCity] = useState("");
@@ -30,18 +31,6 @@ const Dashboard = () => {
   const touchStartX = useRef(0);
 
   const { t } = useTranslation();
-
-  useEffect(() => {
-  console.log(
-    "Dashboard Token:",
-    localStorage.getItem("token")
-  );
-
-  console.log(
-    "Dashboard User:",
-    localStorage.getItem("user")
-  );
-}, []);
 
   /* ================= USER ================= */
   useEffect(() => {
@@ -70,9 +59,7 @@ useEffect(() => {
   }
 
   if (!navigator.geolocation) {
-    console.log(
-      "Geolocation not supported"
-    );
+    setLocationError("Location is unavailable in this browser. You can still search destinations manually.");
     return;
   }
 
@@ -90,6 +77,8 @@ useEffect(() => {
   lng: longitude,
 });
 
+      setLocationError("");
+
       localStorage.setItem(
         "lat",
         latitude
@@ -100,33 +89,20 @@ useEffect(() => {
         longitude
       );
 
-      console.log(
-        "Location:",
-        latitude,
-        longitude
-      );
-
       try {
 
         const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyAMBqBt2BGppYl3XPTo2ReAHnTjrnIpc5A`
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.REACT_APP_GOOGLE_MAPS_KEY || ""}`
         );
 
         const data =
           await res.json();
 
-        console.log(
-          "Geocode Response:",
-          data
-        );
-
         if (
           data.status !== "OK" ||
           !data.results?.length
         ) {
-          console.log(
-            "Google Geocode Failed"
-          );
+          setLocationError("We could not name your current location. Search destinations manually instead.");
           return;
         }
 
@@ -166,11 +142,6 @@ useEffect(() => {
 
           "";
 
-        console.log(
-          "Detected City:",
-          detectedCity
-        );
-
         if (detectedCity) {
 
           localStorage.setItem(
@@ -185,27 +156,13 @@ useEffect(() => {
         }
 
       } catch (err) {
-
-        console.log(
-          "Geocode Error:",
-          err
-        );
-
+        setLocationError("We could not load your current city. Search destinations manually instead.");
       }
 
     },
 
-    (err) => {
-
-      console.log(
-        "Location Error:",
-        err
-      );
-
-      alert(
-        "Please allow location access"
-      );
-
+    () => {
+      setLocationError("Location access is off. You can still explore by searching for a city.");
     }
 
   );
@@ -305,6 +262,12 @@ useEffect(() => {
           </p>
 
         </div>
+
+        {locationError && (
+          <div className="inline-notice" role="status">
+            {locationError}
+          </div>
+        )}
 
         <Cards
           openChat={

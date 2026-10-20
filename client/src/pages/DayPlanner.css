@@ -12,6 +12,15 @@
   color: white;
 }
 
+.planner-error {
+  margin-bottom: 25px;
+  padding: 14px 16px;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 14px;
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}
+
 /* ================= HEADER ================= */
 
 .day-header {
@@ -91,6 +100,12 @@
 
 .generate-btn:hover {
   transform: translateY(-2px);
+}
+
+.generate-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
 }
 
 /* ================= SUMMARY ================= */
@@ -247,7 +262,7 @@
   }
 
   .day-page {
-    padding: 20px;
+    padding: 0;
   }
 
   .day-grid {

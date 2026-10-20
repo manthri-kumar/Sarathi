@@ -66,6 +66,11 @@ const getUserId = () => {
   return getOrCreateAnonId();
 };
 
+const authHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const makeId = () =>
   (crypto?.randomUUID && crypto.randomUUID()) ||
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -130,7 +135,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/chat/session/${getUserId()}`);
+        const res = await fetch(`${API_BASE}/api/chat/session/${getUserId()}`, { headers: authHeaders() });
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
@@ -191,8 +196,8 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
     try {
       await fetch(`${API_BASE}/api/chat/reset`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: getUserId() }),
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({}),
       });
     } catch {
       // Non-fatal — UI still resets locally even if the backend call fails.
@@ -239,7 +244,6 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
           }
         : {
             message: msg,
-            userId: getUserId(),
             lat: localStorage.getItem("lat"),
             lng: localStorage.getItem("lng"),
             city: localStorage.getItem("city"),
@@ -247,7 +251,7 @@ const ChatPanel = ({ closeChat, templeContext = null }) => {
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });

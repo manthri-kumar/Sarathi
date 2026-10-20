@@ -10,6 +10,11 @@ exports.generateDayPlan = async (req, res) => {
         message: "Location not provided"
       });
     }
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ success: false, message: "Valid coordinates required" });
+    }
 
     const keywordMap = {
       nature: "park",
@@ -28,17 +33,13 @@ exports.generateDayPlan = async (req, res) => {
       "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
       {
         params: {
-          location: `${lat},${lng}`,
+          location: `${latitude},${longitude}`,
           radius: 15000,
           keyword,
           key: process.env.GOOGLE_API_KEY
-        }
+        },
+        timeout: 10000
       }
-    );
-
-    console.log(
-      "Places Found:",
-      placesRes.data.results.length
     );
 
     const places =
@@ -46,10 +47,7 @@ exports.generateDayPlan = async (req, res) => {
         .slice(0, 12)
         .map((p) => {
 
-          let image =
-            `https://picsum.photos/800/600?random=${Math.floor(
-              Math.random() * 1000
-            )}`;
+          let image = null;
 
           if (
             p.photos &&
@@ -61,7 +59,8 @@ exports.generateDayPlan = async (req, res) => {
 
           return {
             name: p.name,
-            rating: p.rating || 4.5,
+            placeId: p.place_id || null,
+            rating: Number.isFinite(p.rating) ? p.rating : null,
             address: p.vicinity || "",
             image,
             lat:
@@ -79,11 +78,6 @@ exports.generateDayPlan = async (req, res) => {
       });
     }
 
-    console.log(
-      "First Place:",
-      places[0]
-    );
-
     res.json({
       success: true,
 
@@ -96,7 +90,8 @@ exports.generateDayPlan = async (req, res) => {
 
       stats: {
         placesCovered: 4,
-        estimatedTravelCost: 300
+        estimatedTravelCost: null,
+        estimatedTravelCostStatus: "unavailable"
       }
     });
 

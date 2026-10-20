@@ -8,7 +8,6 @@ import {
   Bookmark,
   User,
   LogOut,
-  Settings,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -36,6 +35,13 @@ const Sidebar = ({ isOpen }) => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/");
+  };
+
+  const handleKeyboardAction = (event, action) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
   };
 
   const menuItems = [
@@ -91,6 +97,12 @@ const Sidebar = ({ isOpen }) => {
               key={item.path}
               className={location.pathname === item.path ? "active" : ""}
               onClick={() => navigate(item.path)}
+              onKeyDown={(event) =>
+                handleKeyboardAction(event, () => navigate(item.path))
+              }
+              role="link"
+              tabIndex={0}
+              aria-current={location.pathname === item.path ? "page" : undefined}
             >
               {item.icon}
               <span>{item.name}</span>
@@ -101,12 +113,16 @@ const Sidebar = ({ isOpen }) => {
 
       {/* BOTTOM */}
       <div className="bottom-section">
-        <div className="logout" onClick={handleLogout}>
+        <div
+          className="logout"
+          onClick={handleLogout}
+          onKeyDown={(event) => handleKeyboardAction(event, handleLogout)}
+          role="button"
+          tabIndex={0}
+        >
           <LogOut size={18} />
           <span>{t("logout")}</span>
         </div>
-
-        <Settings size={18} className="settings-icon" />
       </div>
     </div>
   );

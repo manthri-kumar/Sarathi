@@ -31,7 +31,7 @@ exports.optimizeRoute = async (req, res) => {
     // If Google key available and places have coordinates, use Distance Matrix
     let orderedPlaces = [...places];
 
-    if (GOOGLE_KEY && places.every((p) => p.lat && p.lng) && places.length > 1) {
+    if (GOOGLE_KEY && places.every((p) => p.lat != null && p.lng != null) && places.length > 1) {
       try {
         orderedPlaces = await nearestNeighbourSort(places);
       } catch (e) {
@@ -44,8 +44,8 @@ exports.optimizeRoute = async (req, res) => {
     const perDay   = Math.ceil(orderedPlaces.length / days);
     const schedule = [];
 
-    const TIME_SLOTS = ["9:00 AM", "12:00 PM", "3:00 PM", "6:00 PM"];
-    const DURATIONS  = ["2-3 hrs", "1-2 hrs", "2-3 hrs", "1-2 hrs"];
+    const TIME_SLOTS = ["9:00 AM", "11:30 AM", "2:00 PM", "4:30 PM", "7:00 PM"];
+    const DURATIONS  = ["2-3 hrs", "1-2 hrs", "2-3 hrs", "1-2 hrs", "1-2 hrs"];
 
     for (let d = 0; d < days; d++) {
       const dayPlaces = orderedPlaces.slice(d * perDay, (d + 1) * perDay);
@@ -60,8 +60,9 @@ exports.optimizeRoute = async (req, res) => {
         day:   d + 1,
         date:  dayDate,
         slots: dayPlaces.map((place, i) => ({
-          time:     TIME_SLOTS[i % TIME_SLOTS.length],
-          duration: DURATIONS[i % DURATIONS.length],
+          time:     TIME_SLOTS[i] || null,
+          duration: DURATIONS[i] || "Flexible duration",
+          timingNote: TIME_SLOTS[i] ? "Suggested time" : "Additional stop; timing requires confirmation",
           place,
         })),
       });
@@ -133,7 +134,12 @@ async function nearestNeighbourSort(places) {
       }
     }
 
-    if (nearest === -1) break;
+    if (nearest === -1) {
+      for (let j = 0; j < places.length; j++) {
+        if (!visited.has(j)) ordered.push(places[j]);
+      }
+      break;
+    }
     current = nearest;
   }
 

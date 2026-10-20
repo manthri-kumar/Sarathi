@@ -23,9 +23,7 @@ function AuthPage() {
   const [isLogin,          setIsLogin]          = useState(false);
   const [form,             setForm]             = useState({ username: "", email: "", password: "" });
   const [signupLoading,    setSignupLoading]    = useState(false);
-  const [isGoogleRedirect, setIsGoogleRedirect] = useState(
-    () => window.location.hash.includes("access_token")
-  );
+  const [isGoogleRedirect, setIsGoogleRedirect] = useState(false);
   const [googleError,      setGoogleError]      = useState(null);
   const [showSplash,       setShowSplash]       = useState(false);
   const [splashFadingOut,  setSplashFadingOut]  = useState(false);
@@ -81,47 +79,29 @@ function AuthPage() {
     return () => clearInterval(t);
   }, [fpResendIn]);
 
-  /* ── Google redirect handler (unchanged) ── */
-  useEffect(() => {
-    const handleGoogleLogin = async () => {
-      const hash = window.location.hash;
-      if (!hash.includes("access_token")) return;
-      try {
-        const accessToken = hash.split("access_token=")[1]?.split("&")[0];
-        if (!accessToken) throw new Error("No access token found in URL");
-        const googleRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!googleRes.ok) throw new Error("Failed to fetch Google user info");
-        const googleUser = await googleRes.json();
-        const backendRes = await axios.post(
-          `${API_BASE}/api/auth/google`,
-          { email: googleUser.email, name: googleUser.name, picture: googleUser.picture }
-        );
-        if (!backendRes.data.token) throw new Error("Token not received from backend");
-        localStorage.setItem("token", backendRes.data.token);
-        localStorage.setItem("user", JSON.stringify(backendRes.data.user));
-        window.history.replaceState({}, document.title, window.location.pathname);
-        navigate("/dashboard", { replace: true });
-      } catch (err) {
-        console.error("Google Login Error:", err);
-        window.history.replaceState({}, document.title, window.location.pathname);
-        setGoogleError(err.response?.data?.message || err.message || "Google Login Failed");
-        setIsGoogleRedirect(false);
-      }
-    };
-    handleGoogleLogin();
-  }, [navigate]);
-
-  /* ── Google OAuth click (unchanged) ── */
-  const handleGoogleClick = () => {
-    const CLIENT_ID   = "1080384580092-c34rc5m8mnm8svmklo2a5c0pcm462ps5.apps.googleusercontent.com";
-    const REDIRECT_URI = window.location.origin;
-    const scope        = encodeURIComponent("openid email profile");
-    window.location.href =
-      `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}` +
-      `&response_type=token&scope=${scope}&prompt=select_account`;
+  const handleGoogleCredential = async (response, challenge) => {
+    try {
+      const backendRes = await axios.post(`${API_BASE}/api/auth/google`, { credential: response.credential, challenge });
+      localStorage.setItem("token", backendRes.data.token);
+      localStorage.setItem("user", JSON.stringify(backendRes.data.user));
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setIsGoogleRedirect(false);
+      setGoogleError(err.response?.data?.message || "Google sign-in failed");
+    }
+  };
+  const handleGoogleClick = async () => {
+    setGoogleError(null);
+    setIsGoogleRedirect(true);
+    try {
+      const { data } = await axios.get(`${API_BASE}/api/auth/google/challenge`);
+      if (!window.google?.accounts?.id) throw new Error("Google sign-in is unavailable");
+      window.google.accounts.id.initialize({ client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID, nonce: data.nonce, callback: (response) => handleGoogleCredential(response, data.challenge) });
+      window.google.accounts.id.prompt();
+    } catch (err) {
+      setIsGoogleRedirect(false);
+      setGoogleError(err.response?.data?.message || err.message);
+    }
   };
 
   /* ── Login / Signup submit (unchanged) ── */
@@ -435,7 +415,13 @@ function AuthPage() {
             and hidden destinations through personalized recommendations, real-time insights,
             and smart trip planning.
           </p>
-          <button className="explore-btns">Start Exploring →</button>
+          <button
+            className="explore-btns"
+            type="button"
+            onClick={() => setIsLogin(false)}
+          >
+            Create Your Account →
+          </button>
           <div className="hero-pills">
             <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Smart Itineraries</h4><p>AI-built travel plans</p></div></div>
             <div className="hero-pill"><span className="hp-icon"></span><div className="hp-text"><h4>Hidden Gems</h4><p>Discover unseen places</p></div></div>
@@ -476,7 +462,7 @@ function AuthPage() {
           </p>
 
           {googleError && (
-            <div className="auth-error-banner"> {googleError}</div>
+            <div className="auth-error-banner" role="alert"> {googleError}</div>
           )}
 
           <div className="toggle">
@@ -492,6 +478,7 @@ function AuthPage() {
             {!isLogin && (
               <input
                 type="text" placeholder="Username"
+                aria-label="Username"
                 value={form.username} autoComplete="off" readOnly
                 onFocus={(e) => e.target.removeAttribute("readOnly")}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -499,12 +486,14 @@ function AuthPage() {
             )}
             <input
               type="email" placeholder="Email"
+              aria-label="Email"
               value={form.email} autoComplete="off" readOnly
               onFocus={(e) => e.target.removeAttribute("readOnly")}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
             <input
               type="password" placeholder="Password"
+              aria-label="Password"
               value={form.password} autoComplete="new-password" readOnly
               onFocus={(e) => e.target.removeAttribute("readOnly")}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -525,15 +514,20 @@ function AuthPage() {
 
           <div className="divider"><span>Or login with</span></div>
 
-          <div className="google-icon-btn" onClick={handleGoogleClick}>
+          <button
+            className="google-icon-btn"
+            type="button"
+            onClick={handleGoogleClick}
+            aria-label="Continue with Google"
+          >
             <img src={googleLogo} alt="google" />
-          </div>
+          </button>
 
           <p className="switch-text">
             {isLogin ? (
-              <>Don't have an account? <span onClick={() => setIsLogin(false)}>Sign up</span></>
+              <>Don't have an account? <button type="button" className="switch-action" onClick={() => setIsLogin(false)}>Sign up</button></>
             ) : (
-              <>Already have an account? <span onClick={() => setIsLogin(true)}>Login</span></>
+              <>Already have an account? <button type="button" className="switch-action" onClick={() => setIsLogin(true)}>Login</button></>
             )}
           </p>
 
@@ -550,9 +544,9 @@ function AuthPage() {
       ══════════════════════════════════════════════════════════════ */}
       {showOtp && (
         <div className="forgot-overlay" onClick={() => !otpState.loading && setShowOtp(false)}>
-          <div className="forgot-modal otp-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="forgot-modal otp-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="signup-otp-title">
             <button className="forgot-close" onClick={() => setShowOtp(false)} aria-label="Close">✕</button>
-            <h3>Verify Your Email</h3>
+            <h3 id="signup-otp-title">Verify Your Email</h3>
             <p className="forgot-sub">
               We sent a 6-digit code to{" "}
               <strong style={{ color: "#86efac" }}>{otpEmail}</strong>.
@@ -573,6 +567,7 @@ function AuthPage() {
                       className="otp-box"
                       type="text"
                       inputMode="numeric"
+                      aria-label={`Verification digit ${i + 1}`}
                       maxLength={1}
                       value={d}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
@@ -614,7 +609,7 @@ function AuthPage() {
       ══════════════════════════════════════════════════════════════ */}
       {showForgot && (
         <div className="forgot-overlay" onClick={closeForgot}>
-          <div className="forgot-modal otp-modal fp-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="forgot-modal otp-modal fp-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Password recovery">
 
             {/* Close button — always visible */}
             <button className="forgot-close" onClick={closeForgot} aria-label="Close">✕</button>

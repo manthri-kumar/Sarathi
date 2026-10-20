@@ -9,6 +9,13 @@ const tripSchema = new mongoose.Schema(
   },
 
   name: String,
+  destination: String,
+  places: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  travellers: Number,
+  startDate: String,
+  endDate: String,
+  itinerary: { type: mongoose.Schema.Types.Mixed, default: null },
+  source: { type: String, enum: ["planner", "chat"], default: "planner" },
   image: String,
   date: String,
   time: String,

@@ -14,9 +14,20 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true
+    },
+    sessionVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    googleSub: {
+      type: String,
+      default: undefined
     }
   },
   { timestamps: true }
 );
+
+userSchema.index({ googleSub: 1 }, { unique: true, partialFilterExpression: { googleSub: { $type: "string" } } });
 
 module.exports = mongoose.model("User", userSchema);

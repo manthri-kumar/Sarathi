@@ -24,10 +24,7 @@ const ProtectedRoute = ({ children }) => {
 
 const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("token");
-  const isOAuthCallback =
-    window.location.hash.includes("access_token");
-
-  if (token && !isOAuthCallback) {
+  if (token) {
     return <Navigate to="/dashboard" replace />;
   }
 
